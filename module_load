@@ -1,0 +1,2 @@
+module purge
+module load intel/intel-18 openmpi/3.0.0-intel-18 hdf5/1.8.20-intel-18 use.own netcdf-fortran-4.5.2

@@ -1,0 +1,11 @@
+FORCE   001
+time shift:     0.0000 ! s
+half duration:  1.0 ! Half duration (s) for Step function, frequency (Hz) for Ricker
+latitude:           68.9656 ! Degree
+longitude:        -150.6807 ! Degree
+depth:           0.0 ! km
+source time function: 0 ! 0=Step function, 1=Ricker wavelet
+factor force source:             1.d15 ! Newton
+component dir vect source E:     0.d0
+component dir vect source N:     0.d0
+component dir vect source Z_UP:  1.d0

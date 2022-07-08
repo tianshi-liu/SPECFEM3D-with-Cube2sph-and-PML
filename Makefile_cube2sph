@@ -1,0 +1,24 @@
+FC=ifort
+CC=icc
+MPIFC=mpif90
+SETUP=./setup
+#CFLAGS=-I${SETUP}  -DFORCE_VECTORIZATION -DWITH_MPI -g -O2 -DFORCE_VECTORIZATION -DWITH_MPI -I/scinet/niagara/software/2018a/opt/intel-2018.2/openmpi/3.1.0/include
+FCFLAGS=-g   -xHost -fpe0 -ftz -assume buffered_io -assume byterecl -align sequence -std03 -diag-disable 6477 -implicitnone -gen-interfaces -warn all -O3 -check nobounds -DFORCE_VECTORIZATION
+FCFLAGS_f90 = -module ./obj -I./obj -I.  -I${SETUP}
+O=./obj
+E=./bin
+
+
+cube2sph_obj= \
+	$O/rthetaphi_xyz.cube2sph.o \
+	$O/rotate_elastic_parameter.cube2sph.o
+
+
+$O/%.cube2sph.o: src/cube2sph/%.f90 setup/*.h
+	${FC} ${FCFLAGS} ${FCFLAGS_f90} -c -o $@ $<
+
+all: $(cube2sph_obj)
+.PHONY: all
+#$O/%.postprocess.o: src/tomography/postprocess_sensitivity_kernels/%.c setup/*.h
+#	${CC} ${CFLAGS} -c -o $@ $<
+

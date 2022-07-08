@@ -1,0 +1,367 @@
+!=====================================================================
+!
+!               S p e c f e m 3 D  V e r s i o n  3 . 0
+!               ---------------------------------------
+!
+!     Main historical authors: Dimitri Komatitsch and Jeroen Tromp
+!                        Princeton University, USA
+!                and CNRS / University of Marseille, France
+!                 (there are currently many more authors!)
+! (c) Princeton University and CNRS / University of Marseille, July 2012
+!
+! This program is free software; you can redistribute it and/or modify
+! it under the terms of the GNU General Public License as published by
+! the Free Software Foundation; either version 2 of the License, or
+! (at your option) any later version.
+!
+! This program is distributed in the hope that it will be useful,
+! but WITHOUT ANY WARRANTY; without even the implied warranty of
+! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+! GNU General Public License for more details.
+!
+! You should have received a copy of the GNU General Public License along
+! with this program; if not, write to the Free Software Foundation, Inc.,
+! 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+!
+!=====================================================================
+! This program is used to compute L-BFGS direction for isotropic model
+! Author: Kai Wang, wangkaim8@gmail.com
+! University of Toronto, ON, Canada
+! Last modified: Tue Dec 22 10:52:28 EDT 2018
+
+! add_model_iso_cg
+!
+! this program can be used to update ISOTROPIC model files with
+! (smoothed & summed) event kernels.
+! the kernels are given for isotropic parameters (alpha,beta,rho) or ( bulk_c,beta,rho).
+!
+! the algorithm uses a steepest descent method with a step length
+! determined by the given maximum update percentage.
+!
+! input:
+!    - step_fac : step length to update the models, f.e. 0.03 for plusminus 3%
+!
+! setup:
+!
+!- INPUT_MODEL/  contains:
+!       proc000***_vs.bin &
+!       proc000***_vp.bin &
+!       proc000***_rho.bin
+!
+!- INPUT_GRADIENT/ contains:
+!       proc000***_bulk_c_kernel_smooth.bin &
+!       proc000***_bulk_beta_kernel_smooth.bin &
+!       proc000***_rho_kernel_smooth.bin
+!     or
+!       proc000***_alpha_kernel_smooth.bin &
+!       proc000***_beta_kernel_smooth.bin &
+!       proc000***_rho_kernel_smooth.bin
+!
+!- topo/ contains:
+!       proc000***_solver_data.bin
+!
+! new models are stored in
+!- OUTPUT_MODEL/ as
+!   proc000***_vp_new.bin and
+!   proc000***_vs_new.bin and
+!   proc000***_rho_new.bin and
+!
+! USAGE: e.g. ./add_model_iso 0.3
+
+
+program add_model
+
+  use tomography_model_iso
+  use tomography_kernels_iso
+
+  use specfem_par, only: NPROC
+
+  implicit none
+
+  integer :: i,j,k,ispec,ier
+  real(kind=CUSTOM_REAL) :: beta1,beta0,rho1,rho0,alpha1,alpha0
+  real(kind=CUSTOM_REAL) :: dbetaiso,dbulk
+  real(kind=CUSTOM_REAL) :: minmax(4)
+  real(kind=CUSTOM_REAL) :: min_beta,min_rho,max_beta,max_rho,min_bulk,max_bulk
+  real(kind=CUSTOM_REAL) :: max
+
+  ! ============ program starts here =====================
+
+  ! initializes arrays
+  call initialize()
+  ! allocate arrays for storing gradient
+  allocate(model_dbulk(NGLLX,NGLLY,NGLLZ,NSPEC), &
+           model_dbeta(NGLLX,NGLLY,NGLLZ,NSPEC), &
+           model_drho(NGLLX,NGLLY,NGLLZ,NSPEC),stat=ier)
+  if (ier /= 0) stop 'Error allocating model arrays'
+
+  ! reads in parameters needed
+  call read_parameters_tomo()
+  !call read_parameters_lbfgs()
+
+  ! user output
+  if (myrank == 0) then
+    print *
+    print *,'***********'
+    print *,'program add_model_iso_lbfgs: '
+    print *,'  NPROC: ',NPROC
+    print *
+    print *,'model update for vs & vp & rho'
+    print *,'  step_fac = ',step_fac
+    print *
+    if (USE_ALPHA_BETA_RHO) then
+      print *,'kernel parameterization: (alpha,beta,rho)'
+    else
+      print *,'kernel parameterization: (bulk,beta,rho)'
+    endif
+    print *
+    if (USE_RHO_SCALING) then
+      print *,'scaling rho perturbations'
+      print *
+    endif
+    print *,'***********'
+    print *
+  endif
+
+  ! reads in current isotropic model files: vp & vs & rho
+  call read_model_iso()
+  !call read_kernels_iso() ! this one is only used for compute_kernel_integral
+
+  ! calculates gradient
+  ! L-BFGS method
+  !call get_lbfgs_direction_iso()
+  call read_direction_iso()
+
+  ! statistics
+  call min_all_cr(minval(model_dbulk),min_bulk)
+  call max_all_cr(maxval(model_dbulk),max_bulk)
+
+  call min_all_cr(minval(model_dbeta),min_beta)
+  call max_all_cr(maxval(model_dbeta),max_beta)
+
+  call min_all_cr(minval(model_drho),min_rho)
+  call max_all_cr(maxval(model_drho),max_rho)
+
+  if (myrank == 0) then
+    print *,'initial gradient:'
+    print *,'  a min/max   : ',min_bulk,max_bulk
+    print *,'  beta min/max: ',min_beta,max_beta
+    print *,'  rho min/max : ',min_rho,max_rho
+    print *
+  endif
+
+  if (myrank == 0) then
+    ! maximum gradient values
+    minmax(1) = abs(min_beta)
+    minmax(2) = abs(max_beta)
+    minmax(3) = abs(min_bulk)
+    minmax(4) = abs(max_bulk)
+
+    ! maximum value of all kernel maxima
+    max = maxval(minmax)
+  endif
+  if (myrank == 0) then
+    print *,'step length:'
+    print *,'  using kernel maximum: ',max
+
+    ! checks maximum value
+    if (max < 1.e-25) stop 'Error maximum kernel value too small for update'
+
+    ! chooses step length such that it becomes the desired, given step factor as
+    ! inputted
+    step_length = step_fac/max
+
+    print *,'  step length value   : ',step_length
+    print *
+  endif
+  call bcast_all_singlecr(step_length)
+
+  ! multiply model updates by a subjective factor that will change the step
+  model_dbulk(:,:,:,:) = step_length * model_dbulk(:,:,:,:)
+  model_dbeta(:,:,:,:) = step_length * model_dbeta(:,:,:,:)
+  model_drho(:,:,:,:) = step_length * model_drho(:,:,:,:)
+
+  ! computes new model values for alpha, beta and rho
+  ! and stores new model files
+  ! allocate new model arrays
+  allocate(model_vp_new(NGLLX,NGLLY,NGLLZ,NSPEC), &
+           model_vs_new(NGLLX,NGLLY,NGLLZ,NSPEC), &
+           model_rho_new(NGLLX,NGLLY,NGLLZ,NSPEC),stat=ier)
+  if (ier /= 0) stop 'Error allocating model arrays'
+
+  ! initializes arrays
+  model_vp_new = 0.0_CUSTOM_REAL
+  model_vs_new = 0.0_CUSTOM_REAL
+  model_rho_new = 0.0_CUSTOM_REAL
+
+  ! model update:
+  !   isotropic update everywhere
+
+  do ispec = 1, NSPEC
+    do k = 1, NGLLZ
+      do j = 1, NGLLY
+        do i = 1, NGLLX
+
+          ! initial model values
+          beta0 = model_vs(i,j,k,ispec)
+          rho0 = model_rho(i,j,k,ispec)
+          alpha0 = model_vp(i,j,k,ispec)
+
+          beta1 = 0._CUSTOM_REAL
+          rho1 = 0._CUSTOM_REAL
+          alpha1 = 0._CUSTOM_REAL
+
+          ! isotropic model update
+
+          ! shear values
+          dbetaiso = model_dbeta(i,j,k,ispec)
+          beta1 = beta0 * exp( dbetaiso )
+
+          ! density
+          rho1 = rho0 * exp( model_drho(i,j,k,ispec) )
+
+          ! alpha values
+          dbulk = model_dbulk(i,j,k,ispec)
+          if (USE_ALPHA_BETA_RHO) then
+            ! new vp values use alpha model update
+            alpha1 = alpha0 * exp( dbulk )
+          else
+            ! new vp values use bulk model update:
+            ! this is based on vp_new = sqrt( bulk_new**2 + 4/3 vs_new**2)
+            alpha1 = sqrt( alpha0**2 * exp(2.0*dbulk) + FOUR_THIRDS * beta0**2 * ( &
+                              exp(2.0*dbetaiso) - exp(2.0*dbulk) ) )
+          endif
+
+          ! stores new model values
+          model_vp_new(i,j,k,ispec) = alpha1
+          model_vs_new(i,j,k,ispec) = beta1
+          model_rho_new(i,j,k,ispec) = rho1
+
+        enddo
+      enddo
+    enddo
+  enddo
+  call synchronize_all()
+
+  ! stores new model in files
+  call write_new_model_iso()
+
+  ! stores relative model perturbations
+  call write_new_model_perturbations_iso()
+
+  ! computes volume element associated with points, calculates kernel integral for statistics
+  !call compute_kernel_integral_iso()
+  deallocate(model_dbulk, model_dbeta, model_drho)
+  deallocate(model_vp_new, model_vs_new, model_rho_new)
+
+  ! stop all the MPI processes, and exit
+  call finalize_mpi()
+
+end program add_model
+
+!
+!-------------------------------------------------------------------------------------------------
+!
+
+subroutine initialize()
+
+! initializes arrays
+! TL: modify it to accomodate for external mesher
+
+  use tomography_par
+
+  use specfem_par, only: NPROC,ADIOS_ENABLED,LOCAL_PATH
+
+  implicit none
+
+  logical :: BROADCAST_AFTER_READ
+  character(len=MAX_STRING_LEN) :: database_name, prname
+  integer :: ier
+
+  ! initialize the MPI communicator and start the NPROCTOT MPI processes
+  call init_mpi()
+  call world_size(sizeprocs)
+  call world_rank(myrank)
+
+  ! reads the parameter file
+  BROADCAST_AFTER_READ = .true.
+  call read_parameter_file(myrank,BROADCAST_AFTER_READ)
+
+  if (ADIOS_ENABLED) stop 'Flag ADIOS_ENABLED not supported yet for xadd_model, please rerun program...'
+
+  ! check that the code is running with the requested nb of processes
+  if (sizeprocs /= NPROC) then
+    if (myrank == 0) then
+      print *, 'Error number of processors supposed to run on: ',NPROC
+      print *, 'Error number of MPI processors actually run on: ',sizeprocs
+      print *
+      print *, 'please rerun with: mpirun -np ',NPROC,' bin/xadd_model .. '
+    endif
+    call exit_MPI(myrank,'Error wrong number of MPI processes')
+  endif
+  call create_name_database(prname,myrank,LOCAL_PATH)
+  database_name = prname(1:len_trim(prname))//'external_mesh.bin'
+  open(unit=IIN,file=trim(database_name),status='old',action='read',form='unformatted',iostat=ier)
+  if (ier /= 0) then
+    print *,'Error could not open database file: ',trim(database_name)
+    call exit_mpi(myrank,'Error opening database file')
+  endif
+  read(IIN) NSPEC
+  read(IIN) NGLOB
+  close(IIN)
+
+  ! read the value of NSPEC_AB and NGLOB_AB because we need it to define some array sizes below
+  !call read_mesh_for_init()
+
+  ! sets tomography array dimensions
+  !NSPEC = NSPEC_AB
+  !NGLOB = NGLOB_AB
+
+end subroutine initialize
+
+
+subroutine read_direction_iso()
+
+! file output for new model
+
+  use tomography_kernels_iso
+  implicit none
+  character(len=MAX_STRING_LEN) :: m_file, fname
+
+  ! user output
+  if (myrank == 0) print *,'read update direction...'
+
+  ! kernel updates
+  fname = 'dbulk'
+  write(m_file,'(a,i6.6,a)') trim(INPUT_KERNELS_DIR)//'proc', &
+       myrank,trim(REG)//trim(fname)//'.bin'
+  if (myrank == 0) print *,'',trim(INPUT_KERNELS_DIR)//'proc**' &
+       //trim(REG)//trim(fname)//'.bin'
+
+  open(IIN,file=trim(m_file),form='unformatted',action='read')
+  read(IIN) model_dbulk
+  close(IIN)
+
+  fname = 'dbeta'
+  write(m_file,'(a,i6.6,a)') trim(INPUT_KERNELS_DIR)//'proc', &
+       myrank,trim(REG)//trim(fname)//'.bin'
+  if (myrank == 0) print *,'',trim(INPUT_KERNELS_DIR)//'proc**' &
+       //trim(REG)//trim(fname)//'.bin'
+
+  open(IIN,file=trim(m_file),form='unformatted',action='read')
+  read(IIN) model_dbeta
+  close(IIN)
+
+  fname = 'drho'
+  write(m_file,'(a,i6.6,a)') trim(INPUT_KERNELS_DIR)//'proc',&
+       myrank,trim(REG)//trim(fname)//'.bin'
+  if (myrank == 0) print *,'',trim(INPUT_KERNELS_DIR)//'proc**'&
+       //trim(REG)//trim(fname)//'.bin'
+
+  open(IIN,file=trim(m_file),form='unformatted',action='read')
+  read(IIN) model_drho
+  close(IIN)
+
+  if (myrank == 0) print *
+
+end subroutine read_direction_iso

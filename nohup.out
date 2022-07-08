@@ -1,0 +1,178 @@
+## ---------------------------- ##
+## setting up compilation flags ##
+## ---------------------------- ##
+checking build system type... x86_64-unknown-linux-gnu
+checking host system type... x86_64-unknown-linux-gnu
+checking whether the Fortran compiler works... yes
+checking for Fortran compiler default output file name... a.out
+checking for suffix of executables... 
+checking whether we are cross compiling... no
+checking for suffix of object files... o
+checking whether we are using the GNU Fortran compiler... no
+checking whether ifort accepts -g... yes
+configure: running /bin/sh ./flags.guess
+checking how to get verbose linking output from ifort... -v
+checking for Fortran libraries of ifort...  -L/opt/torque-2.5.12/lib -L/opt/intel/18.0.1/compilers_and_libraries/linux//lib/intel64 -L/opt/intel/18.0.1/compilers_and_libraries/linux/mkl/lib/intel64 -L/opt/openmpi/3.0.0-intel-18/lib -L/opt/intel/18.0.1/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64_lin -L/usr/lib/gcc/x86_64-redhat-linux/4.4.7/ -L/usr/lib/gcc/x86_64-redhat-linux/4.4.7/../../../../lib64 -L/usr/lib/gcc/x86_64-redhat-linux/4.4.7/../../../../lib64/ -L/lib/../lib64 -L/lib/../lib64/ -L/usr/lib/../lib64 -L/usr/lib/../lib64/ -L/opt/torque-2.5.12/lib/ -L/opt/intel/18.0.1/compilers_and_libraries/linux//lib/intel64/ -L/opt/intel/18.0.1/compilers_and_libraries/linux/mkl/lib/intel64/ -L/opt/openmpi/3.0.0-intel-18/lib/ -L/usr/lib/gcc/x86_64-redhat-linux/4.4.7/../../../ -L/lib64 -L/lib/ -L/usr/lib64 -L/usr/lib -lifport -lifcoremt -limf -lsvml -lm -lipgo -lirc -lpthread -lirc_s -ldl
+checking for gcc... icc
+checking whether we are using the GNU C compiler... yes
+checking whether icc accepts -g... yes
+checking for icc option to accept ISO C89... none needed
+checking for dummy main to link with Fortran libraries... none
+checking for Fortran name-mangling scheme... lower case, underscore, no extra underscore
+checking for Fortran flag to compile .f90 files... none
+checking for Fortran flag needed to accept free-form source... none
+checking for Fortran flag to compile preprocessed .F files... none
+checking how to define symbols for preprocessed Fortran... -D
+checking for Fortran flag to compile preprocessed .F90 files... none
+checking for gcc... (cached) icc
+checking whether we are using the GNU C compiler... (cached) yes
+checking whether icc accepts -g... (cached) yes
+checking for icc option to accept ISO C89... (cached) none needed
+## ------ ##
+## SCOTCH ##
+## ------ ##
+checking for scotchfarchinit  in -lscotch... no
+checking whether Scotch is usable... no, using bundled scotch instead
+checking for flex... flex
+checking lex output file root... lex.yy
+checking lex library... none needed
+checking whether yytext is a pointer... no
+checking for bison... bison -y
+checking for the pthreads library -lpthreads... no
+checking whether pthreads work without any flags... no
+checking whether pthreads work with -Kthread... no
+checking whether pthreads work with -kthread... no
+checking for the pthreads library -llthread... no
+checking whether pthreads work with -pthread... yes
+checking for joinable pthread attribute... PTHREAD_CREATE_JOINABLE
+checking if more special flags are required for pthreads... no
+pthread found
+SCOTCH is enabled
+## ----------------- ##
+## module extensions ##
+## ----------------- ##
+checking Fortran 90 module extension... mod
+checking Fortran 90 module inclusion flag... -I
+checking Fortran 90 module output flag... -mod 
+checking how to run the C preprocessor... icc -E
+checking for grep that handles long lines and -e... /bin/grep
+checking for egrep... /bin/grep -E
+checking for ANSI C header files... yes
+checking for sys/types.h... yes
+checking for sys/stat.h... yes
+checking for stdlib.h... yes
+checking for string.h... yes
+checking for memory.h... yes
+checking for strings.h... yes
+checking for inttypes.h... yes
+checking for stdint.h... yes
+checking for unistd.h... yes
+checking emmintrin.h usability... yes
+checking emmintrin.h presence... yes
+checking for emmintrin.h... yes
+checking xmmintrin.h usability... yes
+checking xmmintrin.h presence... yes
+checking for xmmintrin.h... yes
+checking err.h usability... yes
+checking err.h presence... yes
+checking for err.h... yes
+checking whether we are using the GNU C++ compiler... yes
+checking whether icpc accepts -g... yes
+checking how to run the C++ preprocessor... icpc -E
+## --- ##
+## MPI ##
+## --- ##
+checking mpi.h usability... yes
+checking mpi.h presence... yes
+checking for mpi.h... yes
+## ------------------- ##
+## FORCE VECTORIZATION ##
+## ------------------- ##
+configure: FORCE_VECTORIZATION is enabled
+## ----------------------------------- ##
+## setting up default simulation setup ##
+## ----------------------------------- ##
+configure: building from git repository
+configure: creating ./config.status
+config.status: creating Makefile
+config.status: creating setup/constants.h
+config.status: creating setup/constants_tomography.h
+config.status: creating setup/precision.h
+config.status: creating setup/config.fh
+config.status: creating ./external_libs/scotch/src/Makefile.inc
+config.status: creating DATA/Par_file
+config.status: creating DATA/CMTSOLUTION
+config.status: creating DATA/STATIONS
+config.status: creating setup/config.h
+config.status: setup/config.h is unchanged
+config.status: executing bin commands
+config.status: executing obj commands
+config.status: executing DATA commands
+config.status: executing OUTPUT_FILES commands
+config.status: executing DATABASES_MPI commands
+
+## --------------- ##
+## Specfem3D 3.0.0 ##
+## --------------- ##
+
+./configure has completed and set up a default configuration to build.
+
+You may wish to modify the following files before running a simulation:
+  DATA/Par_file           Set parameters affecting the simulation.
+  DATA/CMTSOLUTION        Set the source parameters before running the solver.
+  DATA/STATIONS           Set the receiver stations before running the solver.
+
+cleaning all
+rm -f  ./obj/combine_surf_data.aux.o  ./obj/combine_vol_data.aux.o ./obj/combine_vol_data_impl.aux.o  ./obj/combine_vol_data_adios_stubs.aux_noadios.o ./obj/combine_vol_data.aux_vtk.o ./obj/combine_vol_data_impl.aux.o  ./obj/combine_vol_data_adios_stubs.aux_noadios.o ./obj/create_movie_shakemap_AVS_DX_GMT.aux.o  ./obj/convolve_source_timefunction.aux.o  ./obj/detect_duplicates_stations_file.aux.o   ./obj/combine_vol_data.aux.o ./obj/combine_vol_data_impl.aux.o  ./obj/combine_vol_data_adios_stubs.aux_noadios.o ./obj/combine_vol_data_mod.mod ./obj/combine_vtk_par.mod  ./obj/combine_vol_data_adios_mod.mod ./bin/xcombine_surf_data ./bin/xcombine_vol_data ./bin/xcombine_vol_data_vtk ./bin/xconvolve_source_timefunction ./bin/xdetect_duplicates_stations_file ./bin/xcreate_movie_shakemap_AVS_DX_GMT   ./obj/check_mesh_quality.check.o ./obj/convert_skewness_to_angle.check.o   ./bin/xcheck_mesh_quality ./bin/xconvert_skewness_to_angle   ./obj/assemble_MPI_scalar_cuda.cuda.o ./obj/assemble_MPI_vector_cuda.cuda.o ./obj/check_fields_cuda.cuda.o ./obj/compute_add_sources_acoustic_cuda.cuda.o ./obj/compute_add_sources_viscoelastic_cuda.cuda.o ./obj/compute_coupling_cuda.cuda.o ./obj/compute_forces_acoustic_cuda.cuda.o ./obj/compute_forces_viscoelastic_cuda.cuda.o ./obj/compute_kernels_cuda.cuda.o ./obj/compute_stacey_acoustic_cuda.cuda.o ./obj/compute_stacey_viscoelastic_cuda.cuda.o ./obj/initialize_cuda.cuda.o ./obj/noise_tomography_cuda.cuda.o ./obj/prepare_mesh_constants_cuda.cuda.o ./obj/save_and_compare_cpu_vs_gpu.cudacc.o ./obj/transfer_fields_cuda.cuda.o ./obj/update_displacement_cuda.cuda.o ./obj/write_seismograms_cuda.cuda.o ./obj/fault_solver_dynamics.cuda.o   ./obj/assemble_MPI_scalar_cuda.cuda.o ./obj/assemble_MPI_vector_cuda.cuda.o ./obj/check_fields_cuda.cuda.o ./obj/compute_add_sources_acoustic_cuda.cuda.o ./obj/compute_add_sources_viscoelastic_cuda.cuda.o ./obj/compute_coupling_cuda.cuda.o ./obj/compute_forces_acoustic_cuda.cuda.o ./obj/compute_forces_viscoelastic_cuda.cuda.o ./obj/compute_kernels_cuda.cuda.o ./obj/compute_stacey_acoustic_cuda.cuda.o ./obj/compute_stacey_viscoelastic_cuda.cuda.o ./obj/initialize_cuda.cuda.o ./obj/noise_tomography_cuda.cuda.o ./obj/prepare_mesh_constants_cuda.cuda.o ./obj/save_and_compare_cpu_vs_gpu.cudacc.o ./obj/transfer_fields_cuda.cuda.o ./obj/update_displacement_cuda.cuda.o ./obj/write_seismograms_cuda.cuda.o ./obj/fault_solver_dynamics.cuda.o    ./obj/part_decompose_mesh.dec.o ./obj/fault_scotch.dec.o ./obj/decompose_mesh.dec.o ./obj/program_decompose_mesh.dec.o   ./obj/fault_scotch.dec.o ./obj/module_qsort.dec.o ./obj/module_database.dec.o ./obj/module_mesh.dec.o ./obj/module_partition.dec.o ./obj/program_decompose_mesh_mpi.mpidec.o   ./obj/decompose_mesh.mod ./obj/fault_scotch.mod ./obj/part_decompose_mesh.mod ./obj/module_qsort.mod ./obj/module_database.mod ./obj/module_mesh.mod ./obj/module_partition.mod  ./bin/xscotch ./bin/xdecompose_mesh  ./bin/xdecompose_mesh_mpi   ./obj/generate_databases_par.gen_mod.o ./obj/calc_jacobian.gen.o ./obj/fault_generate_databases.gen.o ./obj/create_mass_matrices.gen.o ./obj/create_regions_mesh.gen.o ./obj/finalize_databases.gen.o ./obj/generate_databases.gen.o ./obj/get_absorbing_boundary.gen.o ./obj/get_coupling_surfaces.gen.o ./obj/get_model.gen.o ./obj/get_MPI.gen.o ./obj/get_perm_color.gen.o ./obj/model_1d_cascadia.gen.o ./obj/model_1d_prem.gen.o ./obj/model_1d_socal.gen.o ./obj/model_aniso.gen.o ./obj/model_coupled.gen.o ./obj/model_default.gen.o ./obj/model_external_values.gen.o ./obj/model_ipati.gen.o ./obj/parse_sep.genc.o ./obj/model_gll.gen.o ./obj/model_salton_trough.gen.o ./obj/model_tomography.gen.o ./obj/pml_set_local_dampingcoeff.gen.o ./obj/pml_set_local_dampingcoeff_ade.gen.o ./obj/save_adepml_solver_files.gen.o ./obj/read_parameters.gen.o ./obj/read_partition_files.gen.o ./obj/save_arrays_solver.gen.o ./obj/setup_color_perm.gen.o ./obj/setup_mesh.gen.o ./obj/memory_eval.gen.o  ./obj/model_sep.mpi_gen.o ./obj/generate_databases_adios_stubs.gen_noadios.o ./obj/create_regions_mesh_ext_par.mod ./obj/external_model.mod ./obj/fault_generate_databases.mod ./obj/generate_databases_par.mod ./obj/model_coupled_par.mod ./obj/model_ipati_adios_mod.mod ./obj/model_sep_mod.mod ./obj/model_tomography_par.mod ./obj/salton_trough_par.mod  ./bin/xgenerate_databases   ./obj/calc_gll_points.mesh.o ./obj/check_mesh_quality.mesh.o ./obj/chunk_earth_mesh_mod.mesh.o ./obj/compute_parameters.mesh.o ./obj/create_meshfem_mesh.mesh.o ./obj/create_CPML_regions.mesh.o ./obj/create_interfaces_mesh.mesh.o ./obj/create_visual_files.mesh.o ./obj/define_subregions.mesh.o ./obj/define_subregions_heuristic.mesh.o ./obj/define_superbrick.mesh.o ./obj/determine_cavity.mesh.o ./obj/earth_chunk.mesh.o ./obj/get_flags_boundaries.mesh.o ./obj/get_MPI_cutplanes_eta.mesh.o ./obj/get_MPI_cutplanes_xi.mesh.o ./obj/meshfem3D.mesh.o ./obj/meshfem3D_par.mesh.o ./obj/read_mesh_parameter_file.mesh.o ./obj/read_value_mesh_parameters.mesh.o ./obj/save_databases.mesh.o ./obj/store_boundaries.mesh.o ./obj/store_coords.mesh.o  ./obj/meshfem3D_adios_stubs.mesh_noadios.o ./obj/constants_meshfem3d.mod ./obj/meshfem3d_par.mod ./obj/chunk_earth_mod.mod ./obj/create_meshfem_par.mod  ./bin/xmeshfem3D   ./obj/shared_par.shared_module.o ./obj/assemble_MPI_scalar.shared.o ./obj/check_mesh_resolution.shared.o ./obj/create_name_database.shared.o ./obj/define_derivation_matrices.shared.o ./obj/detect_surface.shared.o ./obj/exit_mpi.shared.o ./obj/force_ftz.cc.o ./obj/get_attenuation_model.shared.o ./obj/get_element_face.shared.o ./obj/get_global.shared.o ./obj/get_jacobian_boundaries.shared.o ./obj/get_shape2D.shared.o ./obj/get_shape3D.shared.o ./obj/gll_library.shared.o ./obj/hex_nodes.shared.o ./obj/heap_sort.shared.o ./obj/lagrange_poly.shared.o ./obj/merge_sort.shared.o ./obj/netlib_specfun_erf.shared.o ./obj/param_reader.cc.o ./obj/prepare_assemble_MPI.shared.o ./obj/read_parameter_file.shared.o ./obj/read_topo_bathy_file.shared.o ./obj/read_value_parameters.shared.o ./obj/recompute_jacobian.shared.o ./obj/safe_alloc_mod.shared.o ./obj/save_header_file.shared.o ./obj/search_kdtree.shared.o ./obj/sort_array_coordinates.shared.o ./obj/utm_geo.shared.o ./obj/write_c_binary.cc.o ./obj/write_VTK_data.shared.o  ./obj/parallel.sharedmpi.o ./obj/adios_manager_stubs.shared_noadios.o  ./obj/asdf_method_stubs.cc.o ./obj/asdf_manager_stubs.shared_asdf.o  ./obj/constants.mod ./obj/kdtree_search.mod ./obj/safe_alloc_mod.mod ./obj/shared_input_parameters.mod ./obj/shared_compute_parameters.mod ./obj/shared_parameters.mod ./obj/attenuation_model.mod  ./obj/my_mpi.mod ./obj/adios_manager_mod.mod  ./obj/shared_par.shared_module.o ./obj/assemble_MPI_scalar.shared.o ./obj/check_mesh_resolution.shared.o ./obj/create_name_database.shared.o ./obj/define_derivation_matrices.shared.o ./obj/detect_surface.shared.o ./obj/exit_mpi.shared.o ./obj/force_ftz.cc.o ./obj/get_attenuation_model.shared.o ./obj/get_element_face.shared.o ./obj/get_global.shared.o ./obj/get_jacobian_boundaries.shared.o ./obj/get_shape2D.shared.o ./obj/get_shape3D.shared.o ./obj/gll_library.shared.o ./obj/hex_nodes.shared.o ./obj/heap_sort.shared.o ./obj/lagrange_poly.shared.o ./obj/merge_sort.shared.o ./obj/netlib_specfun_erf.shared.o ./obj/param_reader.cc.o ./obj/prepare_assemble_MPI.shared.o ./obj/read_parameter_file.shared.o ./obj/read_topo_bathy_file.shared.o ./obj/read_value_parameters.shared.o ./obj/recompute_jacobian.shared.o ./obj/safe_alloc_mod.shared.o ./obj/save_header_file.shared.o ./obj/search_kdtree.shared.o ./obj/sort_array_coordinates.shared.o ./obj/utm_geo.shared.o ./obj/write_c_binary.cc.o ./obj/write_VTK_data.shared.o  ./obj/parallel.sharedmpi.o ./obj/adios_manager_stubs.shared_noadios.o  ./obj/asdf_method_stubs.cc.o ./obj/asdf_manager_stubs.shared_asdf.o    ./obj/specfem3D_par.spec_module.o ./obj/asdf_data.spec_module.o ./obj/adepml_utils.spec.o ./obj/assemble_MPI_vector.spec.o ./obj/check_stability.spec.o ./obj/comp_source_time_function.spec.o ./obj/compute_add_sources_acoustic.spec.o ./obj/compute_add_sources_viscoelastic.spec.o ./obj/compute_add_sources_poroelastic.spec.o ./obj/compute_adj_source_frechet.spec.o ./obj/compute_arrays_source.spec.o ./obj/compute_boundary_kernel.spec.o ./obj/compute_coupling_acoustic_el.spec.o ./obj/compute_coupling_acoustic_po.spec.o ./obj/compute_coupling_viscoelastic_ac.spec.o ./obj/compute_coupling_viscoelastic_po.spec.o ./obj/compute_coupling_poroelastic_ac.spec.o ./obj/compute_coupling_poroelastic_el.spec.o ./obj/compute_forces_acoustic_calling_routine.spec.o ./obj/compute_forces_acoustic_NGLL5_fast.spec.o ./obj/compute_forces_acoustic_NGLLnot5_generic_slow.spec.o ./obj/compute_forces_viscoelastic_calling_routine.spec.o ./obj/compute_forces_viscoelastic_adepml.spec.o ./obj/compute_element_att_memory.spec.o ./obj/compute_forces_poro_fluid_part.spec.o ./obj/compute_forces_poroelastic_calling_routine.spec.o ./obj/compute_forces_poro_solid_part.spec.o ./obj/compute_gradient_in_acoustic.spec.o ./obj/compute_interpolated_dva.spec.o ./obj/compute_kernels.spec.o ./obj/compute_seismograms.spec.o ./obj/compute_stacey_acoustic.spec.o ./obj/compute_stacey_viscoelastic.spec.o ./obj/compute_stacey_poroelastic.spec.o ./obj/compute_energy.spec.o ./obj/convert_time.spec.o ./obj/couple_with_injection.spec.o ./obj/calendar.spec.o ./obj/create_color_image.spec.o ./obj/detect_mesh_surfaces.spec.o ./obj/fault_solver_common.spec.o ./obj/fault_solver_dynamic.spec.o ./obj/fault_solver_kinematic.spec.o ./obj/finalize_simulation.spec.o ./obj/get_cmt.spec.o ./obj/get_elevation.spec.o ./obj/get_force.spec.o ./obj/gravity_perturbation.spec.o ./obj/initialize_simulation.spec.o ./obj/iterate_time.spec.o ./obj/locate_MPI_slice.spec.o ./obj/locate_point.spec.o ./obj/locate_receivers.spec.o ./obj/locate_source.spec.o ./obj/make_gravity.spec.o ./obj/noise_tomography.spec.o ./obj/pml_allocate_arrays.spec.o ./obj/pml_output_VTKs.spec.o ./obj/pml_compute_accel_contribution.spec.o ./obj/pml_compute_memory_variables.spec.o ./obj/pml_par.spec.o ./obj/prepare_attenuation.spec.o ./obj/prepare_gpu.spec.o ./obj/prepare_gravity.spec.o ./obj/prepare_noise.spec.o ./obj/prepare_timerun.spec.o ./obj/prepare_wavefields.spec.o ./obj/print_stf_file.spec.o ./obj/read_adepml_files.spec.o ./obj/read_external_stf.spec.o ./obj/read_mesh_databases.spec.o ./obj/save_adjoint_kernels.spec.o ./obj/setup_GLL_points.spec.o ./obj/setup_movie_meshes.spec.o ./obj/setup_sources_receivers.spec.o ./obj/specfem3D.spec.o ./obj/station_filter.spec.o ./obj/surface_or_volume_integral.spec.o ./obj/update_displacement_scheme.spec.o ./obj/update_displacement_LDDRK.spec.o ./obj/write_movie_output.spec.o ./obj/write_output_ASCII_or_binary.spec.o ./obj/write_output_SU.spec.o ./obj/write_seismograms.spec.o  ./obj/specfem3D_gpu_cuda_method_stubs.cudacc.o  ./obj/specfem3D_adios_stubs.spec_noadios.o  ./obj/asdf_data.mod ./obj/asdf_manager_mod.mod ./obj/fault_solver_common.mod ./obj/fault_solver_dynamic.mod ./obj/fault_solver_kinematic.mod ./obj/gravity_perturbation.mod ./obj/image_pnm_par.mod ./obj/pml_par.mod ./obj/specfem_par.mod ./obj/specfem_par_acoustic.mod ./obj/specfem_par_elastic.mod ./obj/specfem_par_poroelastic.mod ./obj/specfem_par_movie.mod ./obj/specfem_par_coupling.mod ./obj/user_noise_distribution.mod  ./bin/xspecfem3D   ./obj/postprocess_par.postprocess_module.o ./obj/parse_kernel_names.postprocess.o ./obj/clip_sem.postprocess.o  ./obj/postprocess_par.postprocess_module.o ./obj/parse_kernel_names.postprocess.o ./obj/combine_sem.postprocess.o  ./obj/postprocess_par.postprocess_module.o ./obj/parse_kernel_names.postprocess.o ./obj/smooth_sem.postprocess.o  ./obj/smooth_sem_cuda_stubs.postprocess.o   ./obj/postprocess_par.mod  ./bin/xclip_sem ./bin/xcombine_sem ./bin/xsmooth_sem   ./obj/add_model_iso.tomo.o ./obj/tomography_par.tomo_module.o ./obj/compute_kernel_integral.tomo.o ./obj/get_cg_direction.tomo.o ./obj/get_sd_direction.tomo.o ./obj/read_kernels.tomo.o ./obj/read_kernels_cg.tomo.o ./obj/read_model.tomo.o ./obj/read_parameters_tomo.tomo.o ./obj/write_gradient.tomo.o ./obj/write_new_model.tomo.o ./obj/write_new_model_perturbations.tomo.o   ./obj/tomography_par.tomo_module.o ./obj/get_sd_direction.tomo.o ./obj/model_update.tomo.o ./obj/read_kernels.tomo.o ./obj/read_parameters_tomo.tomo.o ./obj/save_external_bin_m_up.tomo.o ./obj/write_gradient.tomo.o ./obj/write_new_model.tomo.o ./obj/write_new_model_perturbations.tomo.o  ./obj/specfem3D_gpu_cuda_method_stubs.cudacc.o ./obj/specfem3D_adios_stubs.spec_noadios.o ./obj/tomography_par.tomo_module.o ./obj/sum_kernels.tomo.o  ./obj/tomography_par.tomo_module.o ./obj/sum_preconditioned_kernels.tomo.o   ./obj/tomography_par.mod ./obj/tomography_kernels_iso.mod ./obj/tomography_kernels_tiso.mod ./obj/tomography_kernels_tiso_cg.mod ./obj/tomography_model_tiso.mod ./obj/tomography_model_iso.mod  ./bin/xadd_model_iso ./bin/xmodel_update ./bin/xsum_kernels ./bin/xsum_preconditioned_kernels 
+rm -f ./bin/*__genmod.*
+rm -f ./obj/*__genmod.*
+cleaning bundled Scotch in directory: ./external_libs/scotch/src
+make -C ./external_libs/scotch/src realclean
+make[1]: Entering directory `/home.default/tliu/specfem3d_pml/external_libs/scotch/src'
+(cd libscotch ;      make realclean)
+make[2]: Entering directory `/home.default/tliu/specfem3d_pml/external_libs/scotch/src/libscotch'
+rm -f *~ *.o lib*.a parser_yy.c parser_ly.h parser_ll.c *scotch.h *scotchf.h y.output dummysizes
+make[2]: Leaving directory `/home.default/tliu/specfem3d_pml/external_libs/scotch/src/libscotch'
+(cd scotch ;         make realclean)
+make[2]: Entering directory `/home.default/tliu/specfem3d_pml/external_libs/scotch/src/scotch'
+rm -f *~ *.o acpl amk_ccc amk_fft2 amk_grf amk_hy amk_m2 amk_p2 atst gbase gcv *ggath *gmap gmk_hy gmk_m2 gmk_m3 gmk_msh gmk_ub2 gmtst *gord gotst gout *gpart *gscat *gtst mcv mmk_m2 mmk_m3 mord mtst
+make[2]: Leaving directory `/home.default/tliu/specfem3d_pml/external_libs/scotch/src/scotch'
+rm -f ../bin/* ../include/* ../lib/*
+make[1]: Leaving directory `/home.default/tliu/specfem3d_pml/external_libs/scotch/src'
+rm -rf ./bin/* ./obj/*
+ar: creating libscotch.a
+ar: creating libscotcherr.a
+ar: creating libscotcherrexit.a
+./setup/constants.h(247): remark #7712: This variable has not been used.   [USE_ADE_PML]
+  logical :: USE_ADE_PML = .true.
+-------------^
+./setup/constants.h(248): remark #7712: This variable has not been used.   [CALC_ADEPML_DAMPING]
+  logical :: CALC_ADEPML_DAMPING = .false.
+-------------^
+./setup/constants.h(247): remark #7712: This variable has not been used.   [USE_ADE_PML]
+  logical :: USE_ADE_PML = .true.
+-------------^
+./setup/constants.h(248): remark #7712: This variable has not been used.   [CALC_ADEPML_DAMPING]
+  logical :: CALC_ADEPML_DAMPING = .false.
+-------------^
+src/generate_databases/pml_set_local_dampingcoeff_ade.f90(23): remark #7712: This variable has not been used.   [IGLOB_CPML]
+  integer :: i,j,k,ispec,iglob,iglob_CPML,iglobc,ispec_CPML,ier,iface,igll
+-------------------------------^
+src/generate_databases/pml_set_local_dampingcoeff_ade.f90(23): remark #7712: This variable has not been used.   [IFACE]
+  integer :: i,j,k,ispec,iglob,iglob_CPML,iglobc,ispec_CPML,ier,iface,igll
+----------------------------------------------------------------^
+src/generate_databases/pml_set_local_dampingcoeff_ade.f90(23): remark #7712: This variable has not been used.   [IGLL]
+  integer :: i,j,k,ispec,iglob,iglob_CPML,iglobc,ispec_CPML,ier,iface,igll
+----------------------------------------------------------------------^
+src/specfem3D/check_stability.f90(94): warning #7416: Fortran 2003 does not allow this intrinsic procedure.   [ISNAN]
+        if (isnan(displ(1,igll)).or.isnan(displ(2,igll)).or.&
+------------^
+src/specfem3D/check_stability.f90(94): warning #7416: Fortran 2003 does not allow this intrinsic procedure.   [ISNAN]
+        if (isnan(displ(1,igll)).or.isnan(displ(2,igll)).or.&
+------------------------------------^
+src/specfem3D/check_stability.f90(95): warning #7416: Fortran 2003 does not allow this intrinsic procedure.   [ISNAN]
+                isnan(displ(3,igll))) then
+----------------^
+src/specfem3D/compute_forces_viscoelastic_adepml.f90(50): remark #7712: This variable has not been used.   [MYRANK]
+                        ATTENUATION,deltat, myrank,&
+--------------------------------------------^

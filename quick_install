@@ -1,0 +1,16 @@
+#!/usr/bin/bash
+#module load intel/intel-18 openmpi/3.0.0-intel-18
+module purge
+module load torque maui
+module load intel/intel-18 openmpi/3.0.0-intel-18
+./configure FC=ifort CC=icc MPIFC=mpif90 --with-mpi -enable-vectorization
+#./configure FC=gfortran CC=gcc MPIFC=mpif90 --with-mpi
+make realclean
+make all > compile_log
+#make bin/xcreate_slice_loc -f Makefile_slice
+#make bin/xcreate_slice -f Makefile_slice
+#make bin/xcreate_slice_loc -f Makefile_slice
+#make bin/xcreate_slice -f Makefile_slice
+#make bin/xcalc_kernel_abs -f Makefile_divhess
+#make bin/xcalc_kernel_div_hess -f Makefile_divhess
+#make bin/xsmooth_sem_sph -f Makefile_sph

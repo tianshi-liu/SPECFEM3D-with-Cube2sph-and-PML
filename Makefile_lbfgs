@@ -1,0 +1,55 @@
+FC=ifort
+MPIFC=mpif90
+SETUP=./setup
+FCFLAGS=-g   -xHost -fpe0 -ftz -assume buffered_io -assume byterecl -align sequence -std03 -diag-disable 6477 -implicitnone -gen-interfaces -warn all -O3 -check nobounds -DFORCE_VECTORIZATION
+FCFLAGS_f90 = -module ./obj -I./obj -I.  -I${SETUP}
+O=./obj
+E=./bin
+lbfgs_SHARED_OBJECTS = \
+	$O/specfem3D_par.spec_module.o \
+	$O/pml_par.spec_module.o \
+	$O/read_mesh_databases.spec.o \
+	$O/shared_par.shared_module.o \
+	$O/create_name_database.shared.o \
+	$O/exit_mpi.shared.o \
+	$O/gll_library.shared.o \
+	$O/param_reader.cc.o \
+	$O/read_parameter_file.shared.o \
+	$O/read_value_parameters.shared.o \
+	$O/shared_par.shared_module.o \
+	$O/check_mesh_resolution.shared.o \
+	$O/parallel.sharedmpi.o \
+	$O/write_VTK_data.shared.o \
+	$O/check_mesh_resolution.shared.o
+xadd_model_existing_direction_OBJECTS = \
+	$O/add_model_iso_from_existing_direction.tomo.o \
+	$O/tomography_par.tomo_module.o \
+	$O/compute_kernel_integral.tomo.o \
+	$O/read_kernels.tomo.o \
+	$O/read_model.tomo.o \
+	$O/read_parameters_tomo.tomo.o \
+	$O/read_parameters_lbfgs.tomo.o \
+	$O/write_gradient.tomo.o \
+	$O/write_new_model.tomo.o \
+	$O/write_new_model_perturbations.tomo.o
+xwrite_lbfgs_direction_OBJECTS = \
+	$O/write_lbfgs_direction_iso.tomo.o \
+	$O/tomography_par.tomo_module.o \
+	$O/compute_kernel_integral.tomo.o \
+	$O/read_kernels.tomo.o \
+	$O/read_model.tomo.o \
+	$O/read_parameters_tomo.tomo.o \
+	$O/read_parameters_lbfgs.tomo.o \
+	$O/get_lbfgs_direction.tomo.o \
+	$O/write_gradient.tomo.o
+$E/xadd_model_iso_from_existing_direction: $O/add_model_iso_from_existing_direction.tomo.o $(xadd_model_existing_direction_OBJECTS) $(lbfgs_SHARED_OBJECTS)
+	${MPIFC} ${FCFLAGS} -o $@ $^
+
+$E/xwrite_lbfgs_direction_iso: $O/write_lbfgs_direction_iso.tomo.o $(xwrite_lbfgs_direction_OBJECTS) $(lbfgs_SHARED_OBJECTS)
+	${MPIFC} ${FCFLAGS} -o $@ $^
+
+
+
+$O/%.tomo.o: src/tomography/%.f90 setup/*.h
+	${FC} ${FCFLAGS} ${FCFLAGS_f90} -c -o $@ $<
+

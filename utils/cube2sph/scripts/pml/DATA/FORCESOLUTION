@@ -1,0 +1,11 @@
+FORCE   1
+time shift:      0.0000
+f0:    0.1
+latorUTM:       -1419734.7991
+longorUTM:       -3775162.4885
+depth:        4931748.4005
+factor force source:       1.0E+015
+component dir vect source E:     -0.592554150
+component dir vect source N:     -0.222843321
+component dir vect source Z_UP:      0.774093298
+DATA/butterworth_stf20.dat

@@ -1,0 +1,157 @@
+FC=ifort
+CC=icc
+MPIFC=mpif90
+SETUP=./setup
+#CFLAGS=-I${SETUP}  -DFORCE_VECTORIZATION -DWITH_MPI -g -O2 -DFORCE_VECTORIZATION -DWITH_MPI -I/scinet/niagara/software/2018a/opt/intel-2018.2/openmpi/3.1.0/include
+FCFLAGS=-g   -xHost -fpe0 -ftz -assume buffered_io -assume byterecl -align sequence -std03 -diag-disable 6477 -implicitnone -gen-interfaces -warn all -O3 -check nobounds -DFORCE_VECTORIZATION
+FCFLAGS_f90 = -module ./obj -I./obj -I.  -I${SETUP}
+O=./obj
+E=./bin
+
+smooth_sem_SHARED_OBJECTS = \
+	$O/shared_par.shared_module.o \
+	$O/assemble_MPI_scalar.shared.o \
+	$O/check_mesh_resolution.shared.o \
+	$O/create_name_database.shared.o \
+	$O/define_derivation_matrices.shared.o \
+	$O/detect_surface.shared.o \
+	$O/exit_mpi.shared.o \
+	$O/force_ftz.cc.o \
+	$O/get_attenuation_model.shared.o \
+	$O/get_element_face.shared.o \
+	$O/get_jacobian_boundaries.shared.o \
+	$O/get_shape3D.shared.o \
+	$O/gll_library.shared.o \
+	$O/heap_sort.shared.o \
+	$O/hex_nodes.shared.o \
+	$O/lagrange_poly.shared.o \
+	$O/netlib_specfun_erf.shared.o \
+	$O/param_reader.cc.o \
+	$O/prepare_assemble_MPI.shared.o \
+	$O/read_topo_bathy_file.shared.o \
+	$O/read_parameter_file.shared.o \
+	$O/read_value_parameters.shared.o \
+	$O/recompute_jacobian.shared.o \
+	$O/save_header_file.shared.o \
+	$O/search_kdtree.shared.o \
+	$O/sort_array_coordinates.shared.o \
+	$O/utm_geo.shared.o \
+	$O/write_VTK_data.shared.o \
+	$O/write_c_binary.cc.o \
+	$O/parallel.sharedmpi.o
+
+smooth_sem_obj= \
+	$O/postprocess_par.postprocess_module.o \
+	$O/parse_kernel_names.postprocess.o \
+	$O/smooth_sem_cuda_stubs.postprocess.o \
+	$O/specfem3D_par.spec_module.o \
+	$O/pml_par.spec_module.o \
+	$O/read_adepml_files.spec.o \
+	$O/read_mesh_databases.spec.o
+
+select_control_group_obj = \
+	$O/postprocess_par.postprocess_module.o \
+	$O/parse_kernel_names.postprocess.o \
+	$O/specfem3D_par.spec_module.o \
+	$O/pml_par.spec_module.o \
+	$O/read_adepml_files.spec.o \
+	$O/read_mesh_databases.spec.o
+
+write_lbfgs_direction_obj = \
+	$O/postprocess_par.postprocess_module.o \
+	$O/parse_kernel_names.postprocess.o \
+	$O/specfem3D_par.spec_module.o \
+	$O/pml_par.spec_module.o \
+	$O/read_adepml_files.spec.o \
+	$O/read_mesh_databases.spec.o
+
+get_max_absolute_value_obj = \
+	$O/postprocess_par.postprocess_module.o \
+	$O/parse_kernel_names.postprocess.o \
+	$O/specfem3D_par.spec_module.o \
+	$O/pml_par.spec_module.o \
+	$O/read_adepml_files.spec.o \
+	$O/read_mesh_databases.spec.o
+
+div_kernel_by_nmeas_obj = \
+	$O/postprocess_par.postprocess_module.o \
+	$O/parse_kernel_names.postprocess.o \
+	$O/specfem3D_par.spec_module.o \
+	$O/pml_par.spec_module.o \
+	$O/read_adepml_files.spec.o \
+	$O/read_mesh_databases.spec.o 
+
+update_model_by_perturbation_obj = \
+	$O/postprocess_par.postprocess_module.o \
+	$O/parse_kernel_names.postprocess.o \
+	$O/specfem3D_par.spec_module.o \
+	$O/pml_par.spec_module.o \
+	$O/read_adepml_files.spec.o \
+	$O/read_mesh_databases.spec.o
+
+scale_rho_with_vs_obj = \
+	$O/postprocess_par.postprocess_module.o \
+	$O/parse_kernel_names.postprocess.o \
+	$O/specfem3D_par.spec_module.o \
+	$O/pml_par.spec_module.o \
+	$O/read_adepml_files.spec.o \
+	$O/read_mesh_databases.spec.o
+
+get_isotropic_vbulk_obj = \
+	$O/postprocess_par.postprocess_module.o \
+	$O/parse_kernel_names.postprocess.o \
+	$O/specfem3D_par.spec_module.o \
+	$O/pml_par.spec_module.o \
+	$O/read_adepml_files.spec.o \
+	$O/read_mesh_databases.spec.o
+
+write_zero_array_obj = \
+	$O/postprocess_par.postprocess_module.o \
+	$O/parse_kernel_names.postprocess.o \
+	$O/specfem3D_par.spec_module.o \
+	$O/pml_par.spec_module.o \
+	$O/read_adepml_files.spec.o \
+	$O/read_mesh_databases.spec.o
+
+all: $E/xsmooth_sem_sph_pde $E/xselect_control_group $E/xwrite_lbfgs_direction $E/xdiv_kernel_by_nmeas $E/xupdate_model_by_perturbation $E/xscale_rho_with_vs $E/xget_isotropic_vbulk $E/xwrite_zero_array
+
+
+$E/xsmooth_sem_sph: $O/smooth_sem_sph_multi.postprocess.o $(smooth_sem_obj) $(smooth_sem_SHARED_OBJECTS)
+	${MPIFC} ${FCFLAGS} -o $@ $^
+$E/xsmooth_sem_sph_pde: $O/smooth_sem_sph_pde.postprocess.o $(smooth_sem_obj) $(smooth_sem_SHARED_OBJECTS)
+	${MPIFC} ${FCFLAGS} -o $@ $^
+$E/xselect_control_group: $O/select_control_group.postprocess.o $(select_control_group_obj) $(smooth_sem_SHARED_OBJECTS)
+	${MPIFC} ${FCFLAGS} -o $@ $^
+
+$E/xwrite_lbfgs_direction: $O/write_lbfgs_direction.postprocess.o $(write_lbfgs_direction_obj) $(smooth_sem_SHARED_OBJECTS)
+	${MPIFC} ${FCFLAGS} -o $@ $^
+
+$E/xwrite_lbfgs_direction_smooth: $O/write_lbfgs_direction_smooth.postprocess.o $(write_lbfgs_direction_obj) $(smooth_sem_SHARED_OBJECTS)
+	${MPIFC} ${FCFLAGS} -o $@ $^
+
+$E/xget_max_absolute_value: $O/get_max_absolute_value.postprocess.o $(get_max_absolute_value_obj) $(smooth_sem_SHARED_OBJECTS)
+	${MPIFC} ${FCFLAGS} -o $@ $^
+
+$E/xdiv_kernel_by_nmeas: $O/div_kernel_by_nmeas.postprocess.o $(div_kernel_by_nmeas_obj) $(smooth_sem_SHARED_OBJECTS)
+	${MPIFC} ${FCFLAGS} -o $@ $^
+
+$E/xupdate_model_by_perturbation: $O/update_model_by_perturbation.postprocess.o $(update_model_by_perturbation_obj) $(smooth_sem_SHARED_OBJECTS)
+	${MPIFC} ${FCFLAGS} -o $@ $^
+
+$E/xscale_rho_with_vs: $O/scale_rho_with_vs.postprocess.o $(scale_rho_with_vs_obj) $(smooth_sem_SHARED_OBJECTS)
+	${MPIFC} ${FCFLAGS} -o $@ $^
+
+$E/xget_isotropic_vbulk: $O/get_isotropic_vbulk.postprocess.o $(get_isotropic_vbulk_obj) $(smooth_sem_SHARED_OBJECTS)
+	${MPIFC} ${FCFLAGS} -o $@ $^
+
+$E/xwrite_zero_array: $O/write_zero_array.postprocess.o $(write_zero_array_obj) $(smooth_sem_SHARED_OBJECTS)
+	${MPIFC} ${FCFLAGS} -o $@ $^
+
+$O/%.postprocess.o: src/tomography/postprocess_sensitivity_kernels/%.F90 setup/*.h
+	${FC} ${FCFLAGS} ${FCFLAGS_f90} -c -o $@ $<
+$O/%.postprocess.o: src/tomography/postprocess_sensitivity_kernels/%.f90 setup/*.h
+	${FC} ${FCFLAGS} ${FCFLAGS_f90} -c -o $@ $<
+#$O/%.postprocess.o: src/tomography/postprocess_sensitivity_kernels/%.c setup/*.h
+#	${CC} ${CFLAGS} -c -o $@ $<
+
+.PHONY: all

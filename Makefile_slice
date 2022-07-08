@@ -1,0 +1,54 @@
+FC=ifort
+CC=icc
+MPIFC=mpif90
+SETUP=./setup
+CFLAGS=-I${SETUP}  -DFORCE_VECTORIZATION -DWITH_MPI -g -O2 -DFORCE_VECTORIZATION -DWITH_MPI -I/scinet/niagara/software/2018a/opt/intel-2018.2/openmpi/3.1.0/include
+FCFLAGS=-g   -xHost -fpe0 -ftz -assume buffered_io -assume byterecl -align sequence -std03 -diag-disable 6477 -implicitnone -gen-interfaces -warn all -O3 -check nobounds -DFORCE_VECTORIZATION
+FCFLAGS_f90 = -module ./obj -I./obj -I.  -I${SETUP}
+O=./obj
+E=./bin
+create_slice_loc_obj= \
+	$O/assemble_MPI_scalar.shared.o \
+	$O/check_mesh_resolution.shared.o \
+	$O/create_name_database.shared.o \
+	$O/define_derivation_matrices.shared.o \
+	$O/detect_surface.shared.o \
+	$O/exit_mpi.shared.o \
+	$O/force_ftz.cc.o \
+	$O/get_attenuation_model.shared.o \
+	$O/get_element_face.shared.o \
+	$O/get_jacobian_boundaries.shared.o \
+	$O/get_shape3D.shared.o \
+	$O/gll_library.shared.o \
+	$O/hex_nodes.shared.o \
+	$O/lagrange_poly.shared.o \
+	$O/netlib_specfun_erf.shared.o \
+	$O/prepare_assemble_MPI.shared.o \
+	$O/read_topo_bathy_file.shared.o \
+	$O/recompute_jacobian.shared.o \
+	$O/save_header_file.shared.o \
+	$O/sort_array_coordinates.shared.o \
+	$O/utm_geo.shared.o \
+	$O/write_VTK_data.shared.o \
+	$O/parallel_for_inverse_problem.invmpi.o \
+	$O/specfem3D_par.spec_module.o \
+	$O/inverse_problem_par.inv_par.o \
+	$O/projection_on_FD_grid_mod.inv_projection.o
+create_slice_obj= \
+	$O/specfem3D_par.spec_module.o \
+	$O/gll_library.shared.o \
+	$O/lagrange_poly.shared.o \
+        $O/get_shape3D.shared.o \
+        $O/hex_nodes.shared.o \
+        $O/exit_mpi.shared.o
+xcombine_vol_data_SHARED_OBJECTS = \
+	$O/shared_par.shared_module.o \
+	$O/read_parameter_file.shared.o \
+	$O/read_value_parameters.shared.o \
+	$O/param_reader.cc.o \
+	$O/write_c_binary.cc.o \
+	$O/parallel.sharedmpi.o
+$E/xcreate_slice_loc: src/auxiliaries/create_slice_loc.f90 $(create_slice_loc_obj) $(xcombine_vol_data_SHARED_OBJECTS)
+	${MPIFC} ${FCFLAGS} ${FCFLAGS_f90} -o $@ $^
+$E/xcreate_slice: src/auxiliaries/create_slice.f90 $(create_slice_obj) $(xcombine_vol_data_SHARED_OBJECTS)
+	${MPIFC} ${FCFLAGS} ${FCFLAGS_f90} -o $@ $^
