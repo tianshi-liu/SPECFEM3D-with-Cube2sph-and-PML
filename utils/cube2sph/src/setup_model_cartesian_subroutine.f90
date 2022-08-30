@@ -81,7 +81,8 @@ subroutine setup_gll_model_cartesian(xstore,ystore,zstore,rho_new,&
   if (ier/=0) then
     stop 'error allocating array for new structural parameters'
   endif
-  call update_parameters_ref(xstore,ystore,zstore,rho_read,vp_read,vs_read, &
+  call update_structural_parameters(xstore,ystore,zstore,&
+                         rho_read,vp_read,vs_read, &
                          rho_new, vp_new, vs_new, &
                          NGLLX, NGLLY, NGLLZ, nspec)
 
@@ -96,8 +97,8 @@ subroutine setup_gll_model_cartesian(xstore,ystore,zstore,rho_new,&
   !deallocate(rho_read,vp_read,vs_read)
 end subroutine setup_gll_model_cartesian
 
-subroutine update_parameters_ref(x, y, z, rho_old, vp_old, vs_old, rho_new, &
-                     vp_new, vs_new, nx, ny, nz, nspec)
+subroutine update_structural_parameters(x, y, z, rho_old, vp_old, vs_old, &
+                     rho_new, vp_new, vs_new, nx, ny, nz, nspec)
   use constants
   use meshfem3D_par, only: &
     iregion_code, idoubling, &
@@ -141,6 +142,8 @@ subroutine update_parameters_ref(x, y, z, rho_old, vp_old, vs_old, rho_new, &
 
   double precision shape3D(NGNOD,nx,ny,nz),dershape3D(NDIM,NGNOD,nx,ny,nz)
   double precision :: vs_min
+  character(len=256) :: dummy_string, model_string, emc_path
+  logical :: use_emc_model = .false.
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !set parameters
@@ -151,21 +154,84 @@ subroutine update_parameters_ref(x, y, z, rho_old, vp_old, vs_old, rho_new, &
   jmid = 3
   kmid = 3
   LOCAL_PATH = 'DATABASES_MPI'
-  ELLIPTICITY = .false.
-  TOPOGRAPHY = .false.
-  CASE_3D = .false.
-  CRUSTAL = .false.
-  ISOTROPIC_3D_MANTLE = .false.
-  ONE_CRUST = .true.
+
+  open(unit=95, file='Cube2sph_model_par', action='read', form='formatted')
+  call find_parameter_value('ELLIPTICITY', dummy_string, 95)
+  read(dummy_string, *) ELLIPTICITY
+  call find_parameter_value('TOPOGRAPHY', dummy_string, 95)
+  read(dummy_string, *) TOPOGRAPHY
+  call find_parameter_value('CASE_3D', dummy_string, 95)
+  read(dummy_string, *) CASE_3D
+  call find_parameter_value('CRUSTAL', dummy_string, 95)
+  read(dummy_string, *) CRUSTAL
+  call find_parameter_value('ISOTROPIC_3D_MANTLE', dummy_string, 95)
+  read(dummy_string, *) ISOTROPIC_3D_MANTLE
+  call find_parameter_value('ONE_CRUST', dummy_string, 95)
+  read(dummy_string, *) ONE_CRUST
+  call find_parameter_value('TRANSVERSE_ISOTROPY', dummy_string, 95)
+  read(dummy_string, *) TRANSVERSE_ISOTROPY
+  call find_parameter_value('MODEL', dummy_string, 95)
+  model_string = trim(dummy_string)
+
+  !ELLIPTICITY = .false.
+  !TOPOGRAPHY = .false.
+  !CASE_3D = .false.
+  !CRUSTAL = .false.
+  !ISOTROPIC_3D_MANTLE = .false.
+  !ONE_CRUST = .true.
   !REFERENCE_1D_MODEL = GLL_REFERENCE_1D_MODEL
   !THREE_D_MODEL = THREE_D_MODEL_GLL
-  TRANSVERSE_ISOTROPY = .false.
+  !TRANSVERSE_ISOTROPY = .false.
   !CRUSTAL = .true.
   !!!!!!! change mantle models here
   !REFERENCE_1D_MODEL = REFERENCE_MODEL_1DREF
   !THREE_D_MODEL = THREE_D_MODEL_S362ANI
-  REFERENCE_1D_MODEL = REFERENCE_MODEL_PREM
-  THREE_D_MODEL = THREE_D_MODEL_S40RTS
+  !REFERENCE_1D_MODEL = REFERENCE_MODEL_PREM
+  !THREE_D_MODEL = THREE_D_MODEL_S40RTS
+  
+  select case (trim(model_string))
+    case ('PREM')
+      CASE_3D = .false.
+      ISOTROPIC_3D_MANTLE = .false.
+      REFERENCE_1D_MODEL = REFERENCE_MODEL_PREM
+    case ('IASP91')
+      CASE_3D = .false.
+      ISOTROPIC_3D_MANTLE = .false.
+      REFERENCE_1D_MODEL = REFERENCE_MODEL_IASP91
+    case ('1DREF')
+      CASE_3D = .false.
+      ISOTROPIC_3D_MANTLE = .false.
+      REFERENCE_1D_MODEL = REFERENCE_MODEL_1DREF
+    case ('S40RTS')
+      CASE_3D = .true.
+      ISOTROPIC_3D_MANTLE = .true.
+      REFERENCE_1D_MODEL = REFERENCE_MODEL_PREM
+      THREE_D_MODEL = THREE_D_MODEL_S40RTS
+    case default
+      if (index(trim(model_string), 'EMC:') /= 1) stop 'incorrect model'
+      CASE_3D = .true.
+      ISOTROPIC_3D_MANTLE = .true.
+      REFERENCE_1D_MODEL = REFERENCE_MODEL_PREM
+      THREE_D_MODEL = THREE_D_MODEL_S40RTS
+      use_emc_model = .true.
+      emc_path = model_string(5:len_trim(model_string))
+  end select
+  close(95)
+  if (myrank==0) then
+    print *, 'implementing Cube2sph structrual model'
+    print *, 'ELLIPTICITY = ', ELLIPTICITY
+    print *, 'TOPOGRAPHY = ', TOPOGRAPHY
+    print *, 'CASE_3D = ', CASE_3D
+    print *, 'CRUSTAL = ', CRUSTAL
+    print *, 'ISOTROPIC_3D_MANTLE = ', ISOTROPIC_3D_MANTLE
+    print *, 'ONE_CRUST = ', ONE_CRUST
+    print *, 'TRANSVERSE_ISOTROPY = ', TRANSVERSE_ISOTROPY
+    print *, 'MODEL = ', trim(model_string)
+    if (use_emc_model) then
+      print *, 'use IRIS EMC model at ', emc_path
+    endif
+  endif
+
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! default: PREM
   ROCEAN = 6368000.d0
@@ -261,7 +327,7 @@ subroutine update_parameters_ref(x, y, z, rho_old, vp_old, vs_old, rho_new, &
   ! get the 3-D shape functions
   call get_shape3D(shape3D,dershape3D,xigll,yigll,zigll)
   ! loops over all GLL points for this spectral element
-  print *, shape(xelm), shape(x)
+  !print *, shape(xelm), shape(x)
   do ispec = 1,nspec
     elem_in_crust = .false.
     elem_in_mantle = .false.
@@ -481,10 +547,21 @@ subroutine update_parameters_ref(x, y, z, rho_old, vp_old, vs_old, rho_new, &
       enddo
     enddo
   enddo
+  if (use_emc_model) then
+    rho_old(:,:,:,:) = rho_new(:,:,:,:)
+    vs_old(:,:,:,:) = vs_new(:,:,:,:)
+    vp_old(:,:,:,:) = vp_new(:,:,:,:)
+    !!!!!!!!!!!!!!
+    call update_parameters_from_netcdf(emc_path, &
+                                     xstore, ystore, zstore, &
+                                     rho_old, vp_old, vs_old, &
+                                     rho_new, vp_new, vs_new, &
+                                     NGLLX, NGLLY, NGLLZ, nspec)
+  endif
   if (CRUSTAL .and. CASE_3D) call meshfem3D_crust_deallocate()
   deallocate(idoubling, ispec_is_tiso)
 
 
-end subroutine update_parameters_ref
+end subroutine update_structural_parameters
 
 

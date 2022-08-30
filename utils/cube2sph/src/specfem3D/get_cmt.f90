@@ -26,7 +26,7 @@
 !=====================================================================
 
   subroutine get_cmt(yr,jda,mo,da,ho,mi,sec,tshift_src,hdur,lat,long,depth,moment_tensor, &
-                     DT,NSOURCES,min_tshift_src_original)
+                     DT,NSOURCES,min_tshift_src_original,CMTSOLUTION_FILE)
 
   use constants, only: IIN,IMAIN,EXTERNAL_SOURCE_TIME_FUNCTION, &
     RHOAV,R_EARTH,PI,GRAV,TINYVAL,MAX_STRING_LEN,mygroup
@@ -44,7 +44,7 @@
   double precision, intent(out) :: sec,min_tshift_src_original
   double precision, dimension(NSOURCES), intent(out) :: tshift_src,hdur,lat,long,depth
   double precision, dimension(6,NSOURCES), intent(out) :: moment_tensor
-
+  character(len=MAX_STRING_LEN)  :: CMTSOLUTION_FILE
   ! local variables below
   integer :: julian_day,isource
   integer :: i,itype,istart,iend,ier, ios
@@ -52,7 +52,7 @@
   double precision :: t_shift(NSOURCES)
   !character(len=5) :: datasource
   character(len=256) :: string
-  character(len=MAX_STRING_LEN) :: CMTSOLUTION_FILE, path_to_add
+  character(len=MAX_STRING_LEN) :: path_to_add
 
   ! initializes
   lat(:) = 0.d0
@@ -66,7 +66,7 @@
 !
 !---- read hypocenter info
 !
-  CMTSOLUTION_FILE = 'DATA/CMTSOLUTION'
+  !CMTSOLUTION_FILE = 'DATA/CMTSOLUTION'
 
   if (NUMBER_OF_SIMULTANEOUS_RUNS > 1 .and. mygroup >= 0) then
     write(path_to_add,"('run',i4.4,'/')") mygroup + 1

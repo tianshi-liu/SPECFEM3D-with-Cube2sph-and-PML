@@ -5,6 +5,10 @@ MPIFC=mpif90
 FCFLAGS=-g -traceback -module ./obj -I./obj -I. -I./include
 CFLAGS=-g -traceback -I./include
 
+NCDFCFLAGS=-I/usr/local/include
+NCDFLDFLAGS=-L/usr/local/lib
+NCDFLDLIBS=-lnetcdff
+
 FC_MODEXT=mod
 FC_MODDIR=./obj
 
@@ -57,6 +61,20 @@ node_stretching_obj= \
         $O/get_ellipticity.check.o \
         $O/add_topography.check.o
 
+write_force_solution_file_obj = \
+	$O/get_force.solver.o \
+	$O/get_cmt.solver.o \
+	$O/specfem3D_par.solverstatic_module.o
+
+
+write_cmt_solution_file_obj = \
+	$O/get_force.solver.o \
+	$O/get_cmt.solver.o \
+	$O/specfem3D_par.solverstatic_module.o
+
+write_stations_file_obj = \
+	$O/specfem3D_par.solverstatic_module.o
+
 shared_obj= \
 	$O/calendar.shared.o \
 	$O/shared_par.shared_module.o \
@@ -105,29 +123,38 @@ cube2sph_adepml_obj=\
         $O/calc_adepml_physical_jacobian.o\
         $O/create_mass_matrices_pml_elastic_loc.o\
 	$O/calc_r_trans.o\
+	$O/update_parameters_from_netcdf.o \
+	$O/netcdf_model_wrapper.o \
+	$O/find_parameter_value.o \
 	$O/setup_model_cartesian_subroutine.o \
-	$O/node_stretching_subroutine.o
+	$O/node_stretching_subroutine.o 
 
 cube2sph_station_obj = \
 	$O/cube2sph_trans.o
 
 
 ## rules
-all: $E/setup_adepml $E/cube2sph_adepml $E/cube2sph_force $E/cube2sph_station $E/write_horizontal_slice_vtk $E/write_vertical_slice_vtk $E/cube2sph_nopml
+all: $E/setup_adepml $E/cube2sph_adepml $E/cube2sph_station_inv $E/cube2sph_boundary_gmt $E/cube2sph_force $E/cube2sph_station $E/write_horizontal_slice_vtk $E/write_vertical_slice_vtk $E/cube2sph_nopml $E/write_force_solution_file $E/write_cmt_solution_file $E/write_stations_file
 
 $E/setup_adepml: ./src/setup_adepml.f90 $(shared_obj) $(adios_shared_STUBS) $(generate_databases_obj) $(setup_adepml_obj)
 	${MPIFC} ${FCFLAGS} -o $@ $^
 
 $E/cube2sph_adepml: ./src/cube2sph_adepml.f90 $(setup_model_obj) $(node_stretching_obj) $(shared_obj) $(adios_shared_STUBS) $(generate_databases_obj) $(cube2sph_adepml_obj)
-	${MPIFC} ${FCFLAGS} -o $@ $^
+	${MPIFC} ${FCFLAGS} ${NCDFLDFLAGS} -o $@ $^ ${NCDFLDLIBS}
 
 $E/cube2sph_nopml: ./src/cube2sph_nopml.f90 $(setup_model_obj) $(node_stretching_obj) $(shared_obj) $(adios_shared_STUBS) $(generate_databases_obj) $(cube2sph_adepml_obj)
-	${MPIFC} ${FCFLAGS} -o $@ $^
+	${MPIFC} ${FCFLAGS} ${NCDFLDFLAGS} -o $@ $^ ${NCDFLDLIBS}
 
 $E/cube2sph_force: ./src/cube2sph_force.f90 $(cube2sph_station_obj) $(shared_obj)
 	${MPIFC} ${FCFLAGS} -o $@ $^
 
 $E/cube2sph_station: ./src/cube2sph_station.f90 $(cube2sph_station_obj) $(shared_obj)
+	${MPIFC} ${FCFLAGS} -o $@ $^
+
+$E/cube2sph_boundary_gmt: ./src/cube2sph_boundary_gmt.f90 $(cube2sph_station_obj) $(shared_obj)
+	${MPIFC} ${FCFLAGS} -o $@ $^
+
+$E/cube2sph_station_inv: ./src/cube2sph_station_inv.f90 $(cube2sph_station_obj) $(shared_obj)
 	${MPIFC} ${FCFLAGS} -o $@ $^
 
 $O/%.check_module.o: ./src/meshfem3D/%.f90 $O/shared_par.shared_module.o
@@ -190,7 +217,33 @@ $O/setup_model_cartesian_subroutine.o: ./src/setup_model_cartesian_subroutine.f9
 $O/node_stretching_subroutine.o: ./src/node_stretching_subroutine.f90
 	${FC} ${FCFLAGS} -c -o $@ $<
 
-$E/write_horizontal_slice_vtk: ./src/write_horizontal_slice_vtk.f90 $O/cube2sph_trans.o $(shared_obj)
+$O/find_parameter_value.o: ./src/find_parameter_value.f90
+	${FC} ${FCFLAGS} -c -o $@ $<
+
+$O/update_parameters_from_netcdf.o: ./src/update_parameters_from_netcdf.f90
+	${FC} ${NCDFCFLAGS} -c -o $@ $<
+$O/netcdf_model_wrapper.o: ./src/netcdf_model_wrapper.f90
+	${FC} ${NCDFCFLAGS} -c -o $@ $<
+
+$O/%.solver.o: ./src/specfem3D/%.f90 $O/shared_par.shared_module.o
+	${FC} ${FCFLAGS} -c -o $@ $<
+$O/%.solver.o: ./src/specfem3D/%.F90 $O/shared_par.shared_module.o
+	${FC} ${FCFLAGS} -c -o $@ $<
+$O/%.solverstatic_module.o: ./src/specfem3D/%.f90 ./OUTPUT_FILES/values_from_mesher.h $O/shared_par.shared_module.o
+	${FC} ${FCFLAGS} -c -o $@ $<
+
+$O/%.solverstatic_module.o: ./src/specfem3D/%.F90 ./OUTPUT_FILES/values_from_mesher.h $O/shared_par.shared_module.o
+	${FC} ${FCFLAGS} -c -o $@ $<
+$E/write_force_solution_file: ./src/write_force_solution_file.f90 $(write_force_solution_file_obj) $(shared_obj)
+	${MPIFC} ${FCFLAGS} -o $@ $^
+
+$E/write_cmt_solution_file: ./src/write_cmt_solution_file.f90 $(write_cmt_solution_file_obj) $(shared_obj)
+	${MPIFC} ${FCFLAGS} -o $@ $^
+
+$E/write_stations_file: ./src/write_stations_file.f90 $(write_stations_file_obj) $(shared_obj)
+	${MPIFC} ${FCFLAGS} -o $@ $^
+
+$E/write_horizontal_slice_vtk: ./src/write_horizontal_slice_vtk.f90 $O/cube2sph_trans.o $(write_stations_file_obj) $(shared_obj)
 	${MPIFC} ${FCFLAGS} -o $@ $^
 $E/write_vertical_slice_vtk: ./src/write_vertical_slice_vtk.f90 $O/cube2sph_trans.o $(shared_obj)
 	${MPIFC} ${FCFLAGS} -o $@ $^

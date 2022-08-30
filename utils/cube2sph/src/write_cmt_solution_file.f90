@@ -1,10 +1,11 @@
-program write_force_solution_file
-  !! writing FORCESOLUTIONS file in Cartesian coordinate
+program write_cmt_file
+  !! writing CMT_SOLUTIONS file in Cartesian coordinate
   !! Tianshi Liu, 2022.2.21
-  !! Usage: write_force_solution_file OLD_FILE NEW_FILE TOPOGRAPHY ELLIPTICITY
-  !! E.g., write_force_solution_file DATA/FORCESOLUTIONS_geo DATA/FORCESOLUTIONS .true. .true.
-  !! takes the DATA/FORCESOLUTIONS_geo in geographic coordinates, writes
-  !! DATA/FORCESOLUTIONS in Cartesian coordinate, with the Etopo topography and the ellipticity
+  !! Usage: write_cmt_solution_file OLD_FILE NEW_FILE TOPOGRAPHY ELLIPTICITY
+  !! E.g., write_cmt_solution_file DATA/CMTSOLUTIONS_geo DATA/CMTSOLUTIONS .true. .true.
+  !! takes the DATA/CMTSOLUTIONS_geo in geographic coordinates, writes
+  !! DATA/CMTSOLUTIONS in Cartesian coordinate, with the Etopo topography and
+  !the ellipticity
   use mpi
   use constants_solver
   use specfem_par, only: &
@@ -14,9 +15,8 @@ program write_force_solution_file
       rspl,espl,espl2,nspl,ibathy_topo, &
       LOCAL_TMP_PATH,SIMULATION_TYPE,TOPOGRAPHY, &
       nu_source, &
-      USE_FORCE_POINT_SOURCE,force_stf,factor_force_source, &
-      comp_dir_vect_source_E,comp_dir_vect_source_N,comp_dir_vect_source_Z_UP
-  use shared_parameters, only: NUMBER_OF_SIMULTANEOUS_RUNS
+      USE_FORCE_POINT_SOURCE
+  use shared_parameters, only: NUMBER_OF_SIMULTANEOUS_RUNS, NOISE_TOMOGRAPHY
   implicit none
   integer, parameter :: NSOURCES = 1
   logical :: ELLIPTICITY
@@ -31,20 +31,25 @@ program write_force_solution_file
   integer :: iorientation, isource
   integer :: ier
   double precision :: stazi,stdip,thetan,phin,n(3)
-  character(len=MAX_STRING_LEN) :: cart_force_fn, sph_force_fn, arg_str
-  double precision :: scaleF, fx, fy, fz
+  character(len=MAX_STRING_LEN) :: cart_cmt_fn, sph_cmt_fn, arg_str
+  double precision :: scaleM
   double precision :: min_tshift_src_original
   double precision :: radius
+  integer :: yr, jda, mo, da, ho, mi
+  double precision :: sec
+  double precision, dimension(6,NSOURCES) :: moment_tensor
+  double precision :: Mrr,Mtt,Mpp,Mrt,Mrp,Mtp
   call MPI_Init(ier)
   call MPI_Comm_rank(MPI_COMM_WORLD, myrank, ier)
-  USE_FORCE_POINT_SOURCE = .true.
+  USE_FORCE_POINT_SOURCE = .false.
+  NOISE_TOMOGRAPHY = .false.
   !NSOURCES = 1
   ONE_CRUST = .true.
   DT = 0.0
   NUMBER_OF_SIMULTANEOUS_RUNS = 1
   isource = 1
-  call get_command_argument(1, sph_force_fn)
-  call get_command_argument(2, cart_force_fn)
+  call get_command_argument(1, sph_cmt_fn)
+  call get_command_argument(2, cart_cmt_fn)
   call get_command_argument(3, arg_str)
   read(arg_str, *) TOPOGRAPHY
   call get_command_argument(4, arg_str)
@@ -56,19 +61,21 @@ program write_force_solution_file
            theta_source(NSOURCES), &
            phi_source(NSOURCES), &
            nu_source(NDIM,NDIM,NSOURCES), &
-           force_stf(NSOURCES),factor_force_source(NSOURCES), &
-           comp_dir_vect_source_E(NSOURCES), &
-           comp_dir_vect_source_N(NSOURCES), &
-           comp_dir_vect_source_Z_UP(NSOURCES),stat=ier)
+           Mxx(NSOURCES), &
+           Myy(NSOURCES), &
+           Mzz(NSOURCES), &
+           Mxy(NSOURCES), &
+           Mxz(NSOURCES), &
+           Myz(NSOURCES), stat=ier)
   allocate(ibathy_topo(NX_BATHY,NY_BATHY),stat=ier)
   call make_ellipticity(nspl,rspl,espl,espl2,ONE_CRUST)
   ibathy_topo(:,:) = 0
   call read_topo_bathy_file(ibathy_topo)
-  call get_force(tshift_src,hdur,lat,long,depth,DT,NSOURCES, &
-                 min_tshift_src_original,force_stf,factor_force_source, &
-                 comp_dir_vect_source_E,comp_dir_vect_source_N, &
-                 comp_dir_vect_source_Z_UP,sph_force_fn)
-
+  call get_cmt(yr,jda,mo,da,ho,mi,sec,tshift_src,hdur,lat,long,depth,&
+               moment_tensor,DT,NSOURCES,min_tshift_src_original,sph_cmt_fn)
+  ! dimensionalize
+  scaleM = 1.d7 * RHOAV * (R_EARTH**5) * PI*GRAV*RHOAV
+  moment_tensor(:,:) = moment_tensor(:,:) * scaleM
   call lat_2_geocentric_colat_dble(lat(isource),theta)
 
   phi = long(isource)*DEGREES_TO_RADIANS
@@ -77,6 +84,25 @@ program write_force_solution_file
   ct=dcos(theta)
   sp=dsin(phi)
   cp=dcos(phi)
+  ! get the moment tensor
+  Mrr = moment_tensor(1,isource)
+  Mtt = moment_tensor(2,isource)
+  Mpp = moment_tensor(3,isource)
+  Mrt = moment_tensor(4,isource)
+  Mrp = moment_tensor(5,isource)
+  Mtp = moment_tensor(6,isource)
+
+  Mxx(isource)=st*st*cp*cp*Mrr+ct*ct*cp*cp*Mtt+sp*sp*Mpp &
+          +2.0d0*st*ct*cp*cp*Mrt-2.0d0*st*sp*cp*Mrp-2.0d0*ct*sp*cp*Mtp
+  Myy(isource)=st*st*sp*sp*Mrr+ct*ct*sp*sp*Mtt+cp*cp*Mpp &
+          +2.0d0*st*ct*sp*sp*Mrt+2.0d0*st*sp*cp*Mrp+2.0d0*ct*sp*cp*Mtp
+  Mzz(isource)=ct*ct*Mrr+st*st*Mtt-2.0d0*st*ct*Mrt
+  Mxy(isource)=st*st*sp*cp*Mrr+ct*ct*sp*cp*Mtt-sp*cp*Mpp &
+          +2.0d0*st*ct*sp*cp*Mrt+st*(cp*cp-sp*sp)*Mrp+ct*(cp*cp-sp*sp)*Mtp
+  Mxz(isource)=st*ct*cp*Mrr-st*ct*cp*Mtt &
+          +(ct*ct-st*st)*cp*Mrt-ct*sp*Mrp+st*sp*Mtp
+  Myz(isource)=st*ct*sp*Mrr-st*ct*sp*Mtt &
+          +(ct*ct-st*st)*sp*Mrt+ct*cp*Mrp-st*cp*Mtp
   ! record three components for each station
   do iorientation = 1,3
 
@@ -143,35 +169,36 @@ program write_force_solution_file
   z_target_source = r_target_source*dcos(theta)
 
   ! rotate force vector
-  fx = comp_dir_vect_source_N(isource) * nu_source(1,1,isource) + &
-       comp_dir_vect_source_E(isource) * nu_source(2,1,isource) + &
-       comp_dir_vect_source_Z_UP(isource) * nu_source(3,1,isource)
-  fy = comp_dir_vect_source_N(isource) * nu_source(1,2,isource) + &
-       comp_dir_vect_source_E(isource) * nu_source(2,2,isource) + &
-       comp_dir_vect_source_Z_UP(isource) * nu_source(3,2,isource)
-  fz = comp_dir_vect_source_N(isource) * nu_source(1,3,isource) + &
-       comp_dir_vect_source_E(isource) * nu_source(2,3,isource) + &
-       comp_dir_vect_source_Z_UP(isource) * nu_source(3,3,isource)
+  !fx = comp_dir_vect_source_N(isource) * nu_source(1,1,isource) + &
+  !     comp_dir_vect_source_E(isource) * nu_source(2,1,isource) + &
+  !     comp_dir_vect_source_Z_UP(isource) * nu_source(3,1,isource)
+  !fy = comp_dir_vect_source_N(isource) * nu_source(1,2,isource) + &
+  !     comp_dir_vect_source_E(isource) * nu_source(2,2,isource) + &
+  !     comp_dir_vect_source_Z_UP(isource) * nu_source(3,2,isource)
+  !fz = comp_dir_vect_source_N(isource) * nu_source(1,3,isource) + &
+  !     comp_dir_vect_source_E(isource) * nu_source(2,3,isource) + &
+  !     comp_dir_vect_source_Z_UP(isource) * nu_source(3,3,isource)
 
-  ! dimensionalize force
-  scaleF = RHOAV * (R_EARTH**4) * PI*GRAV*RHOAV
-  factor_force_source(:) = factor_force_source(:) * scaleF
   
   ! write to specfem cartesian FORCESOLUTION format
-  !cart_force_fn = 'DATA/FORCESOLUTION_cartesian'
-  open(unit=IOUT,file=trim(cart_force_fn), &
+  !cart_cmt_fn = 'DATA/CMTSOLUTION_cartesian'
+  open(unit=IOUT,file=trim(cart_cmt_fn), &
           status='unknown', form='formatted', action='write', iostat=ier)
-  write(IOUT, "(a5,i4)") 'FORCE', 1
-  write(IOUT, "(a11,f12.4)") 'time shift:', tshift_src(isource)
-  write(IOUT, "(a3,f7.1)") 'f0:', hdur(isource)
-  write(IOUT, "(a9,f25.9)") 'latorUTM:', y_target_source * R_EARTH
-  write(IOUT, "(a10,f25.9)") 'longorUTM:', x_target_source * R_EARTH
-  write(IOUT, "(a6,f25.9)") 'depth:', z_target_source * R_EARTH
-  write(IOUT, "(a20,es15.1e3)") 'factor force source:', &
-                                      factor_force_source(isource)
-  write(IOUT, "(a28,f23.15)") 'component dir vect source E:', fx
-  write(IOUT, "(a28,f23.15)") 'component dir vect source N:', fy
-  write(IOUT, "(a31,f23.15)") 'component dir vect source Z_UP:', fz
+  write(IOUT, "(a3,i5,i3,i3,i3,i3,f6.2,f9.4,f10.4,f6.1)") 'PDE', &
+              yr,mo,da,ho,mi,sec,lat(isource),long(isource),depth(isource)
+  !write(IOUT, *)
+  write(IOUT, "(a11,a12)") "event name:","     000000A"
+  write(IOUT, "(a11,f12.4)") "time shift:", tshift_src(isource)
+  write(IOUT, "(a14,f9.4)") "half duration:", hdur(isource)
+  write(IOUT, "(a9,f14.4)") "latorUTM:", y_target_source*R_EARTH
+  write(IOUT, "(a10,f13.4)") "longorUTM:", x_target_source*R_EARTH
+  write(IOUT, "(a6,f17.4)") "depth:", z_target_source*R_EARTH
+  write(IOUT, "(a4, es19.6E3)") "Mrr:", Mzz(isource)
+  write(IOUT, "(a4, es19.6E3)") "Mtt:", Myy(isource)
+  write(IOUT, "(a4, es19.6E3)") "Mpp:", Mxx(isource)
+  write(IOUT, "(a4, es19.6E3)") "Mrt:", -Myz(isource)
+  write(IOUT, "(a4, es19.6E3)") "Mrp:", Mxz(isource)
+  write(IOUT, "(a4, es19.6E3)") "Mtp:", -Mxy(isource)
   close(IOUT)
 
   deallocate(tshift_src, &
@@ -179,10 +206,7 @@ program write_force_solution_file
              theta_source, &
              phi_source, &
              nu_source, &
-             force_stf,factor_force_source, &
-             comp_dir_vect_source_E, &
-             comp_dir_vect_source_N, &
-             comp_dir_vect_source_Z_UP)
+             Mxx, Myy, Mzz, Mxy, Mxz, Myz)
   deallocate(ibathy_topo)
   call MPI_Finalize(ier)
-end program write_force_solution_file
+end program write_cmt_file

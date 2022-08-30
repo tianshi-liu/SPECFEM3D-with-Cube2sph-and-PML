@@ -1,15 +1,23 @@
 program cube2sph_force
+  !! ./cube2sph_force infn outfn center_lat center_lon rotation_azi
   character(len=300) :: string, infn, outfn, dummy
   integer :: dummyval, IFILE
   double precision :: t_shift, hdur, factor_force_source,&
        comp_dir_vect_source_E,comp_dir_vect_source_N,comp_dir_vect_source_Z_UP
   double precision, dimension(3,1) :: nodes_coords, nodes_coords_new, &
           nu, nu_new
-  double precision :: r_earth=6371000.0,center_lat=62.5,&
-          center_lon=-151.0,rotation_azi=20.0,rs
+  double precision :: r_earth=6371000.0,center_lat,center_lon,rotation_azi,rs
   double precision :: r, lat, lon
+  call get_command_argument(1, infn)
+  call get_command_argument(2, outfn)
+  call get_command_argument(3, string)
+  read(string, *) center_lat
+  call get_command_argument(4, string)
+  read(string, *) center_lon
+  call get_command_argument(5, string)
+  read(string, *) rotation_azi
   IFILE = 20
-  infn = 'DATA/FORCESOLUTION_cart'
+  !infn = 'DATA/FORCESOLUTION_cart'
   open(unit=IFILE,file=trim(infn),status='old',action='read',iostat=ier)
   read(IFILE,"(a)") string
   ! skips empty lines
@@ -85,7 +93,7 @@ program cube2sph_force
   !comp_dir_vect_source_Z_UP = nu_new(3,1)
 
 
-  outfn = 'DATA/FORCESOLUTION_sph'
+  !outfn = 'DATA/FORCESOLUTION_sph'
   open(unit=IFILE,file=trim(outfn), &
           status='unknown', form='formatted', action='write', iostat=ier)
   write(IFILE, "(a5,i4)") 'FORCE', 1

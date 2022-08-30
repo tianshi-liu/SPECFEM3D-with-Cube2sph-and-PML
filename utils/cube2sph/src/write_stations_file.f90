@@ -1,4 +1,12 @@
 program write_stations_file
+  !! writing STATIONS file in Cartesian coordinate
+  !! Tianshi Liu, 2022.2.21
+  !! Usage: write_stations_file OLD_FILE NEW_FILE ROTATION_NU_FILE TOPOGRAPHY ELLIPTICITY
+  !! E.g., write_stations_file DATA/STATIONS_geo DATA/STATIONS DATA/rotation_nu .true. .true.
+  !! takes the DATA/STATIONS_geo in geographic coordinates, writes
+  !! DATA/STATIONS in Cartesian coordinate,  and
+  !! DATA/rotation_nu the rotation matrix file
+  !! with the Etopo topography and the ellipticity
   use mpi
   use constants_solver, only: &
     !ELLIPTICITY_VAL, &
@@ -31,14 +39,19 @@ program write_stations_file
   double precision :: theta,phi
   double precision :: x_target_rec,y_target_rec,z_target_rec
   character(len=256) :: string
-  character(len=MAX_STRING_LEN) :: dummystring
+  character(len=MAX_STRING_LEN) :: dummystring, arg_str
   double precision :: lat,lon,r
   call MPI_Init(ier)
   call MPI_Comm_rank(MPI_COMM_WORLD, myrank, ier)
-  STATIONS_FILE = 'DATA/STATIONS'
+  call get_command_argument(1, STATIONS_FILE)
+  !STATIONS_FILE = 'DATA/STATIONS'
   ONE_CRUST = .true.
-  TOPOGRAPHY = .true.
-  ELLIPTICITY = .true.
+  call get_command_argument(4, arg_str)
+  read(arg_str, *) TOPOGRAPHY
+  call get_command_argument(5, arg_str)
+  read(arg_str, *) ELLIPTICITY
+  !TOPOGRAPHY = .true.
+  !ELLIPTICITY = .true.
   open(unit=IIN,file=trim(STATIONS_FILE),status='old',action='read',iostat=ier)
   if (ier /= 0) call exit_MPI(myrank,'Stations file '//trim(STATIONS_FILE)//' could not be found, please check your setup')
   ! counts records
@@ -108,7 +121,8 @@ program write_stations_file
   enddo
   ! close receiver file
   close(IIN)
-  STATIONS_FILE = 'DATA/STATIONS_cartesian'
+  call get_command_argument(2, STATIONS_FILE)
+  !STATIONS_FILE = 'DATA/STATIONS_cartesian'
   open(unit=IOUT,file=trim(STATIONS_FILE), &
           status='unknown', form='formatted', action='write', iostat=ier)
   do irec = 1,nrec
@@ -200,16 +214,17 @@ program write_stations_file
     x_target(irec) = x_target_rec * R_EARTH
     y_target(irec) = y_target_rec * R_EARTH
     z_target(irec) = z_target_rec * R_EARTH
-    write(IOUT, "(a4,a7,f23.4,f23.4,f5.1,f23.4)") network_name(irec), &
-            station_name(irec), y_target(irec), x_target(irec), &
+    write(IOUT, "(a7,a7,f23.4,f23.4,f5.1,f23.4)") station_name(irec), &
+            network_name(irec), y_target(irec), x_target(irec), &
             0.0, z_target(irec) 
   enddo
   close(IOUT)
-  STATIONS_FILE = 'DATA/rotation_nu'
+  call get_command_argument(3, STATIONS_FILE)
+  !STATIONS_FILE = 'DATA/rotation_nu'
   open(unit=IOUT,file=trim(STATIONS_FILE), &
           status='unknown', form='formatted', action='write', iostat=ier)
   do irec = 1,nrec
-    write(IOUT, "(a4,a7)") network_name(irec), station_name(irec)
+    write(IOUT, "(a7,a7)") network_name(irec), station_name(irec)
     write(IOUT, "(f23.9,f23.9,f23.9)") nu(1,1,irec),nu(1,2,irec),nu(1,3,irec)
     write(IOUT, "(f23.9,f23.9,f23.9)") nu(2,1,irec),nu(2,2,irec),nu(2,3,irec)
     write(IOUT, "(f23.9,f23.9,f23.9)") nu(3,1,irec),nu(3,2,irec),nu(3,3,irec)

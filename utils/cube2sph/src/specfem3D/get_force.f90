@@ -28,7 +28,7 @@
   subroutine get_force(tshift_force,hdur,lat,long,depth,DT,NSOURCES, &
                       min_tshift_force_original,force_stf,factor_force_source, &
                       comp_dir_vect_source_E,comp_dir_vect_source_N, &
-                      comp_dir_vect_source_Z_UP)
+                      comp_dir_vect_source_Z_UP, FORCESOLUTION)
 
   use constants, only: IIN,MAX_STRING_LEN,TINYVAL,mygroup,RHOAV,R_EARTH,PI,GRAV
   use shared_parameters, only: NUMBER_OF_SIMULTANEOUS_RUNS
@@ -46,7 +46,7 @@
   double precision, dimension(NSOURCES), intent(out) :: comp_dir_vect_source_E
   double precision, dimension(NSOURCES), intent(out) :: comp_dir_vect_source_N
   double precision, dimension(NSOURCES), intent(out) :: comp_dir_vect_source_Z_UP
-
+  character(len=MAX_STRING_LEN) :: FORCESOLUTION
   ! local variables below
   integer :: isource,dummyval
   double precision :: scaleF
@@ -54,7 +54,7 @@
   double precision :: length
   character(len=7) :: dummy
   character(len=MAX_STRING_LEN) :: string
-  character(len=MAX_STRING_LEN) :: FORCESOLUTION,path_to_add
+  character(len=MAX_STRING_LEN) :: path_to_add
   integer :: ier
 
   ! initializes
@@ -73,7 +73,7 @@
 !
 !---- read info
 !
-  FORCESOLUTION = 'DATA/FORCESOLUTION'
+  !FORCESOLUTION = 'DATA/FORCESOLUTION'
 ! see if we are running several independent runs in parallel
 ! if so, add the right directory for that run
 ! (group numbers start at zero, but directory names start at run0001, thus we add one)

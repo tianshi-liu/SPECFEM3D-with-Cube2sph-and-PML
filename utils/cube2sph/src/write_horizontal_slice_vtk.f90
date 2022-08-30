@@ -1,24 +1,28 @@
 program write_slice_vtk
-  use constants, only: R_EARTH, MAX_STRING_LEN, NDIM
+  use constants, only: R_EARTH, MAX_STRING_LEN, NDIM, ONE, TWO
+  use specfem_par, only: ONE_CRUST, ELLIPTICITY,nspl,rspl,espl,espl2
   implicit none 
   character(len=MAX_STRING_LEN) :: xyzfile, vtkfile
   integer :: i, j, ier,nv = 8
   double precision, dimension(:,:), allocatable :: coords_cube, coords
   double precision :: xi_start, xi_end, eta_start, eta_end, dxi, deta, depth, &
-                      center_lat = 90.0, center_lon = 0.0, rotation_azi = 0.0
+                    center_lat = 62.5, center_lon = -151.0, rotation_azi = 20.0
+  double precision :: r, x, y, z, theta, phi, cost, p20, ell, factor
   integer :: nxi, neta, npts, ipt, nelem, ielem
   integer , dimension(:,:), allocatable :: ipt_map
-  xyzfile = 'slice_500m.xyz'
-  vtkfile = 'slice_500m.vtk'
-  xi_start = -1111949.25
-  xi_end = 1111949.25
-  eta_start = -1111949.25
-  eta_end = 1111949.25
+  ONE_CRUST = .true.
+  ELLIPTICITY = .true.
+  xyzfile = 'slice_90000m.xyz'
+  vtkfile = 'slice_90000m.vtk'
+  xi_start = -1223144.193
+  xi_end = 1223144.193
+  eta_start = -1223144.193
+  eta_end = 1223144.193
   nxi = 320
   neta = 320
   dxi = (xi_end - xi_start) / (nxi * 1.0)
   deta = (eta_end - eta_start) / (neta * 1.0)
-  depth = 500.0
+  depth = 90000.0
   nelem = nxi * neta
   allocate(ipt_map(0:nv-1,0:nelem-1))
   do i = 0, nxi-1
@@ -65,6 +69,29 @@ program write_slice_vtk
   allocate(coords(NDIM,0:npts-1))
   call cube2sph_trans(coords_cube, coords, npts, R_EARTH, &
                       center_lat,center_lon,rotation_azi)
+  ! sets up spline coefficients for ellipticity
+  if (ELLIPTICITY) call make_ellipticity(nspl,rspl,espl,espl2,ONE_CRUST)
+  if (ELLIPTICITY) then
+    do ipt = 0, npts-1
+      !call get_ellipticity_single_point(coords(1,ipt), coords(2,ipt), &
+      !                                  coords(3,ipt),nspl,rspl,espl,espl2)
+      x = coords(1,ipt) / R_EARTH
+      y = coords(2,ipt) / R_EARTH
+      z = coords(3,ipt) / R_EARTH
+      call xyz_2_rthetaphi_dble(x,y,z,r,theta,phi)
+      cost = dcos(theta)
+      ! this is the Legendre polynomial of degree two, P2(cos(theta)), see the
+      ! discussion above eq (14.4) in Dahlen and Tromp (1998)
+      p20 = 0.5d0*(3.0d0*cost*cost-1.0d0)
+
+      ! get ellipticity using spline evaluation
+      call spline_evaluation(rspl,espl,espl2,nspl,r,ell)
+
+      ! this is eq (14.4) in Dahlen and Tromp (1998)
+      factor = ONE-(TWO/3.0d0)*ell*p20
+      coords(:,ipt) = coords(:,ipt) * factor
+    enddo
+  endif
   open(55,file=trim(xyzfile),status='unknown',iostat=ier, action='write')
   do ipt = 0, npts-1
     write(55, '(3e18.6)') coords(1,ipt), coords(2,ipt), coords(3,ipt)

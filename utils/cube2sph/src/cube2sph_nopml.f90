@@ -34,7 +34,7 @@ program cube2sph
   double precision, dimension(NGNOD) :: xelm, yelm, zelm
   double precision, dimension(:,:), allocatable :: &
           nodes_coords_sph,nodes_coords_new
-  character(len=MAX_STRING_LEN) :: infn, outfn
+  character(len=MAX_STRING_LEN) :: infn, outfn, indir, outdir, string_dummy
   double precision, dimension(:,:,:,:), allocatable :: &
           xstore,ystore,zstore,xstore_sph,ystore_sph,zstore_sph,&
           xstore_new,ystore_new,zstore_new,jacobian3D
@@ -53,21 +53,30 @@ program cube2sph
   !logical, dimension(:), allocatable :: is_CPML_dummy
 
   ! cube2sph
-  double precision :: r, center_lat, center_lon, rotation_azi
+  double precision :: r = 6371000.0, center_lat, center_lon, rotation_azi
+
+  call get_command_argument(1, indir)
+  call get_command_argument(2, outdir)
+  call get_command_argument(3, string_dummy)
+  read(string_dummy, *) center_lat
+  call get_command_argument(4, string_dummy)
+  read(string_dummy, *) center_lon
+  call get_command_argument(5, string_dummy)
+  read(string_dummy, *) rotation_azi
 
   call MPI_Init(ier)
   call MPI_Comm_rank(MPI_COMM_WORLD, myrank, ier)
   call MPI_Comm_size(MPI_COMM_WORLD, NPROC, ier)
-  LOCAL_PATH = 'DATABASES_MPI_REF'
+  LOCAL_PATH = trim(indir)
   call read_partition_files()
   allocate(nodes_coords_sph(NDIM,npts),stat=ier)
   allocate(nodes_coords_new(NDIM,npts),stat=ier)
   !! cube2sph transform
   !call wait_for_attach(myrank)
-  r = 6371000.0
-  center_lat = 62.5
-  center_lon = -151.0
-  rotation_azi = 20.0
+  !r = 6371000.0
+  !center_lat = 62.5
+  !center_lon = -151.0
+  !rotation_azi = 20.0
   call cube2sph_trans(nodes_coords,nodes_coords_sph,npts,&
           r,center_lat,center_lon,rotation_azi)
   
@@ -174,7 +183,7 @@ program cube2sph
   !call wait_for_attach(myrank)
 
   nodes_coords(:,:) = nodes_coords_new(:,:)
-  LOCAL_PATH= 'DATABASES_MPI'
+  LOCAL_PATH= trim(outdir)
   call write_partition_files()
 
   if (myrank == 0) print *, 'writing to ', prname(1:len_trim(prname))//'undeformed_xyz.bin'

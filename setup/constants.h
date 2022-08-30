@@ -182,7 +182,7 @@
 ! use this t0 as earliest starting time rather than the automatically calculated one
 ! (must be positive and bigger than the automatically one to be effective;
 !  simulation will start at t = - t0)
-  double precision, parameter :: USER_T0 = 40.0d0
+  double precision, parameter :: USER_T0 = 0.0d0
 
 ! the receivers can be located inside the model
   logical, parameter :: RECEIVERS_CAN_BE_BURIED = .true.
@@ -207,7 +207,7 @@
 !! Subsampling in kernel calculation
 !!
 !!-----------------------------------------------------------
-  logical, parameter :: SUBSAMPLE_FORWARD_WAVEFIELD = .true.
+  logical, parameter :: SUBSAMPLE_FORWARD_WAVEFIELD = .false.
   integer, parameter :: NSTEP_PER_FORWARD_OUTPUT = 32
   integer, parameter :: IFILE_FORWARD_WAVEFIELD = 82
 
