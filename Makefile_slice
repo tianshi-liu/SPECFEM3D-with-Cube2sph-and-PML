@@ -58,3 +58,6 @@ $E/xbin_to_xyz: src/auxiliaries/bin_to_xyz.f90 $(bin_to_xyz_obj) $(xcombine_vol_
 	${MPIFC} ${FCFLAGS} ${FCFLAGS_f90} -o $@ $^
 $E/xwrite_gll_model_from_xyz: src/auxiliaries/write_gll_model_from_xyz.f90 $(bin_to_xyz_obj) $(xcombine_vol_data_SHARED_OBJECTS)
 	${MPIFC} ${FCFLAGS} ${FCFLAGS_f90} -o $@ $^
+
+all: $E/xcreate_slice_loc $E/xcreate_slice
+.PHONY: all
