@@ -4,10 +4,10 @@ program cube2sph_boundary_gmt
   integer :: N = 20
   double precision, dimension(3,1) :: nodes_coords, nodes_coords_new
   double precision, parameter :: r_earth=6371000.0
-  double precision :: center_lat=62.5,&
-          center_lon=-151.0,rotation_azi=20.0,rs,dummy
+  double precision :: center_lat=43.5,&
+          center_lon=121.8,rotation_azi=0.0,rs,dummy
   double precision ::  lat, lon, r, margin=2.0, &
-                       x1=-11.0, x2=11.0, y1=-11.0, y2=11.0
+                       x1=-10.0, x2=10.0, y1=-5.0, y2=5.0
   double precision, parameter :: meter_per_deg = r_earth * 3.1415926535 / 180.0
   IOUT = 21
   outfn = 'boundary_2d.gmt'

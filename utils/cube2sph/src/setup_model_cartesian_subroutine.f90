@@ -190,6 +190,11 @@ subroutine update_structural_parameters(x, y, z, rho_old, vp_old, vs_old, &
   !THREE_D_MODEL = THREE_D_MODEL_S40RTS
   
   select case (trim(model_string))
+    case ('default')
+      rho_new(:,:,:,:) = rho_old(:,:,:,:)
+      vs_new(:,:,:,:) = vs_old(:,:,:,:)
+      vp_new(:,:,:,:) = vp_old(:,:,:,:)
+      return
     case ('PREM')
       CASE_3D = .false.
       ISOTROPIC_3D_MANTLE = .false.

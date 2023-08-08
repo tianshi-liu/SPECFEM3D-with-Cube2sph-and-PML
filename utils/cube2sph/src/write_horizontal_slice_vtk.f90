@@ -14,12 +14,12 @@ program write_slice_vtk
   ELLIPTICITY = .true.
   xyzfile = 'slice_90000m.xyz'
   vtkfile = 'slice_90000m.vtk'
-  xi_start = -1223144.193
-  xi_end = 1223144.193
-  eta_start = -1223144.193
-  eta_end = 1223144.193
-  nxi = 320
-  neta = 320
+  xi_start = -1223000.0
+  xi_end = 1223000.0
+  eta_start = -1223000.0
+  eta_end = 1223000.0
+  nxi = 100
+  neta = 100
   dxi = (xi_end - xi_start) / (nxi * 1.0)
   deta = (eta_end - eta_start) / (neta * 1.0)
   depth = 90000.0
@@ -107,16 +107,16 @@ program write_slice_vtk
     write(77,'(3f18.6)') coords(1,ipt), coords(2,ipt), coords(3,ipt)
   enddo
   write(77,'(a)') ''
-  write(77,'(a,2i12)') 'CELLS', nelem, nelem * (nv+1)
-  !write(77,'(a,2i12)') 'CELLS', nelem, nelem * 5
+  !write(77,'(a,2i12)') 'CELLS', nelem, nelem * (nv+1)
+  write(77,'(a,2i12)') 'CELLS', nelem, nelem * 5
   do ielem = 0, nelem-1
-    write(77,'(9i12)') 8, ipt_map(0:7,ielem)
-    !write(77,'(9i12)') 4, ipt_map(0:3,ielem)
+    !write(77,'(9i12)') 8, ipt_map(0:7,ielem)
+    write(77,'(9i12)') 4, ipt_map(0:3,ielem)
   enddo
   write(77,'(a)') ''
   write(77,'(a,i12)') 'CELL_TYPES', nelem
   do ielem = 0, nelem-1
-    write(77,'(i12)') 23
+    write(77,'(i12)') 9
   enddo
   close(55)
   deallocate(ipt_map,coords,coords_cube)

@@ -2,8 +2,8 @@ CC=icc
 FC=ifort
 MPIFC=mpif90
 
-FCFLAGS=-g -traceback -module ./obj -I./obj -I. -I./include
-CFLAGS=-g -traceback -I./include
+FCFLAGS=-O3 -traceback -module ./obj -I./obj -I. -I./include
+CFLAGS=-O3 -traceback -I./include
 
 NCDFCFLAGS=-I/usr/local/include
 NCDFLDFLAGS=-L/usr/local/lib
@@ -60,6 +60,28 @@ node_stretching_obj= \
         $O/moho_stretching.check.o \
         $O/get_ellipticity.check.o \
         $O/add_topography.check.o
+
+write_topo_obj= \
+	${get_moho_topo_obj} \
+	$O/specfem3D_par.solverstatic_module.o \
+	$O/add_topography.check.o
+
+write_boundary_obj= \
+	${get_moho_topo_obj} \
+	$O/netcdf_model_par.o \
+	$O/get_boundary_from_netcdf.o \
+	$O/get_boundary_from_crust_1_0.o \
+	$O/netcdf_model_wrapper.o
+
+write_model_tomo_obj= \
+	${get_moho_topo_obj} \
+	$O/specfem3D_par.solverstatic_module.o \
+	$O/add_topography.check.o \
+	$O/netcdf_model_par.o \
+	$O/get_boundary_from_netcdf.o \
+	$O/get_boundary_from_crust_1_0.o \
+	$O/get_model_mantle.o \
+	$O/netcdf_model_wrapper.o
 
 write_force_solution_file_obj = \
 	$O/get_force.solver.o \
@@ -132,6 +154,15 @@ cube2sph_adepml_obj=\
 cube2sph_station_obj = \
 	$O/cube2sph_trans.o
 
+cube2sph_txt_obj = \
+	$O/cube2sph_trans.o
+
+create_ckbd_obj= \
+	$O/meshfem3D_par.check_module.o \
+	$O/specfem3D_par.solverstatic_module.o \
+	$O/get_ellipticity.check.o \
+	$O/add_topography.check.o
+
 
 ## rules
 all: $E/setup_adepml $E/cube2sph_adepml $E/cube2sph_station_inv $E/cube2sph_boundary_gmt $E/cube2sph_force $E/cube2sph_station $E/write_horizontal_slice_vtk $E/write_vertical_slice_vtk $E/cube2sph_nopml $E/write_force_solution_file $E/write_cmt_solution_file $E/write_stations_file
@@ -151,10 +182,25 @@ $E/cube2sph_force: ./src/cube2sph_force.f90 $(cube2sph_station_obj) $(shared_obj
 $E/cube2sph_station: ./src/cube2sph_station.f90 $(cube2sph_station_obj) $(shared_obj)
 	${MPIFC} ${FCFLAGS} -o $@ $^
 
+$E/cube2sph_txt: ./src/cube2sph_txt.f90 $(cube2sph_txt_obj) $(shared_obj)
+	${MPIFC} ${FCFLAGS} -o $@ $^
+
+$E/mask_depth: ./src/mask_depth.f90
+	${MPIFC} ${FCFLAGS} -o $@ $^
+
+$E/add_topo_to_depth: ./src/add_topo_to_depth.f90
+	${MPIFC} ${FCFLAGS} -o $@ $^
+
+$E/write_topo_txt: ./src/write_topo_txt.f90 $(write_topo_obj) $(shared_obj) $(adios_shared_STUBS)
+	${MPIFC} ${FCFLAGS} -o $@ $^
+
 $E/cube2sph_boundary_gmt: ./src/cube2sph_boundary_gmt.f90 $(cube2sph_station_obj) $(shared_obj)
 	${MPIFC} ${FCFLAGS} -o $@ $^
 
 $E/cube2sph_station_inv: ./src/cube2sph_station_inv.f90 $(cube2sph_station_obj) $(shared_obj)
+	${MPIFC} ${FCFLAGS} -o $@ $^
+
+$E/create_ckbd: ./src/create_ckbd.f90 $(create_ckbd_obj) $(shared_obj)
 	${MPIFC} ${FCFLAGS} -o $@ $^
 
 $O/%.check_module.o: ./src/meshfem3D/%.f90 $O/shared_par.shared_module.o
@@ -221,9 +267,21 @@ $O/find_parameter_value.o: ./src/find_parameter_value.f90
 	${FC} ${FCFLAGS} -c -o $@ $<
 
 $O/update_parameters_from_netcdf.o: ./src/update_parameters_from_netcdf.f90
-	${FC} ${NCDFCFLAGS} -c -o $@ $<
+	${FC} ${FCFLAGS} ${NCDFCFLAGS} -c -o $@ $<
 $O/netcdf_model_wrapper.o: ./src/netcdf_model_wrapper.f90
-	${FC} ${NCDFCFLAGS} -c -o $@ $<
+	${FC} ${FCFLAGS} ${NCDFCFLAGS} -c -o $@ $<
+
+$O/netcdf_model_par.o: ./src/netcdf_model_par.f90
+	${FC} ${FCFLAGS} ${NCDFCFLAGS} -c -o $@ $<
+
+$O/get_boundary_from_crust_1_0.o: ./src/get_boundary_from_crust_1_0.f90
+	${FC} ${FCFLAGS} -c -o $@ $<
+
+$O/get_boundary_from_netcdf.o: ./src/get_boundary_from_netcdf.f90
+	${FC} ${FCFLAGS} -c -o $@ $<
+
+$O/get_model_mantle.o: ./src/get_model_mantle.f90
+	${FC} ${FCFLAGS} -c -o $@ $<
 
 $O/%.solver.o: ./src/specfem3D/%.f90 $O/shared_par.shared_module.o
 	${FC} ${FCFLAGS} -c -o $@ $<
@@ -247,6 +305,13 @@ $E/write_horizontal_slice_vtk: ./src/write_horizontal_slice_vtk.f90 $O/cube2sph_
 	${MPIFC} ${FCFLAGS} -o $@ $^
 $E/write_vertical_slice_vtk: ./src/write_vertical_slice_vtk.f90 $O/cube2sph_trans.o $(shared_obj)
 	${MPIFC} ${FCFLAGS} -o $@ $^
+
+$E/write_boundary_depth: ./src/write_boundary_depth.f90 $(write_boundary_obj) $(shared_obj) $(adios_shared_STUBS)
+	${MPIFC} ${FCFLAGS} ${NCDFLDFLAGS} -o $@ $^ ${NCDFLDLIBS}
+
+$E/write_model_tomo: ./src/write_model_tomo.f90 $(write_model_tomo_obj) $(shared_obj) $(adios_shared_STUBS)
+	${MPIFC} ${FCFLAGS} ${NCDFLDFLAGS} -o $@ $^ ${NCDFLDLIBS}
+
 #$O/debug.o: ./src/debug.f90
 #	${FC} ${FCFLAGS} -c -o $@ $<
 

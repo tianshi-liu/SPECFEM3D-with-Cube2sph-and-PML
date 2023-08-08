@@ -54,6 +54,8 @@ subroutine node_stretching(nodes_coords,nodes_coords_new)
   !REFERENCE_1D_MODEL = REFERENCE_MODEL_PREM
   !THREE_D_MODEL = THREE_D_MODEL_S40RTS
   select case (trim(model_string))
+    case ('default')
+      CASE_3D = .false.
     case ('PREM')
       CASE_3D = .false.
       ISOTROPIC_3D_MANTLE = .false.
