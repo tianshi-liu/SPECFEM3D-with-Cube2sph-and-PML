@@ -1020,6 +1020,8 @@
 
 !  use constants
   use shared_parameters
+  !! TL: chack if wavefield subsampling is used
+  use constants, only: SUBSAMPLE_FORWARD_WAVEFIELD
 
   implicit none
 
@@ -1071,7 +1073,10 @@
   if (PML_CONDITIONS) then
 !! DK DK added this for now (March 2013)
 !! DK DK we will soon add it
-    if (SAVE_FORWARD .or. SIMULATION_TYPE == 3) &
+    !! TL: allow PML for adjoint simulation if subsampling
+    !!if (SAVE_FORWARD .or. SIMULATION_TYPE == 3) &
+    if ((SAVE_FORWARD .or. SIMULATION_TYPE == 3) .and. &
+        (.not. SUBSAMPLE_FORWARD_WAVEFIELD)) &
       stop 'PML_CONDITIONS is still under test for adjoint simulation'
 
     ! only one absorbing condition is possible
