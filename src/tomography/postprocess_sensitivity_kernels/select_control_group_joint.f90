@@ -8,23 +8,37 @@ program select_control_group
   use specfem_par_poroelastic, only: ispec_is_poroelastic
 
   implicit none
-  integer, parameter :: NARGS = 5
+  integer, parameter :: NARGS = 6
+  integer, parameter :: MAX_DATASETS = 2
 
-  character(len=MAX_STRING_LEN) :: kernel_paths(MAX_KERNEL_PATHS), &
-                                   kernel_names(MAX_KERNEL_NAMES), &
-                                   kernel_names_comma_delimited
-  character(len=MAX_STRING_LEN) :: sline,output_dir,input_file,&
+  character(len=MAX_STRING_LEN) :: &
+          kernel_paths(MAX_KERNEL_PATHS, MAX_DATASETS), &
+          meas_paths(MAX_KERNEL_PATHS, MAX_DATASETS), &
+          kernel_names(MAX_KERNEL_NAMES), &
+          kernel_names_comma_delimited, &
+          dir_lists_comma_delimited, & 
+          meas_lists_comma_delimited
+  logical :: kept(MAX_KERNEL_PATHS, MAX_DATASETS)
+  character(len=MAX_STRING_LEN) :: sline,output_dir, &
+                                   fns_dir_list(MAX_KERNEL_NAMES), &
+                                   fns_meas_list(MAX_KERNEL_NAMES),&
                                    kernel_name,filename
   character(len=MAX_STRING_LEN) :: arg(NARGS)
-  integer :: npath,nker,min_num_path,npath_left
-  integer :: i,ier,iker,ipath,ipath_try,ipath_max,ipath_to_remove
-  integer :: list_path(MAX_KERNEL_PATHS)
+  integer :: npath(MAX_DATASETS),nker,min_num_path,npath_left(MAX_DATASETS),&
+             nset, nmeas(MAX_KERNEL_PATHS, MAX_DATASETS), &
+             nmeas_all(MAX_DATASETS), nmeas_left(MAX_DATASETS), &
+             ndummy
+  integer :: i,ier,iker,ipath,iset, ipath_max,iset_max
+  !integer :: list_path(MAX_KERNEL_PATHS)
   real(kind=CUSTOM_REAL) :: threshold_cos, cos_angle, norm_sum_all,&
                            inner_prod, norm_sum_sub, norm_sum_all_all, &
                            inner_prod_all, norm_sum_sub_all, max_cos_angle
   real(kind=CUSTOM_REAL), dimension(:,:,:,:,:),allocatable :: &
-                                   sum_all_array, array, sum_sub_array
+                                   sum_all_array, array, sum_ctrlgrp_array
+  real(kind=CUSTOM_REAL), dimension(:,:,:,:,:,:),allocatable :: &
+                                   sum_sub_array
   real(kind=CUSTOM_REAL), parameter :: SMALL_VAL = 1.0e-20
+  double precision :: chi_dummy
   logical :: BROADCAST_AFTER_READ
 
   call init_mpi()
@@ -51,34 +65,80 @@ program select_control_group
   enddo
 
   read(arg(1),'(a)') kernel_names_comma_delimited
-  read(arg(2),'(a)') input_file
-  read(arg(3),'(a)') output_dir
-  read(arg(4),*) min_num_path
-  read(arg(5),*) threshold_cos
+  read(arg(2),'(a)') dir_lists_comma_delimited
+  read(arg(3),'(a)') meas_lists_comma_delimited
+  read(arg(4),'(a)') output_dir
+  read(arg(5),*) min_num_path
+  read(arg(6),*) threshold_cos
   threshold_cos = cos(threshold_cos*PI/180.0) ! get cos value
 
   ! parse names from KERNEL_NAMES
   call parse_kernel_names(kernel_names_comma_delimited,kernel_names,nker)
+  call parse_kernel_names(dir_lists_comma_delimited,fns_dir_list,nset)
+  call parse_kernel_names(meas_lists_comma_delimited,fns_meas_list,ndummy)
+  if (myrank == 0) then
+    if (.not. (nset == ndummy)) stop 'inconsist numbers of dir_list and meas_list'
+  endif
 
   ! parse paths from INPUT_FILE
-  npath=0
-  open(unit = IIN, file = trim(input_file), status = 'old',iostat = ier)
+  do iset = 1, nset
+  npath(iset)=0
+  open(unit = IIN, file = trim(fns_dir_list(iset)), status = 'old',iostat = ier)
   if (ier /= 0) then
-     print *,'Error opening ',trim(input_file), myrank
+     print *,'Error opening ',trim(fns_dir_list(iset)), myrank
      stop 1
   endif
   do while (1 == 1)
      read(IIN,'(a)',iostat=ier) sline
      if (ier /= 0) exit
-     npath = npath+1
-     if (npath > MAX_KERNEL_PATHS) stop 'Error number of paths exceeds MAX_KERNEL_PATHS'
-     kernel_paths(npath) = sline
+     npath(iset) = npath(iset)+1
+     if (npath(iset) > MAX_KERNEL_PATHS) &
+       stop 'Error number of paths exceeds MAX_KERNEL_PATHS'
+     kernel_paths(npath(iset), iset) = sline
   enddo
   close(IIN)
   if (myrank == 0) then
-    write(*,*) '  ',npath,' events'
+    write(*,*) '  set ', iset, ' ' ,npath(iset),' events'
     write(*,*)
   endif
+  ndummy = 0
+  open(unit = IIN, file = trim(fns_meas_list(iset)), status = 'old',iostat = ier)
+  if (ier /= 0) then
+     print *,'Error opening ',trim(fns_meas_list(iset)), myrank
+     stop 1
+  endif
+  do while (1 == 1)
+     read(IIN,'(a)',iostat=ier) sline
+     if (ier /= 0) exit
+     ndummy = ndummy+1
+     if (ndummy > MAX_KERNEL_PATHS) &
+       stop 'Error number of paths exceeds MAX_KERNEL_PATHS'
+     meas_paths(ndummy, iset) = sline
+  enddo
+  close(IIN)
+  if (myrank == 0) then
+    if (.not. (npath(iset) == ndummy)) &
+      stop 'inconsist numbers of kernel paths and measurement paths'
+  endif
+  nmeas_all(iset) = 0
+  do ipath = 1, npath(iset)
+    filename = trim(meas_paths(ipath, iset)) // '/sum_chi'
+    open(unit=IIN, file=trim(filename), form='formatted', status='old', &
+         action='read', iostat=ier)
+    read(IIN, *) chi_dummy
+    read(IIN, *) nmeas(ipath, iset)
+    close(IIN)
+    if (myrank == 0) then
+      print *, 'measurement path:', trim(meas_paths(ipath, iset))
+      print *, '  nmeas = ', nmeas(ipath, iset)
+    endif
+    nmeas_all(iset) = nmeas_all(iset) + nmeas(ipath, iset)
+  enddo
+  if (myrank == 0) then
+    print *, 'total number of measurements in dataset ', &
+             iset, ': ', nmeas_all(iset)
+  endif
+  enddo
 
 ! set up coordinates of the Gauss-Lobatto-Legendre points
   call zwgljd(xigll,wxgll,NGLLX,GAUSSALPHA,GAUSSBETA)
@@ -186,42 +246,61 @@ program select_control_group
   ! reads in external mesh
   call read_mesh_databases()
 
+  !allocate(sum_set_array(NGLLX,NGLLY,NGLLZ,NSPEC_AB,nker,nset),stat=ier)
   allocate(sum_all_array(NGLLX,NGLLY,NGLLZ,NSPEC_AB,nker),stat=ier)
+  allocate(sum_ctrlgrp_array(NGLLX,NGLLY,NGLLZ,NSPEC_AB,nker),stat=ier)
   allocate(array(NGLLX,NGLLY,NGLLZ,NSPEC_AB,nker), stat=ier)
-  allocate(sum_sub_array(NGLLX,NGLLY,NGLLZ,NSPEC_AB,nker),stat=ier)
+  allocate(sum_sub_array(NGLLX,NGLLY,NGLLZ,NSPEC_AB,nker,nset),stat=ier)
 
+  sum_sub_array = 0._CUSTOM_REAL
   sum_all_array = 0._CUSTOM_REAL
-  do ipath = 1, npath
+  kept(:,:) = .true.
+  do iset = 1, nset
+  do ipath = 1, npath(iset)
     array = 0._CUSTOM_REAL
-    call read_kernel_from_path(kernel_paths(ipath),kernel_names,&
+    call read_kernel_from_path(kernel_paths(ipath, iset),kernel_names,&
                                nker,array)
-    sum_all_array(:,:,:,:,:) = sum_all_array(:,:,:,:,:) + array(:,:,:,:,:)
+    sum_sub_array(:,:,:,:,:,iset) = sum_sub_array(:,:,:,:,:,iset) + &
+                                    array(:,:,:,:,:)
   enddo
-
-  npath_left = npath
-  list_path(:) = 0
-  do ipath = 1, npath
-    list_path(ipath) = ipath
+  sum_all_array(:,:,:,:,:) = sum_all_array(:,:,:,:,:) + &
+                      sum_sub_array(:,:,:,:,:,iset) / (nmeas_all(iset) * 1.0)
   enddo
-  sum_sub_array(:,:,:,:,:) = sum_all_array(:,:,:,:,:)
+  
+  nmeas_left(1:nset) = nmeas_all(1:nset)
+  npath_left(1:nset) = npath(1:nset)
+  !sum_sub_array(:,:,:,:,:,:) = sum_set_array(:,:,:,:,:,:)
   call calc_inner_product(sum_all_array,sum_all_array,nker,norm_sum_all)
   if (myrank == 0) norm_sum_all_all = 0.0
   call sum_all_cr(norm_sum_all,norm_sum_all_all)
   if (myrank == 0) norm_sum_all_all = sqrt(norm_sum_all_all)
-  do while (npath_left > min_num_path)
+  if (myrank == 0) print *, 'norm of total gradiant = ', norm_sum_all_all
+  do while (any(npath_left(1:nset) > min_num_path))
     if (myrank == 0) then
-      print *, npath_left, 'event kernels left, attempting to remove one.'
+      do iset = 1, nset
+      print *, npath_left(iset), 'event kernels left in set ', iset
+      enddo
+      print *, 'attempting to remove one ...'
       max_cos_angle = -10.0
       ipath_max = 0
+      iset_max = 0
     endif
-    do ipath_try = 1, npath_left
-      ipath = list_path(ipath_try)
+    do iset = 1, nset
+    if (npath_left(iset) == min_num_path) cycle
+    do ipath = 1, npath(iset)
+      if (.not. kept(ipath, iset)) cycle
       array = 0._CUSTOM_REAL
       if (myrank == 0) print *, '    trying to remove event kernel', &
-                       trim(kernel_paths(ipath))
-      call read_kernel_from_path(kernel_paths(ipath),kernel_names,&
+                       trim(kernel_paths(ipath, iset))
+      call read_kernel_from_path(kernel_paths(ipath, iset),kernel_names,&
                                  nker,array)
-      array(:,:,:,:,:) = sum_sub_array(:,:,:,:,:) - array(:,:,:,:,:)
+      array(:,:,:,:,:) = (sum_sub_array(:,:,:,:,:,iset) - array(:,:,:,:,:))&
+                       / ((nmeas_left(iset) - nmeas(ipath, iset)) * 1.0)
+      do i = 1, nset
+        if (i == iset) cycle
+        array(:,:,:,:,:) = array(:,:,:,:,:) + &
+                           sum_sub_array(:,:,:,:,:,i) / (nmeas_left(i) * 1.0)
+      enddo
       call calc_inner_product(sum_all_array,array,nker,inner_prod)
       if (myrank == 0) inner_prod_all = 0.0
       call sum_all_cr(inner_prod,inner_prod_all)
@@ -241,33 +320,45 @@ program select_control_group
         print *, '    angle = ', dble(acos(cos_angle)) / PI * 180.0
         if (cos_angle > max_cos_angle) then
           max_cos_angle = cos_angle ! keep the maximum
-          ipath_max = ipath_try
+          ipath_max = ipath
+          iset_max = iset
         endif
       endif
+    enddo
     enddo
     if (myrank == 0) then
       print *, 'minimum angle = ', dble(acos(max_cos_angle)) / PI * 180.0
       if (max_cos_angle < threshold_cos) then ! reach threshold
         print *, 'threshold has reached, no event kernel is removed'
         ipath_max = 0 
+        iset_max = 0
       endif
     endif
     call bcast_all_singlei(ipath_max)
+    call bcast_all_singlei(iset_max)
     if (ipath_max == 0) exit ! reach angle threshold, break directly
-    ipath_to_remove = list_path(ipath_max)
     if (myrank == 0) print *, 'remove event kernel ', &
-                     trim(kernel_paths(ipath_to_remove))
+                     trim(kernel_paths(ipath_max, iset_max))
     array = 0._CUSTOM_REAL
-    call read_kernel_from_path(kernel_paths(ipath_to_remove),kernel_names,&
+    call read_kernel_from_path(kernel_paths(ipath_max, iset_max),kernel_names,&
                                nker,array)
-    sum_sub_array(:,:,:,:,:) = sum_sub_array(:,:,:,:,:) - array(:,:,:,:,:)
-    do ipath_try = ipath_max, npath_left - 1
-      list_path(ipath_try) = list_path(ipath_try + 1)
-    enddo
-    list_path(npath_left) = 0
-    npath_left = npath_left - 1
+    sum_sub_array(:,:,:,:,:,iset_max) = sum_sub_array(:,:,:,:,:,iset_max) - &
+                                  array(:,:,:,:,:)    
+    nmeas_left(iset_max) = nmeas_left(iset_max) - nmeas(ipath_max, iset_max)
+    npath_left(iset_max) = npath_left(iset_max) - 1
+    kept(ipath_max, iset_max) = .false.
   enddo
   
+  sum_ctrlgrp_array = 0._CUSTOM_REAL
+  do iset = 1, nset
+    sum_ctrlgrp_array(:,:,:,:,:) = sum_ctrlgrp_array(:,:,:,:,:) + &
+                   sum_sub_array(:,:,:,:,:,iset) / (nmeas_left(iset) * 1.0)
+  enddo
+  call calc_inner_product(sum_ctrlgrp_array,sum_ctrlgrp_array,nker,norm_sum_sub)
+  if (myrank == 0) norm_sum_sub_all = 0.0
+  call sum_all_cr(norm_sum_sub,norm_sum_sub_all)
+  if (myrank == 0) norm_sum_sub_all = sqrt(norm_sum_sub_all)
+  if (myrank == 0) print *, 'norm of ctrlgrp gradiant = ', norm_sum_sub_all
   ! output kernels
   do iker = 1, nker
     kernel_name = kernel_names(iker)
@@ -280,23 +371,26 @@ program select_control_group
                         trim(kernel_name)//'_ctrlgrp.bin'
     open(IOUT,file=trim(filename),form='unformatted',action='write',&
               status='unknown', iostat=ier)
-    write(IOUT) sum_sub_array(:,:,:,:,iker)
+    write(IOUT) sum_ctrlgrp_array(:,:,:,:,iker)
     close(IOUT)
   enddo
   ! write components of control group
   if (myrank == 0) then
-    open(unit=IOUT, file=trim(input_file)//'.ctrlgrp',form='formatted',&
+    do iset = 1, nset
+    open(unit=IOUT, file=trim(fns_dir_list(iset))//'.ctrlgrp',form='formatted',&
                  action='write',status='unknown',iostat=ier)
-    do ipath_try = 1, npath_left
-      ipath = list_path(ipath_try)
-      write(IOUT,'(a)') trim(kernel_paths(ipath))
+    do ipath = 1, npath(iset)
+      if (kept(ipath, iset)) &
+        write(IOUT,'(a)') trim(kernel_paths(ipath, iset))
     enddo
-    close(IOUT)  
+    close(IOUT)
+    enddo
   endif
 
   deallocate(ibool,irregular_element_number)
   deallocate(xix,xiy,xiz,etax,etay,etaz,gammax,gammay,gammaz,jacobian)
-  deallocate(sum_all_array, array, sum_sub_array)
+  deallocate(sum_all_array, array, sum_sub_array, &
+             sum_ctrlgrp_array)
   deallocate(xstore,ystore,zstore,kappastore,mustore)
   deallocate(ispec_is_acoustic, ispec_is_elastic, ispec_is_poroelastic)
 
