@@ -49,6 +49,16 @@ smooth_sem_obj= \
 	$O/read_adepml_files.spec.o \
 	$O/read_mesh_databases.spec.o
 
+combine_sem_obj = \
+	$O/postprocess_par.postprocess_module.o \
+	$O/parse_kernel_names.postprocess.o 
+
+combine_sem_SHARED_OBJECTS = \
+	$O/shared_par.shared_module.o \
+	$O/param_reader.cc.o \
+	$O/read_parameter_file.shared.o \
+	$O/read_value_parameters.shared.o
+
 select_control_group_obj = \
 	$O/postprocess_par.postprocess_module.o \
 	$O/parse_kernel_names.postprocess.o \
@@ -113,16 +123,23 @@ write_zero_array_obj = \
 	$O/read_adepml_files.spec.o \
 	$O/read_mesh_databases.spec.o
 
-all: $E/xsmooth_sem_sph_pde $E/xselect_control_group $E/xwrite_lbfgs_direction $E/xdiv_kernel_by_nmeas $E/xupdate_model_by_perturbation $E/xscale_rho_with_vs $E/xget_isotropic_vbulk $E/xwrite_zero_array
+all: $E/xsmooth_sem_sph_pde $E/xselect_control_group $E/xselect_control_group_joint $E/xcombine_sem_joint $E/xwrite_lbfgs_direction $E/xdiv_kernel_by_nmeas $E/xupdate_model_by_perturbation $E/xscale_rho_with_vs $E/xget_isotropic_vbulk $E/xwrite_zero_array
 
 
 $E/xsmooth_sem_sph: $O/smooth_sem_sph_multi.postprocess.o $(smooth_sem_obj) $(smooth_sem_SHARED_OBJECTS)
 	${MPIFC} ${FCFLAGS} -o $@ $^
 $E/xsmooth_sem_sph_pde: $O/smooth_sem_sph_pde.postprocess.o $(smooth_sem_obj) $(smooth_sem_SHARED_OBJECTS)
 	${MPIFC} ${FCFLAGS} -o $@ $^
+$E/xsmooth_sem_pde: $O/smooth_sem_pde.postprocess.o $(smooth_sem_obj) $(smooth_sem_SHARED_OBJECTS)
+	${MPIFC} ${FCFLAGS} -o $@ $^
 $E/xselect_control_group: $O/select_control_group.postprocess.o $(select_control_group_obj) $(smooth_sem_SHARED_OBJECTS)
 	${MPIFC} ${FCFLAGS} -o $@ $^
-
+$E/xselect_control_group_joint: $O/select_control_group_joint.postprocess.o $(select_control_group_obj) $(smooth_sem_SHARED_OBJECTS)
+	${MPIFC} ${FCFLAGS} -o $@ $^
+$E/xselect_control_group_joint_diff: $O/select_control_group_joint_diff.postprocess.o $(select_control_group_obj) $(smooth_sem_SHARED_OBJECTS)
+	${MPIFC} ${FCFLAGS} -o $@ $^
+$E/xcombine_sem_joint: $O/combine_sem_joint.postprocess.o $(combine_sem_obj) $(smooth_sem_SHARED_OBJECTS)
+	${MPIFC} ${FCFLAGS} -o $@ $^
 $E/xwrite_lbfgs_direction: $O/write_lbfgs_direction.postprocess.o $(write_lbfgs_direction_obj) $(smooth_sem_SHARED_OBJECTS)
 	${MPIFC} ${FCFLAGS} -o $@ $^
 

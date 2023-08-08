@@ -41,7 +41,7 @@
 
 ! set to SIZE_REAL to run in single precision
 ! set to SIZE_DOUBLE to run in double precision (increases memory size by 2)
-  integer, parameter :: CUSTOM_REAL = @CUSTOM_REAL@
+  integer, parameter :: CUSTOM_REAL = SIZE_REAL
 
 !----------- parameters that can be changed by the user -----------
 
@@ -57,7 +57,7 @@
 ! set to .false.  if running on a Beowulf-type machine with local disks
 ! set to .true. if running on a shared-memory machine with common file system
 ! if running on a Beowulf, also modify name of nodes in filter_machine_file.f90
-  logical, parameter :: LOCAL_PATH_IS_ALSO_GLOBAL = .@LOCAL_PATH_IS_ALSO_GLOBAL@.
+  logical, parameter :: LOCAL_PATH_IS_ALSO_GLOBAL = .true.
 
 ! maximum length of strings used for paths, reading from files, etc.
   integer, parameter :: MAX_STRING_LEN = 512
@@ -201,6 +201,20 @@
 ! (brute-force search will be slower but even more accurate)
   logical, parameter :: DO_BRUTE_FORCE_POINT_SEARCH = .true.
 
+!! TL: add this part for subsampling forward wavefield output
+!!-----------------------------------------------------------
+!!
+!! Subsampling in kernel calculation
+!!
+!!-----------------------------------------------------------
+  logical, parameter :: SUBSAMPLE_FORWARD_WAVEFIELD = .false.
+  integer, parameter :: NSTEP_PER_FORWARD_OUTPUT = 32
+  integer, parameter :: IFILE_FORWARD_WAVEFIELD = 82
+
+!!TL: cube2sph mesh for anisotropic model
+  logical, parameter :: CUBE2SPH_MESH = .true.
+  logical, parameter :: AZIMUTHAL_ANISOTROPY = .false.
+
 !!-----------------------------------------------------------
 !!
 !! CPML perfectly matched absorbing layers
@@ -242,10 +256,10 @@
 
 !! TL: add parameters to accomodate ADE-PML
   double precision, parameter :: PML_KAPPA0 = 1.0
-  double precision, parameter :: MPML_P = 0.4d0
+  double precision, parameter :: MPML_P = 0.0d0
   double precision, parameter :: PML_P = 1.0
   logical :: USE_ADE_PML = .true.
-  logical :: CALC_ADEPML_DAMPING = .true.
+  logical :: ADEPML_DEFORMED = .true.
 
 !!-----------------------------------------------------------
 !!

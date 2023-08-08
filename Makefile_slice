@@ -41,6 +41,8 @@ create_slice_obj= \
         $O/get_shape3D.shared.o \
         $O/hex_nodes.shared.o \
         $O/exit_mpi.shared.o
+bin_to_xyz_obj= \
+	$O/specfem3D_par.spec_module.o
 xcombine_vol_data_SHARED_OBJECTS = \
 	$O/shared_par.shared_module.o \
 	$O/read_parameter_file.shared.o \
@@ -51,4 +53,8 @@ xcombine_vol_data_SHARED_OBJECTS = \
 $E/xcreate_slice_loc: src/auxiliaries/create_slice_loc.f90 $(create_slice_loc_obj) $(xcombine_vol_data_SHARED_OBJECTS)
 	${MPIFC} ${FCFLAGS} ${FCFLAGS_f90} -o $@ $^
 $E/xcreate_slice: src/auxiliaries/create_slice.f90 $(create_slice_obj) $(xcombine_vol_data_SHARED_OBJECTS)
+	${MPIFC} ${FCFLAGS} ${FCFLAGS_f90} -o $@ $^
+$E/xbin_to_xyz: src/auxiliaries/bin_to_xyz.f90 $(bin_to_xyz_obj) $(xcombine_vol_data_SHARED_OBJECTS)
+	${MPIFC} ${FCFLAGS} ${FCFLAGS_f90} -o $@ $^
+$E/xwrite_gll_model_from_xyz: src/auxiliaries/write_gll_model_from_xyz.f90 $(bin_to_xyz_obj) $(xcombine_vol_data_SHARED_OBJECTS)
 	${MPIFC} ${FCFLAGS} ${FCFLAGS_f90} -o $@ $^

@@ -34,6 +34,7 @@
 
   implicit none
 
+
   integer myrank
 
   double precision dershape3D(NDIM,NGNOD,NGLLX,NGLLY,NGLLZ)
@@ -82,8 +83,13 @@
                  xgamma*(yxi*zeta-yeta*zxi)
 
 ! check that the Jacobian transform is invertible, i.e. that the Jacobian never becomes negative or null
-      if (jacobian <= ZERO) call exit_MPI(myrank,'Error negative or null 3D Jacobian found')
-
+!! TL: add a vtk output here. if a negative Jacobian is detected, print current
+!! element with vtk before crashing
+      if (jacobian <= ZERO) then
+        call write_bad_element_vtk(myrank, xelm,yelm,zelm)
+        call exit_MPI(myrank,'Error negative or null 3D Jacobian found')        
+      endif
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !     invert the relation (Fletcher p. 50 vol. 2)
       xix = (yeta*zgamma-ygamma*zeta) / jacobian
       xiy = (xgamma*zeta-xeta*zgamma) / jacobian
@@ -120,7 +126,43 @@
 
   end subroutine calc_jacobian
 
-
+  subroutine write_bad_element_vtk(myrank, xelm,yelm,zelm)
+  !! TL: vtk file
+  use generate_databases_par, only: NGNOD
+  implicit none
+  integer myrank
+  character(len=512) :: prname
+  integer :: IOVTK = 322
+  double precision, dimension(NGNOD) :: xelm,yelm,zelm
+  integer :: i, np
+  if (NGNOD == 8) then
+    np = 8
+  else if (NGNOD == 27) then
+    np = 20
+  endif
+  write(prname, "('DATABASES_MPI/proc', i6.6, '_')") myrank
+  open(IOVTK,file=prname(1:len_trim(prname))//'mesh_debug.vtk',status='unknown')
+  write(IOVTK,'(a)') '# vtk DataFile Version 3.1'
+  write(IOVTK,'(a)') 'material model VTK file'
+  write(IOVTK,'(a)') 'ASCII'
+  write(IOVTK,'(a)') 'DATASET UNSTRUCTURED_GRID'
+  write(IOVTK, '(a, i12, a)') 'POINTS ', np,  ' float'
+  do i = 1, np
+    write(IOVTK, *) xelm(i), yelm(i), zelm(i)
+  enddo
+  write(IOVTK, '(a, i12, i12)') "CELLS ", 1, np+1
+  if (NGNOD == 8) then
+    write(IOVTK, '(a)') '8 0 1 2 3 4 5 6 7'
+  else if (NGNOD == 27) then
+    write(IOVTK, '(a)') '20 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19'
+  endif
+  write(IOVTK,'(a,i12)') "CELL_TYPES ", 1
+  if (NGNOD == 8) then
+    write(IOVTK, '(a)') '12'
+  else if (NGNOD == 27) then
+    write(IOVTK, '(a)') '25'
+  endif
+  end subroutine write_bad_element_vtk
 
   subroutine calc_coords(x_elem,y_elem,z_elem,xelm,yelm,zelm,shape3D)
 

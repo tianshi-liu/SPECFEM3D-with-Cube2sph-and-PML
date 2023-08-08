@@ -196,7 +196,7 @@
 
   use constants, only: CUSTOM_REAL,MAX_STRING_LEN, &
   !!TL: add flag for azimuthal anisotropy
-                       AZIMUTHAL_ANISOTROPY
+                       AZIMUTHAL_ANISOTROPY, CUBE2SPH_MESH
 
 ! global point coordinates
   real(kind=CUSTOM_REAL), dimension(:), allocatable :: xstore_dummy

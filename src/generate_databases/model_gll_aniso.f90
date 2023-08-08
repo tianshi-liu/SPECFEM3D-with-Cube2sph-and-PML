@@ -47,7 +47,7 @@
             c34store,c35store,c36store,c44store,c45store,c46store, &
             c55store,c56store,c66store, &
             xstore_dummy, ystore_dummy, zstore_dummy
-  use create_regions_mesh_ext_par, only: AZIMUTHAL_ANISOTROPY,&
+  use create_regions_mesh_ext_par, only: AZIMUTHAL_ANISOTROPY, CUBE2SPH_MESH, &
                kappavstore,muvstore,eta_anistore,Gc_nondimstore,Gs_nondimstore
 
   implicit none
@@ -353,14 +353,39 @@
       xp = xstore_dummy(iglob)
       yp = ystore_dummy(iglob)
       zp = zstore_dummy(iglob)
+      if (CUBE2SPH_MESH) then
+        call xyz_2_rthetaphi(xp,yp,zp,r_dummy,theta,phi)
 
-      call xyz_2_rthetaphi(xp,yp,zp,r_dummy,theta,phi)
-
-      call rotate_aniso_tensor(dble(theta),dble(phi),d11,d12,d13,d14,d15,d16, &
+        call rotate_aniso_tensor(dble(theta),dble(phi),d11,d12,d13,d14,d15,d16, &
                            d22,d23,d24,d25,d26, &
                            d33,d34,d35,d36,d44,d45,d46,d55,d56,d66, &
                            c11,c12,c13,c14,c15,c16,c22,c23,c24,c25,c26, &
                            c33,c34,c35,c36,c44,c45,c46,c55,c56,c66)
+      else
+! The mapping to the global Cartesian coordinate system used in the code
+! (1---East, 2---North, 3---up)
+        c11 = d22
+        c12 = d12
+        c13 = d23
+        c14 = - d25
+        c15 = d24
+        c16 = - d26
+        c22 = d11
+        c23 = d13
+        c24 = - d15
+        c25 = d14
+        c26 = - d16
+        c33 = d33
+        c34 = - d35
+        c35 = d34
+        c36 = - d36
+        c44 = d55
+        c45 = - d45
+        c46 = d56
+        c55 = d44
+        c56 = - d46
+        c66 = d66        
+      endif
       c11store(i,j,k,ispec) = real(c11, kind=CUSTOM_REAL)
       c12store(i,j,k,ispec) = real(c12, kind=CUSTOM_REAL)
       c13store(i,j,k,ispec) = real(c13, kind=CUSTOM_REAL)

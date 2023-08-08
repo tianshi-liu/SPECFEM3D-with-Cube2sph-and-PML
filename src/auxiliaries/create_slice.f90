@@ -18,6 +18,7 @@ program create_slice
   real(kind=CUSTOM_REAL), dimension(MAX_POINTS_IN_SLICE) :: val, dist_rec
   real(kind=CUSTOM_REAL), dimension(3) :: real_dummy 
   real(kind=CUSTOM_REAL), dimension(:,:,:,:), allocatable ::  database
+  real(kind=CUSTOM_REAL), parameter :: FILL_VAL = -1.0e10
   integer :: irank, current_rank, ios, ispec, iglob, ier
   character(len=MAX_STRING_LEN) slice_fn, loc_fn, out_fn, prname, &
                                 model_name, model_dir, norm_string
@@ -43,7 +44,7 @@ program create_slice
   allocate(iaddx(NGNOD), iaddy(NGNOD), iaddz(NGNOD), shape3D(NGNOD))
   npts = 0
   dist_rec(:) = HUGEVAL
-  val(:) = 0.0
+  val(:) = FILL_VAL
   open(11, file=slice_fn, iostat=ios)
   do while (1 == 1)
     npts = npts + 1
@@ -57,7 +58,9 @@ program create_slice
     read(11, *, iostat=ios) ipt, irank, ispec, xi, eta, gamma, dist
     if (ios /= 0) exit
     if (irank /= current_rank) then
-      if (current_rank >= 0) deallocate(ibool, xstore, ystore, zstore, database)
+      !if (current_rank >= 0) deallocate(ibool, xstore, ystore, zstore, database)
+      if (allocated(ibool)) &
+        deallocate(ibool, xstore, ystore, zstore, database)
       write(prname,'(a,i6.6,a)') 'DATABASES_MPI/proc',irank,'_'
       open(unit=27,file=prname(1:len_trim(prname))//'external_mesh.bin', &
          status='old',action='read',form='unformatted',iostat=ier)
@@ -148,7 +151,9 @@ program create_slice
     endif
   enddo
   close(12)
-  deallocate(ibool, xstore, ystore, zstore, database)
+  !deallocate(ibool, xstore, ystore, zstore, database)
+  if (allocated(ibool)) &
+        deallocate(ibool, xstore, ystore, zstore, database)
   deallocate(iaddx, iaddy, iaddz, shape3D)
   call MPI_FINALIZE(ier)
 end program create_slice
