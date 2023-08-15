@@ -1,6 +1,7 @@
 source module_load
-#./configure FC=ifort CC=icc MPIFC=mpif90 --with-mpi -enable-vectorization
-./configure FC=gfortran CC=gcc MPIFC=mpif90 --with-mpi
+mkdir -p bin/ obj/
+./configure FC=ifort CC=icc MPIFC=mpif90 --with-mpi -enable-vectorization
+#./configure FC=gfortran CC=gcc MPIFC=mpif90 --with-mpi
 make realclean
 #make all > compile_log
 make meshfem3D
@@ -10,6 +11,7 @@ make generate_databases
 #make bin/xcreate_slice_loc -f Makefile_slice
 #make bin/xcreate_slice -f Makefile_slice
 cd utils/cube2sph
+mkdir -p bin/ obj/
 make clean
 make all
 cd ../..
