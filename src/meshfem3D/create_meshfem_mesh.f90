@@ -84,6 +84,10 @@ end module create_meshfem_par
 
   use adios_manager_mod, only: adios_setup,adios_cleanup
 
+  !! Tianshi Liu: setting up wavefield discontinuity boundary
+  use wavefield_discontinuity_par, only: IS_WAVEFIELD_DISCONTINUITY, &
+                                            read_wavefield_discontinuity_switch
+
   implicit none
 
   ! local parameters
@@ -164,6 +168,12 @@ end module create_meshfem_par
   call create_visual_files(CREATE_ABAQUS_FILES,CREATE_DX_FILES,CREATE_VTK_FILES, &
                           nspec,nglob, &
                           prname,nodes_coords,ibool,ispec_material_id)
+
+  !! Tianshi Liu: setting up wavefield discontinuity boundary
+  call read_wavefield_discontinuity_switch()
+  if (IS_WAVEFIELD_DISCONTINUITY) then
+    call find_wavefield_discontinuity_elements()
+  endif
 
   ! stores boundary informations
   call store_boundaries(myrank,iboun,nspec, &

@@ -62,6 +62,7 @@ decompose_mesh_SHARED_OBJECTS = \
 	$O/read_parameter_file.shared.o \
 	$O/read_value_parameters.shared.o \
 	$O/sort_array_coordinates.shared.o \
+	$O/wavefield_discontinuity_par.shared.o \
 	$(EMPTY_MACRO)
 
 
@@ -164,7 +165,7 @@ $O/decompose_mesh.dec.o: $O/part_decompose_mesh.dec.o $O/fault_scotch.dec.o ${SC
 
 $O/program_decompose_mesh.dec.o: $O/decompose_mesh.dec.o $O/shared_par.shared_module.o $(COND_MPI_OBJECTS)
 $O/program_decompose_mesh_mpi.mpidec.o: $O/shared_par.shared_module.o $O/module_mesh.dec.o $O/module_database.dec.o $O/module_partition.dec.o $(COND_MPI_OBJECTS)
-
+$O/part_decompose_mesh.dec.o: $O/wavefield_discontinuity_par.shared.o
 $O/module_database.dec.o : $O/shared_par.shared_module.o
 $O/module_partition.dec.o : $O/shared_par.shared_module.o $O/fault_scotch.dec.o $O/module_qsort.dec.o
 $O/module_mesh.dec.o : $O/shared_par.shared_module.o $O/fault_scotch.dec.o

@@ -1132,8 +1132,8 @@
       !! VM VM in case of USE_EXTERNAL_SOURCE_FILE we have to read one additional line per source (the name of external source file)
       NSOURCES = icounter / (NLINES_PER_FORCESOLUTION_SOURCE+1)
     endif
-
-    if (NSOURCES < 1) stop 'Error need at least one source in FORCESOLUTION file'
+    !! Tianshi Liu: allow zero source
+    !if (NSOURCES < 1) stop 'Error need at least one source in FORCESOLUTION file'
 
   else
     ! compute the total number of sources in the CMTSOLUTION file
@@ -1155,8 +1155,8 @@
       !! VM VM in case of USE_EXTERNAL_SOURCE_FILE we have to read one additional line per source (the name of external source file)
       NSOURCES = icounter / (NLINES_PER_CMTSOLUTION_SOURCE+1)
     endif
-
-    if (NSOURCES < 1) stop 'Error need at least one source in CMTSOLUTION file'
+    !! Tianshi Liu: allow zero source
+    !if (NSOURCES < 1) stop 'Error need at least one source in CMTSOLUTION file'
 
     ! compute the minimum value of hdur in CMTSOLUTION file
     open(unit=21,file=trim(sources_filename),status='old',action='read')

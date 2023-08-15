@@ -43,6 +43,8 @@ generate_databases_TARGETS = \
 
 generate_databases_OBJECTS = \
 	$O/generate_databases_par.gen_mod.o \
+	$O/wavefield_discontinuity_generate_databases_mod.gen.o \
+	$O/get_discontinuity_surface.gen.o \
 	$O/calc_jacobian.gen.o \
 	$O/fault_generate_databases.gen.o \
 	$O/create_mass_matrices.gen.o \
@@ -90,6 +92,7 @@ generate_databases_MODULES = \
 	$(FC_MODDIR)/model_sep_mod.$(FC_MODEXT) \
 	$(FC_MODDIR)/model_tomography_par.$(FC_MODEXT) \
 	$(FC_MODDIR)/salton_trough_par.$(FC_MODEXT) \
+	$(FC_MODDIR)/wavefield_discontinuity_generate_databases.$(FC_MODEXT) \
 	$(EMPTY_MACRO)
 
 
@@ -121,6 +124,7 @@ generate_databases_SHARED_OBJECTS = \
 	$O/sort_array_coordinates.shared.o \
 	$O/utm_geo.shared.o \
 	$O/write_VTK_data.shared.o \
+	$O/wavefield_discontinuity_par.shared.o \
 	$(EMPTY_MACRO)
 
 generate_databases_CUBE2SPH_OBJECTS = \
@@ -219,8 +223,11 @@ ifeq ($(MPI),yes)
 $O/model_sep.mpi_gen.o: $O/parallel.sharedmpi.o
 endif
 
-$O/create_regions_mesh.gen.o: $O/fault_generate_databases.gen.o
-
+$O/create_regions_mesh.gen.o: $O/fault_generate_databases.gen.o $O/wavefield_discontinuity_generate_databases_mod.gen.o
+$O/read_partition_files.gen.o: $O/wavefield_discontinuity_generate_databases_mod.gen.o
+$O/save_arrays_solver.gen.o: $O/wavefield_discontinuity_generate_databases_mod.gen.o
+$O/get_discontinuity_surface.gen.o: $O/wavefield_discontinuity_generate_databases_mod.gen.o
+$O/wavefield_discontinuity_generate_databases_mod.gen.o: $O/wavefield_discontinuity_par.shared.o
 ## adios
 $O/generate_databases.gen.o: $(adios_generate_databases_PREOBJECTS)
 $O/save_arrays_solver_adios.gen_adios.o: $(adios_generate_databases_PREOBJECTS)
@@ -263,6 +270,9 @@ $O/%.mpi_gen.o: $S/%.F90 $O/shared_par.shared_module.o $O/generate_databases_par
 
 $O/%.genc.o: $S/%.c
 	${CC} ${CFLAGS} -c -o $@ $<
+
+$O/%.cube2sph.o: src/cube2sph/%.f90 setup/*.h $O/shared_par.shared_module.o
+	${FCCOMPILE_CHECK} ${FCFLAGS_f90} -c -o $@ $<
 
 ###
 ### ADIOS compilation

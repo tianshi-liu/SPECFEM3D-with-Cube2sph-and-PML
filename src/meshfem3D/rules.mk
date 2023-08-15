@@ -59,6 +59,7 @@ meshfem3D_OBJECTS = \
 	$O/get_MPI_cutplanes_xi.mesh.o \
 	$O/meshfem3D.mesh.o \
 	$O/meshfem3D_par.mesh.o \
+	$O/get_wavefield_discontinuity.mesh.o \
 	$O/read_mesh_parameter_file.mesh.o \
 	$O/read_value_mesh_parameters.mesh.o \
 	$O/save_databases.mesh.o \
@@ -83,6 +84,7 @@ meshfem3D_SHARED_OBJECTS = \
 	$O/hex_nodes.shared.o \
 	$O/param_reader.cc.o \
 	$O/read_parameter_file.shared.o \
+	$O/wavefield_discontinuity_par.shared.o \
 	$O/read_topo_bathy_file.shared.o \
 	$O/read_value_parameters.shared.o \
 	$O/safe_alloc_mod.shared.o \
@@ -152,7 +154,9 @@ $E/xmeshfem3D: $(XMESHFEM_OBJECTS)
 
 
 $O/meshfem3D.mesh.o: $O/meshfem3D_par.mesh.o $O/chunk_earth_mesh_mod.mesh.o
-$O/create_meshfem_mesh.mesh.o: $O/meshfem3D_par.mesh.o
+$O/create_meshfem_mesh.mesh.o: $O/meshfem3D_par.mesh.o $O/wavefield_discontinuity_par.shared.o
+$O/save_databases.mesh.o: $O/wavefield_discontinuity_par.shared.o
+$O/get_wavefield_discontinuity.mesh.o: $O/wavefield_discontinuity_par.shared.o
 $O/create_CPML_regions.mesh.o: $O/meshfem3D_par.mesh.o
 $O/create_interfaces_mesh.mesh.o: $O/meshfem3D_par.mesh.o
 $O/read_mesh_parameter_file.mesh.o: $O/meshfem3D_par.mesh.o

@@ -43,6 +43,9 @@ module decompose_mesh
     build_glob2loc_elmnts,build_glob2loc_nodes,build_interfaces,poro_elastic_repartitioning,moho_surface_repartitioning, &
     decompose_default_repartitioning
 
+  !! Tianshi Liu: setting up wavefield discontinuity boundary
+  use part_decompose_mesh, only: write_wavefield_discontinuity_database
+
   use fault_scotch, only: ANY_FAULT,nodes_coords_open,read_fault_files,save_nodes_coords,close_faults, &
     fault_repartition,write_fault_database
 
@@ -1218,11 +1221,18 @@ module decompose_mesh
        call write_material_props_database(IIN_database,count_def_mat,count_undef_mat, &
                                   mat_prop, undef_mat_prop)
 
+
        ! writes out spectral element indices
        write(IIN_database) nspec_local
        call write_partition_database(IIN_database, ipart, nspec_local, nspec, elmnts, &
                                   glob2loc_elmnts, glob2loc_nodes_nparts, &
                                   glob2loc_nodes_parts, glob2loc_nodes, part, mat, NGNOD, 2)
+
+
+
+       !! Tianshi Liu: setting up wavefield discontinuity boundary
+       call write_wavefield_discontinuity_database(IIN_database, ipart, nspec, &
+                                                glob2loc_elmnts, part)
 
        ! writes out absorbing/free-surface boundaries
        call write_boundaries_database(IIN_database, ipart, nspec, nspec2D_xmin, nspec2D_xmax, nspec2D_ymin, &

@@ -33,6 +33,10 @@
 
   use generate_databases_par
 
+  !! Tianshi Liu: setup wavefield discontinuity boundary
+  use wavefield_discontinuity_generate_databases, only: &
+                                                  IS_WAVEFIELD_DISCONTINUITY
+
   implicit none
 
   integer :: num_xmin,num_xmax,num_ymin,num_ymax,num_top,num_bottom,num
@@ -141,6 +145,12 @@
     write(IMAIN,*) 'total number of spectral elements: ',num
   endif
   call synchronize_all()
+
+  !! Tianshi Liu: setup wavefield discontinuity boundary
+  if (IS_WAVEFIELD_DISCONTINUITY) then
+    call read_partition_files_wavefield_discontinuity()
+    call synchronize_all()
+  endif
 
 ! reads absorbing/free-surface boundaries
   read(IIN) boundary_number ,nspec2D_xmin

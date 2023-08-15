@@ -70,6 +70,7 @@ shared_OBJECTS = \
 	$O/utm_geo.shared.o \
 	$O/write_c_binary.cc.o \
 	$O/write_VTK_data.shared.o \
+	$O/wavefield_discontinuity_par.shared.o \
 	$(EMPTY_MACRO)
 
 
@@ -81,6 +82,7 @@ shared_MODULES = \
 	$(FC_MODDIR)/shared_compute_parameters.$(FC_MODEXT) \
 	$(FC_MODDIR)/shared_parameters.$(FC_MODEXT) \
 	$(FC_MODDIR)/attenuation_model.$(FC_MODEXT) \
+	$(FC_MODDIR)/wavefield_discontinuity_par.$(FC_MODEXT) \
 	$(EMPTY_MACRO)
 
 

@@ -53,7 +53,8 @@
           nibool_interfaces_ext_mesh, num_interface, SAVE_MOHO_MESH, &
           boundary_number, nspec2D_moho_ext, ibelm_moho, nodes_ibelm_moho
 
-
+  !! Tianshi Liu: setup wavefield discontinuity boundary
+  use wavefield_discontinuity_cube2sph, only: IS_WAVEFIELD_DISCONTINUITY
 
   implicit none
 
@@ -164,6 +165,12 @@
     write(IMAIN,*) 'total number of spectral elements: ',num
   endif
   call synchronize_all()
+
+  !! Tianshi Liu: setup wavefield discontinuity boundary
+  if (IS_WAVEFIELD_DISCONTINUITY) then
+    call read_partition_files_wavefield_discontinuity()
+    call synchronize_all()
+  endif
 
 ! reads absorbing/free-surface boundaries
   read(IIN) boundary_number ,nspec2D_xmin

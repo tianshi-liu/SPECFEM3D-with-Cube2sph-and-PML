@@ -38,6 +38,9 @@
   use constants, only: MAX_STRING_LEN,IDOMAIN_ACOUSTIC,IDOMAIN_ELASTIC,SAVE_MESH_AS_CUBIT
   use shared_parameters, only: COUPLE_WITH_INJECTION_TECHNIQUE
 
+  !! Tianshi Liu: setting up wavefield discontinuity boundary
+  use wavefield_discontinuity_par, only: IS_WAVEFIELD_DISCONTINUITY
+
   implicit none
 
   include "constants_meshfem3D.h"
@@ -209,6 +212,10 @@
            ibool(1,1,1,ispec),ibool(2,1,1,ispec),ibool(2,2,1,ispec),ibool(1,2,1,ispec),ibool(1,1,2,ispec), &
            ibool(2,1,2,ispec),ibool(2,2,2,ispec),ibool(1,2,2,ispec)
   enddo
+
+  !! Tianshi Liu: setting up wavefield discontinuity boundary
+  if (IS_WAVEFIELD_DISCONTINUITY) &
+    call write_wavefield_discontinuity_database(IIN_database)
 
   ! Boundaries
   write(IIN_database) 1,nspec2D_xmin
@@ -434,6 +441,9 @@
 
   use constants, only: MAX_STRING_LEN,IDOMAIN_ACOUSTIC,IDOMAIN_ELASTIC, NGLLX, NGLLY, NGLLZ, NDIM, ZERO
 
+  !! Tianshi Liu: setting up wavefield discontinuity boundary
+  use wavefield_discontinuity_par, only: IS_WAVEFIELD_DISCONTINUITY
+
   implicit none
 
   include "constants_meshfem3D.h"
@@ -524,6 +534,10 @@
           ibool(2,2,2,ispec),ibool(1,2,2,ispec)
   enddo
   close(IIN_database)
+
+  !! Tianshi Liu: setting up wavefield discontinuity boundary
+  if (IS_WAVEFIELD_DISCONTINUITY) &
+    call write_wavefield_discontinuity_file()
 
   open(IIN_database,file='MESH/absorbing_surface_file_xmin')
   write(IIN_database,*) nspec2D_xmin

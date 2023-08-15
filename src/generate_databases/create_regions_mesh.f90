@@ -59,6 +59,10 @@
   !! TL: add this for ADE-PML
   use generate_databases_par, only: USE_ADE_PML,CALC_ADEPML_DAMPING,&
                                     SET_ADEPML_GLOB
+
+  !! Tianshi Liu: setup wavefield discontinuity boundary
+  use wavefield_discontinuity_generate_databases, only: &
+               IS_WAVEFIELD_DISCONTINUITY, read_wavefield_discontinuity_switch
   implicit none
 
 ! local parameters
@@ -266,6 +270,18 @@
     call flush_IMAIN()
   endif
   call create_mass_matrices(nglob_dummy,nspec,ibool,PML_CONDITIONS,STACEY_ABSORBING_CONDITIONS)
+
+  !! Tianshi Liu: setup wavefield discontinuity boundary
+  call read_wavefield_discontinuity_switch()
+  if (IS_WAVEFIELD_DISCONTINUITY) then
+    call synchronize_all()
+    if (myrank == 0) then
+      write(IMAIN,*)
+      write(IMAIN,*) '  ...setting up wavefield discontinuity boundary '
+      call flush_IMAIN()
+    endif
+    call setup_boundary_wavefield_discontinuity()
+  endif
 
 ! saves the binary mesh files
   call synchronize_all()

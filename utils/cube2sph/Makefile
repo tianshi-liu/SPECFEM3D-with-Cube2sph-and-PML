@@ -128,6 +128,8 @@ adios_shared_STUBS= \
 	$O/adios_method_stubs.cc.o
 generate_databases_obj=\
 	$O/meshfem3D_par.check_module.o\
+	$O/wavefield_discontinuity_cube2sph_mod.gen.o \
+	$O/read_write_wavefield_discontinuity.gen.o \
 	$O/read_partition_files.gen.o \
 	$O/write_partition_files.gen.o \
 	$O/generate_databases_par.gen_mod.o

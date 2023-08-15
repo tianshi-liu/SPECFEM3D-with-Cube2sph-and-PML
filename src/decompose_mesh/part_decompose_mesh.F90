@@ -531,6 +531,54 @@ contains
   end subroutine  write_material_props_database
 
 
+  !! Tianshi Liu: setting up wavefield discontinuity boundary
+  subroutine write_wavefield_discontinuity_database(IIN_database, iproc, nspec,&
+                                                    glob2loc_elmnts, part)
+  use wavefield_discontinuity_par
+  implicit none
+  integer, intent(in)  :: IIN_database
+  integer, intent(in)  :: iproc
+  integer, intent(in)  :: nspec
+  integer, dimension(:), pointer :: glob2loc_elmnts
+  integer, dimension(1:nspec)  :: part
+  integer :: ier, ispec, iside
+  call read_wavefield_discontinuity_switch()
+  if (.not. IS_WAVEFIELD_DISCONTINUITY) return
+  open(unit=IFILE_WAVEFIELD_DISCONTINUITY, &
+       file='wavefield_discontinuity_boundary', &
+       action='read', form='formatted')
+  ier = 0
+  nb_wd = 0
+  do while (ier == 0)
+    read(IFILE_WAVEFIELD_DISCONTINUITY, *, iostat=ier) ispec, iside
+    if (ier /= 0) exit
+    if (part(ispec) == iproc) nb_wd = nb_wd + 1
+  enddo
+  close(IFILE_WAVEFIELD_DISCONTINUITY)
+  allocate(boundary_to_ispec_wd(nb_wd), side_wd(nb_wd))
+  open(unit=IFILE_WAVEFIELD_DISCONTINUITY, &
+       file='wavefield_discontinuity_boundary', &
+       action='read', form='formatted')
+  print *, 'found ', nb_wd, 'injection elements in partition', iproc
+  ier = 0
+  nb_wd = 0
+  do while (ier == 0)
+    read(IFILE_WAVEFIELD_DISCONTINUITY, *, iostat=ier) ispec, iside
+    if (ier /= 0) exit
+    if (part(ispec) == iproc) then
+      nb_wd = nb_wd + 1
+      boundary_to_ispec_wd(nb_wd) = glob2loc_elmnts(ispec-1)+1
+      side_wd(nb_wd) = iside
+    endif
+  enddo
+  close(IFILE_WAVEFIELD_DISCONTINUITY)
+  write(IIN_database) nb_wd
+  write(IIN_database) boundary_to_ispec_wd
+  write(IIN_database) side_wd
+  deallocate(boundary_to_ispec_wd, side_wd)
+  end subroutine write_wavefield_discontinuity_database
+
+
   !--------------------------------------------------
   ! Write elements on boundaries (and their four nodes on boundaries)
   ! pertaining to iproc partition in the corresponding Database

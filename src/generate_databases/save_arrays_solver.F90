@@ -58,6 +58,10 @@
   use create_regions_mesh_ext_par
 
   use shared_parameters, only: COUPLE_WITH_INJECTION_TECHNIQUE,MESH_A_CHUNK_OF_THE_EARTH
+ 
+  !! Tianshi Liu: setup wavefield discontinuity boundary
+  use wavefield_discontinuity_generate_databases, only: &
+                                                  IS_WAVEFIELD_DISCONTINUITY 
 
   implicit none
 
@@ -187,6 +191,11 @@
         if (nglob_interface_PML_elastic > 0)  write(IOUT) points_interface_PML_elastic
       endif
     endif
+  endif
+
+  !! Tianshi Liu: setup wavefield discontinuity boundary
+  if (IS_WAVEFIELD_DISCONTINUITY) then
+    call save_arrays_solver_mesh_wavefield_discontinuity()
   endif
 
 ! absorbing boundary surface
