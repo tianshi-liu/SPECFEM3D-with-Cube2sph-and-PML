@@ -1,0 +1,6 @@
+     2     -1     tomography elastic model_bot_660.dat 0
+     2     -2     tomography elastic model_660_410.dat 0
+     2     -3     tomography elastic model_410_210.dat 0
+     2     -4     tomography elastic model_210_moho.dat 0
+     2     1      2920.0 6500.000 3850.000 9999 50.0 0
+     2     2      2720.0 5800.000 3460.000 9999 50.0 0
