@@ -45,6 +45,8 @@ specfem3D_TARGETS = \
 specfem3D_OBJECTS = \
 	$O/specfem3D_par.spec_module.o \
         $O/asdf_data.spec_module.o \
+	$O/wavefield_discontinuity_solver_mod.spec.o \
+	$O/wavefield_discontinuity.spec.o \
 	$O/adepml_utils.spec.o \
 	$O/assemble_MPI_vector.spec.o \
 	$O/check_stability.spec.o \
@@ -161,6 +163,7 @@ specfem3D_SHARED_OBJECTS = \
 	$O/utm_geo.shared.o \
 	$O/write_VTK_data.shared.o \
 	$O/write_c_binary.cc.o \
+	$O/wavefield_discontinuity_par.shared.o \
 	$(EMPTY_MACRO)
 
 specfem3D_CUBE2SPH_OBJECTS = \
@@ -184,6 +187,7 @@ specfem3D_MODULES = \
 	$(FC_MODDIR)/specfem_par_movie.$(FC_MODEXT) \
 	$(FC_MODDIR)/specfem_par_coupling.$(FC_MODEXT) \
 	$(FC_MODDIR)/user_noise_distribution.$(FC_MODEXT) \
+	$(FC_MODDIR)/wavefield_discontinuity_solver.$(FC_MODEXT) \
 	$(EMPTY_MACRO)
 
 
@@ -408,6 +412,14 @@ $O/write_output_ASDF.spec.o: $O/asdf_data.spec_module.o
 $O/locate_point.spec.o: $O/search_kdtree.shared.o
 $O/setup_sources_receivers.spec.o: $O/search_kdtree.shared.o
 
+## wavefield discontinuity
+$O/wavefield_discontinuity.spec.o: $O/wavefield_discontinuity_solver_mod.spec.o
+$O/compute_forces_viscoelastic_calling_routine.spec.o: $O/wavefield_discontinuity_solver_mod.spec.o
+$O/compute_forces_viscoelastic.spec.o: $O/wavefield_discontinuity_solver_mod.spec.o
+$O/iterate_time.spec.o: $O/wavefield_discontinuity_solver_mod.spec.o
+$O/initialize_simulation.spec.o: $O/wavefield_discontinuity_solver_mod.spec.o
+$O/read_mesh_databases.spec.o: $O/wavefield_discontinuity_solver_mod.spec.o
+$O/wavefield_discontinuity_solver_mod.spec.o: $O/wavefield_discontinuity_par.shared.o
 ####
 #### rule to build each .o file below
 ####
@@ -424,6 +436,9 @@ $O/%.spec.o: $S/%.f90 $O/specfem3D_par.spec_module.o
 	${FCCOMPILE_CHECK} ${FCFLAGS_f90} -c -o $@ $<
 
 $O/%.spec.o: $S/%.F90 $O/specfem3D_par.spec_module.o
+	${FCCOMPILE_CHECK} ${FCFLAGS_f90} -c -o $@ $<
+
+$O/%.cube2sph.o: src/cube2sph/%.f90 setup/*.h $O/shared_par.shared_module.o
 	${FCCOMPILE_CHECK} ${FCFLAGS_f90} -c -o $@ $<
 
 ###

@@ -301,7 +301,8 @@
   endif
 
   ! check that we have at least one source
-  if (NSOURCES < 1) call exit_MPI(myrank,'need at least one source')
+  ! Tianshi Liu: skip this check
+  !if (NSOURCES < 1) call exit_MPI(myrank,'need at least one source')
 
   ! check simulation type
   if (SIMULATION_TYPE /= 1 .and. SIMULATION_TYPE /= 2 .and. SIMULATION_TYPE /= 3) &

@@ -36,6 +36,10 @@
   use specfem_par_movie
   use gravity_perturbation, only: gravity_timeseries, GRAVITY_SIMULATION
 
+  !! Tianshi Liu: for solving wavefield discontinuity problem with
+  !! non-split-node scheme
+  use wavefield_discontinuity_solver, only: IS_WAVEFIELD_DISCONTINUITY
+
   implicit none
 
   ! for EXACT_UNDOING_TO_DISK
@@ -202,6 +206,12 @@
   t_update = 0.0
   t_update_pml = 0.0
 
+  !! Tianshi Liu: for solving wavefield discontinuity problem with
+  !! non-split-node scheme
+  if (IS_WAVEFIELD_DISCONTINUITY) then
+    call open_wavefield_discontinuity_file()
+  endif
+
   do it = it_begin,it_end
 
     ! simulation status output and stability check
@@ -340,6 +350,12 @@
   !---- end of time iteration loop
   !
   enddo   ! end of main time loop
+
+  !! Tianshi Liu: for solving wavefield discontinuity problem with
+  !! non-split-node scheme
+  if (IS_WAVEFIELD_DISCONTINUITY) then
+    call finalize_wavefield_discontinuity()
+  endif
 
   ! TL: output timing
   open(unit=525,file=trim(prname)//'timing.txt',status='unknown',action='write')

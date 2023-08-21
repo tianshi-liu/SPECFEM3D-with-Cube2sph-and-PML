@@ -37,6 +37,11 @@
   use specfem_par_poroelastic
   use specfem_par_movie
 
+  !! Tianshi Liu: for solving wavefield discontinuity problem with
+  !! non-split-node scheme
+  use wavefield_discontinuity_solver, only: IS_WAVEFIELD_DISCONTINUITY, &
+                                            read_wavefield_discontinuity_switch
+
   implicit none
   integer :: ier
   character(len=MAX_STRING_LEN) :: database_name
@@ -582,6 +587,13 @@
         endif
       endif
     endif
+  endif
+
+  !! Tianshi Liu: for solving wavefield discontinuity problem with
+  !! non-split-node scheme
+  call read_wavefield_discontinuity_switch()
+  if (IS_WAVEFIELD_DISCONTINUITY) then
+    call read_mesh_databases_wavefield_discontinuity()
   endif
 
   ! absorbing boundary surface

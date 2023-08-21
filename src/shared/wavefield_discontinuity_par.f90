@@ -3,9 +3,9 @@
 !! Tianshi Liu, 2023.5
 
 module wavefield_discontinuity_par
-  logical :: IS_WAVEFIELD_DISCONTINUITY=.true.
+  logical :: IS_WAVEFIELD_DISCONTINUITY=.false.
 
-  logical :: IS_TOP_WAVEFIELD_DISCONTINUITY=.false.
+  logical :: IS_TOP_WAVEFIELD_DISCONTINUITY=.true.
 
   integer, parameter :: IFILE_WAVEFIELD_DISCONTINUITY=527
 
@@ -29,11 +29,24 @@ module wavefield_discontinuity_par
   contains
 
   subroutine read_wavefield_discontinuity_switch()
+    implicit none
+    integer :: ier, myrank
+    call world_rank(myrank)
     open(unit=IFILE_WAVEFIELD_DISCONTINUITY, &
        file='wavefield_discontinuity_switch', &
-       form='formatted', action='read')
-    read(IFILE_WAVEFIELD_DISCONTINUITY, *) IS_WAVEFIELD_DISCONTINUITY
-    read(IFILE_WAVEFIELD_DISCONTINUITY, *) IS_TOP_WAVEFIELD_DISCONTINUITY
-    close(IFILE_WAVEFIELD_DISCONTINUITY)
+       form='formatted', action='read', iostat=ier)
+    if (ier /= 0) then
+      if (myrank == 0) print *, 'cannot find switch file for wavefield discontinuity, skip'
+      return
+    else
+      read(IFILE_WAVEFIELD_DISCONTINUITY, *) IS_WAVEFIELD_DISCONTINUITY
+      read(IFILE_WAVEFIELD_DISCONTINUITY, *) IS_TOP_WAVEFIELD_DISCONTINUITY
+      close(IFILE_WAVEFIELD_DISCONTINUITY)
+      if (myrank == 0) then
+        print *, 'found switch file for wavefield discontinuity'
+        print *, 'IS_WAVEFIELD_DISCONTINUITY = ', IS_WAVEFIELD_DISCONTINUITY
+        print *, 'IS_TOP_WAVEFIELD_DISCONTINUITY = ', IS_TOP_WAVEFIELD_DISCONTINUITY
+      endif
+    endif
   end subroutine read_wavefield_discontinuity_switch
 end module wavefield_discontinuity_par

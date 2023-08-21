@@ -79,6 +79,10 @@
                      rmemory_duz_dxl_z,rmemory_duz_dyl_z,rmemory_duy_dzl_z,rmemory_dux_dzl_z, &
                      rmemory_displ_elastic,PML_displ_old,PML_displ_new
 
+  !! Tianshi Liu: for solving wavefield discontinuity problem with
+  !! non-split-node scheme
+  use wavefield_discontinuity_solver, only: IS_WAVEFIELD_DISCONTINUITY
+
   implicit none
 
 ! displacement, velocity and acceleration
@@ -222,6 +226,12 @@
           enddo
         enddo
       enddo
+      !! Tianshi Liu: for solving wavefield discontinuity problem with
+      !! non-split-node scheme
+      if (IS_WAVEFIELD_DISCONTINUITY) then
+        call add_displacement_discontinuity_element(ispec, dummyx_loc, &
+                                                  dummyy_loc, dummyz_loc)
+      endif
     endif
 
     if (is_CPML(ispec)) then

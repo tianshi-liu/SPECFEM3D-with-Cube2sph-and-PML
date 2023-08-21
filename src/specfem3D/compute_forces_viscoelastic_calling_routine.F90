@@ -38,6 +38,10 @@ subroutine compute_forces_viscoelastic_calling()
   use fault_solver_dynamic, only: bc_dynflt_set3d_all,SIMULATION_TYPE_DYN
   use fault_solver_kinematic, only: bc_kinflt_set_all,SIMULATION_TYPE_KIN
 
+  !! Tianshi Liu: for solving wavefield discontinuity problem with
+  !! non-split-node scheme
+  use wavefield_discontinuity_solver, only: IS_WAVEFIELD_DISCONTINUITY
+
   implicit none
 
   integer:: iphase
@@ -59,6 +63,13 @@ subroutine compute_forces_viscoelastic_calling()
                                      my_neighbors_ext_mesh,myrank)
   endif
 
+  !! Tianshi Liu: for solving wavefield discontinuity problem with
+  !! non-split-node scheme
+  if (IS_WAVEFIELD_DISCONTINUITY) then
+    call read_wavefield_discontinuity_file()
+  endif
+
+
 ! distinguishes two runs: for elements in contact with MPI interfaces, and elements within the partitions
   do iphase = 1,2
 
@@ -77,6 +88,12 @@ subroutine compute_forces_viscoelastic_calling()
     t_force = t_force + (wtime() - t_clock)
     ! computes additional contributions
     if (iphase == 1) then
+      !! Tianshi Liu: for solving wavefield discontinuity problem with
+      !! non-split-node scheme
+      if (IS_WAVEFIELD_DISCONTINUITY) then
+        call add_traction_discontinuity()
+      endif
+
       ! adds elastic absorbing boundary term to acceleration (Stacey conditions)
       if (STACEY_ABSORBING_CONDITIONS) then
         call compute_stacey_viscoelastic(NSPEC_AB,NGLOB_AB,accel, &
