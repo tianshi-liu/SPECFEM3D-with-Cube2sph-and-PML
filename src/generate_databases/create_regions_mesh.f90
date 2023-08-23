@@ -62,7 +62,7 @@
 
   !! Tianshi Liu: setup wavefield discontinuity boundary
   use wavefield_discontinuity_generate_databases, only: &
-               IS_WAVEFIELD_DISCONTINUITY, read_wavefield_discontinuity_switch
+               IS_WAVEFIELD_DISCONTINUITY
   implicit none
 
 ! local parameters
@@ -272,7 +272,6 @@
   call create_mass_matrices(nglob_dummy,nspec,ibool,PML_CONDITIONS,STACEY_ABSORBING_CONDITIONS)
 
   !! Tianshi Liu: setup wavefield discontinuity boundary
-  call read_wavefield_discontinuity_switch()
   if (IS_WAVEFIELD_DISCONTINUITY) then
     call synchronize_all()
     if (myrank == 0) then

@@ -35,7 +35,7 @@
 
   !! Tianshi Liu: setup wavefield discontinuity boundary
   use wavefield_discontinuity_generate_databases, only: &
-                                                  IS_WAVEFIELD_DISCONTINUITY
+           IS_WAVEFIELD_DISCONTINUITY, read_wavefield_discontinuity_switch
 
   implicit none
 
@@ -147,6 +147,7 @@
   call synchronize_all()
 
   !! Tianshi Liu: setup wavefield discontinuity boundary
+  call read_wavefield_discontinuity_switch()
   if (IS_WAVEFIELD_DISCONTINUITY) then
     call read_partition_files_wavefield_discontinuity()
     call synchronize_all()
