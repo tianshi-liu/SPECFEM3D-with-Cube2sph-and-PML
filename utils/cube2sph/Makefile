@@ -165,7 +165,9 @@ create_ckbd_obj= \
 	$O/get_ellipticity.check.o \
 	$O/add_topography.check.o
 
-
+$O/read_write_wavefield_discontinuity.gen.o: $O/wavefield_discontinuity_cube2sph_mod.gen.o
+$O/read_partition_files.gen.o: $O/wavefield_discontinuity_cube2sph_mod.gen.o
+$O/write_partition_files.gen.o: $O/wavefield_discontinuity_cube2sph_mod.gen.o
 ## rules
 all: $E/setup_adepml $E/cube2sph $E/cube2sph_station_inv $E/cube2sph_boundary_gmt $E/cube2sph_force $E/cube2sph_station $E/write_horizontal_slice_vtk $E/write_vertical_slice_vtk $E/write_force_solution_file $E/write_cmt_solution_file $E/write_stations_file
 
