@@ -319,8 +319,8 @@ DEFAULT = \
 
 ifeq ($(MPI),yes)
 DEFAULT += xdecompose_mesh_mpi
-DEFAULT += xinverse_problem_for_model
-SUBDIRS += inverse_problem_for_model
+#DEFAULT += xinverse_problem_for_model
+#SUBDIRS += inverse_problem_for_model
 endif
 
 default: $(DEFAULT)

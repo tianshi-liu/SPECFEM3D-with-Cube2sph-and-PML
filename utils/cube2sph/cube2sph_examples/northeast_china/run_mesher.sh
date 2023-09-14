@@ -8,7 +8,7 @@ echo
 echo "   setting up example..."
 echo
 #specfem_dir="${HOME}/specfem3d_pml"
-specfem_dir="${HOME}/specfem3d_pml_1order_repository"
+specfem_dir="${SCRATCH}/cube2sph_injection_test/SPECFEM3D-with-Cube2sph-and-PML"
 # cleans output files
 rm -rf DATABASES_MPI*
 rm -rf MESH*
@@ -37,9 +37,6 @@ cd ../
 cp DATA/meshfem3D_files/Mesh_Par_file OUTPUT_FILES/
 cp DATA/Par_file_initmesh DATA/Par_file
 cp DATA/Par_file OUTPUT_FILES/
-#cp DATA/FORCESOLUTION OUTPUT_FILES/
-#cp DATA/STATIONS OUTPUT_FILES/
-
 # get the number of processors, ignoring comments in the Par_file
 NPROC=`grep ^NPROC DATA/Par_file | grep -v -E '^[[:space:]]*#' | cut -d = -f 2`
 
@@ -69,7 +66,7 @@ rm -rf DATABASES_MPI
 mkdir -p OUTPUT_FILES
 # stores setup
 #cp DATA/Par_file_ref DATA/Par_file
-sed -i "/^NPROC/c\NPROC                           = 200" DATA/Par_file
+sed -i "/^NPROC/c\NPROC                           = 120" DATA/Par_file
 sed -i "/^NGNOD/c\NGNOD                           = 27" DATA/Par_file
 
 cp DATA/meshfem3D_files/Mesh_Par_file OUTPUT_FILES/

@@ -8,8 +8,8 @@
 # USER PARAMETERS
 
 ## 40 CPUs ( 10*4 ), walltime 5 hour
-#SBATCH --nodes=5
-#SBATCH --ntasks=200
+#SBATCH --nodes=3
+#SBATCH --ntasks=120
 #SBATCH --time=00:15:00
 
 ###########################################################
@@ -56,7 +56,7 @@ cp -R DATABASES_MPI DATABASES_MPI_REF
 
 #./bin/cube2sph_force
 #./bin/cube2sph_station
-mpirun -np $NPROC ./bin/cube2sph_adepml DATABASES_MPI_REF DATABASES_MPI 43.5 121.8 0.0
+mpirun -np $NPROC ./bin/cube2sph DATABASES_MPI_REF DATABASES_MPI 43.5 121.8 0.0
 cp DATABASES_MPI_REF/proc*adepml_param.bin DATABASES_MPI
 cp $specfem_dir/bin/xgenerate_databases bin/
 cp $specfem_dir/bin/xcombine_vol_data_vtk bin/

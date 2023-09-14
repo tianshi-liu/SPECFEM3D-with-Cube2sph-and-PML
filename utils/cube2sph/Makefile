@@ -167,10 +167,13 @@ create_ckbd_obj= \
 
 
 ## rules
-all: $E/setup_adepml $E/cube2sph_adepml $E/cube2sph_station_inv $E/cube2sph_boundary_gmt $E/cube2sph_force $E/cube2sph_station $E/write_horizontal_slice_vtk $E/write_vertical_slice_vtk $E/cube2sph_nopml $E/write_force_solution_file $E/write_cmt_solution_file $E/write_stations_file
+all: $E/setup_adepml $E/cube2sph $E/cube2sph_station_inv $E/cube2sph_boundary_gmt $E/cube2sph_force $E/cube2sph_station $E/write_horizontal_slice_vtk $E/write_vertical_slice_vtk $E/write_force_solution_file $E/write_cmt_solution_file $E/write_stations_file
 
 $E/setup_adepml: ./src/setup_adepml.f90 $(shared_obj) $(adios_shared_STUBS) $(generate_databases_obj) $(setup_adepml_obj)
 	${MPIFC} ${FCFLAGS} -o $@ $^
+
+$E/cube2sph: ./src/cube2sph.f90 $(setup_model_obj) $(node_stretching_obj) $(shared_obj) $(adios_shared_STUBS) $(generate_databases_obj) $(cube2sph_adepml_obj)
+	${MPIFC} ${FCFLAGS} ${NCDFLDFLAGS} -o $@ $^ ${NCDFLDLIBS}
 
 $E/cube2sph_adepml: ./src/cube2sph_adepml.f90 $(setup_model_obj) $(node_stretching_obj) $(shared_obj) $(adios_shared_STUBS) $(generate_databases_obj) $(cube2sph_adepml_obj)
 	${MPIFC} ${FCFLAGS} ${NCDFLDFLAGS} -o $@ $^ ${NCDFLDLIBS}

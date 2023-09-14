@@ -1,7 +1,7 @@
 subroutine setup_gll_model_cartesian(xstore,ystore,zstore,rho_new,&
                   vp_new,vs_new,nspec)
   use meshfem3D_models_par, only: myrank
-  use constants, only: NGLLX,NGLLY,NGLLZ,IIN,IOUT
+  use constants, only: NGLLX,NGLLY,NGLLZ,IIN,IOUT,IMAIN
   implicit none
   integer :: ier,nspec
   double precision, dimension(NGLLX,NGLLY,NGLLZ,nspec) :: xstore,ystore,zstore
@@ -22,7 +22,7 @@ subroutine setup_gll_model_cartesian(xstore,ystore,zstore,rho_new,&
   write(prname_lp,'(a,i6.6,a)') trim(LOCAL_PATH_REF)// '/' //'proc',myrank,'_'
   ! user output
   if (myrank == 0) then
-    write(*,*) '     reading mesh from: ',trim(LOCAL_PATH_REF)
+    write(IMAIN,*) '     reading mesh from: ',trim(LOCAL_PATH_REF)
   endif
   ! density
   !allocate(rho_read(NGLLX,NGLLY,NGLLZ,nspec),stat=ier)
@@ -32,7 +32,7 @@ subroutine setup_gll_model_cartesian(xstore,ystore,zstore,rho_new,&
   !if (myrank == 0) write(*,*) '     reading in: rho.bin'
 
   filename = prname_lp(1:len_trim(prname_lp))//'rho.bin'
-  if (myrank == 0) print *, 'reading ', filename
+  if (myrank == 0) write(IMAIN,*) 'reading ', filename
   open(unit=IIN,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
   if (ier /= 0) then
     print *,'error opening file: ',trim(filename)
@@ -50,7 +50,7 @@ subroutine setup_gll_model_cartesian(xstore,ystore,zstore,rho_new,&
   !if (myrank == 0) write(*,*) '     reading in: vp.bin'
 
   filename = prname_lp(1:len_trim(prname_lp))//'vp.bin'
-  if (myrank == 0) print *, 'reading ', filename
+  if (myrank == 0) write(IMAIN,*) 'reading ', filename
   open(unit=IIN,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
   if (ier /= 0) then
     print *,'error opening file: ',trim(filename)
@@ -60,15 +60,8 @@ subroutine setup_gll_model_cartesian(xstore,ystore,zstore,rho_new,&
   read(IIN) vp_read
   close(IIN)
 
-  ! vs
-  !allocate(vs_read(NGLLX,NGLLY,NGLLZ,nspec),stat=ier)
-  !if (ier /= 0) stop 'error allocating array vs_read'
-
-  ! user output
-  !if (myrank == 0) write(*,*) '     reading in: vs.bin'
-
   filename = prname_lp(1:len_trim(prname_lp))//'vs.bin'
-  if (myrank == 0) print *, 'reading ', filename
+  if (myrank == 0) write(IMAIN,*) 'reading ', filename
   open(unit=IIN,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
   if (ier /= 0) then
     print *,'error opening file: ',trim(filename)
@@ -194,6 +187,7 @@ subroutine update_structural_parameters(x, y, z, rho_old, vp_old, vs_old, &
       rho_new(:,:,:,:) = rho_old(:,:,:,:)
       vs_new(:,:,:,:) = vs_old(:,:,:,:)
       vp_new(:,:,:,:) = vp_old(:,:,:,:)
+      write(IMAIN,*) 'use default model'
       return
     case ('PREM')
       CASE_3D = .false.
@@ -223,17 +217,17 @@ subroutine update_structural_parameters(x, y, z, rho_old, vp_old, vs_old, &
   end select
   close(95)
   if (myrank==0) then
-    print *, 'implementing Cube2sph structrual model'
-    print *, 'ELLIPTICITY = ', ELLIPTICITY
-    print *, 'TOPOGRAPHY = ', TOPOGRAPHY
-    print *, 'CASE_3D = ', CASE_3D
-    print *, 'CRUSTAL = ', CRUSTAL
-    print *, 'ISOTROPIC_3D_MANTLE = ', ISOTROPIC_3D_MANTLE
-    print *, 'ONE_CRUST = ', ONE_CRUST
-    print *, 'TRANSVERSE_ISOTROPY = ', TRANSVERSE_ISOTROPY
-    print *, 'MODEL = ', trim(model_string)
+    write(IMAIN,*) 'implementing Cube2sph structrual model'
+    write(IMAIN,*) 'ELLIPTICITY = ', ELLIPTICITY
+    write(IMAIN,*) 'TOPOGRAPHY = ', TOPOGRAPHY
+    write(IMAIN,*) 'CASE_3D = ', CASE_3D
+    write(IMAIN,*) 'CRUSTAL = ', CRUSTAL
+    write(IMAIN,*) 'ISOTROPIC_3D_MANTLE = ', ISOTROPIC_3D_MANTLE
+    write(IMAIN,*) 'ONE_CRUST = ', ONE_CRUST
+    write(IMAIN,*) 'TRANSVERSE_ISOTROPY = ', TRANSVERSE_ISOTROPY
+    write(IMAIN,*) 'MODEL = ', trim(model_string)
     if (use_emc_model) then
-      print *, 'use IRIS EMC model at ', emc_path
+      write(IMAIN,*) 'use IRIS EMC model at ', emc_path
     endif
   endif
 

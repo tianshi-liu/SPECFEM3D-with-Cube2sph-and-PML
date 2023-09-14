@@ -84,17 +84,17 @@ subroutine node_stretching(nodes_coords,nodes_coords_new)
   end select
   close(95)
   if (myrank==0) then
-    print *, 'implementing Cube2sph node stretching'
-    print *, 'ELLIPTICITY = ', ELLIPTICITY
-    print *, 'TOPOGRAPHY = ', TOPOGRAPHY
-    print *, 'CASE_3D = ', CASE_3D
-    print *, 'CRUSTAL = ', CRUSTAL
-    print *, 'ISOTROPIC_3D_MANTLE = ', ISOTROPIC_3D_MANTLE
-    print *, 'ONE_CRUST = ', ONE_CRUST
-    print *, 'TRANSVERSE_ISOTROPY = ', TRANSVERSE_ISOTROPY
-    print *, 'MODEL = ', trim(model_string)
+    write(IMAIN,*) 'implementing Cube2sph node stretching'
+    write(IMAIN,*) 'ELLIPTICITY = ', ELLIPTICITY
+    write(IMAIN,*) 'TOPOGRAPHY = ', TOPOGRAPHY
+    write(IMAIN,*) 'CASE_3D = ', CASE_3D
+    write(IMAIN,*) 'CRUSTAL = ', CRUSTAL
+    write(IMAIN,*) 'ISOTROPIC_3D_MANTLE = ', ISOTROPIC_3D_MANTLE
+    write(IMAIN,*) 'ONE_CRUST = ', ONE_CRUST
+    write(IMAIN,*) 'TRANSVERSE_ISOTROPY = ', TRANSVERSE_ISOTROPY
+    write(IMAIN,*) 'MODEL = ', trim(model_string)
     if (use_emc_model) then
-      print *, 'use IRIS EMC model at ', emc_path
+      write(IMAIN,*) 'use IRIS EMC model at ', emc_path
     endif
   endif
 

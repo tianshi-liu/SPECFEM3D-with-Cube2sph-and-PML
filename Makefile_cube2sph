@@ -14,7 +14,7 @@ cube2sph_obj= \
 	$O/rotate_elastic_parameter.cube2sph.o
 
 
-$O/%.cube2sph.o: src/cube2sph/%.f90 setup/*.h
+$O/%.cube2sph.o: src/cube2sph/%.f90 setup/*.h $O/shared_par.shared_module.o
 	${FC} ${FCFLAGS} ${FCFLAGS_f90} -c -o $@ $<
 
 all: $(cube2sph_obj)

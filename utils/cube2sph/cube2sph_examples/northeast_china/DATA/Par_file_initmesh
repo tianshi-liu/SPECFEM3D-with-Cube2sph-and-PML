@@ -26,8 +26,8 @@ SUPPRESS_UTM_PROJECTION         = .true.
 NPROC                           = 1
 
 # time step parameters
-NSTEP                           = 45000
-DT                              = 2.000E-002
+NSTEP                           = 20000
+DT                              = 5.000E-002
 
 #-----------------------------------------------------------
 #
@@ -184,7 +184,7 @@ USE_FORCE_POINT_SOURCE          = .true.
 
 # set to true to use a Ricker source time function instead of the source time functions set by default
 # to represent a (tilted) FORCESOLUTION force point source or a CMTSOLUTION moment-tensor source.
-USE_RICKER_TIME_FUNCTION        = .true.
+USE_RICKER_TIME_FUNCTION        = .false.
 
 # Use an external source time function.
 # if .true. you must add a file with your source time function and the file name
