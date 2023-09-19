@@ -74,10 +74,12 @@ program write_stations_file
   allocate(x_target(nrec), &
            y_target(nrec), &
            z_target(nrec),stat=ier)
-  allocate(ibathy_topo(NX_BATHY,NY_BATHY),stat=ier)
-  call make_ellipticity(nspl,rspl,espl,espl2,ONE_CRUST)
-  ibathy_topo(:,:) = 0
-  call read_topo_bathy_file(ibathy_topo)
+  if (TOPOGRAPHY) then
+    allocate(ibathy_topo(NX_BATHY,NY_BATHY),stat=ier)
+    call make_ellipticity(nspl,rspl,espl,espl2,ONE_CRUST)
+    ibathy_topo(:,:) = 0
+    call read_topo_bathy_file(ibathy_topo)
+  endif
   open(unit=IIN,file=trim(STATIONS_FILE),status='old',action='read',iostat=ier)
   if (ier /= 0 ) call exit_MPI(myrank,'Error opening STATIONS file')
 
@@ -241,7 +243,7 @@ program write_stations_file
   deallocate(x_target, &
            y_target, &
            z_target)
-  deallocate(ibathy_topo)
+  if (TOPOGRAPHY) deallocate(ibathy_topo)
   call MPI_Finalize(ier)
 end program write_stations_file
 

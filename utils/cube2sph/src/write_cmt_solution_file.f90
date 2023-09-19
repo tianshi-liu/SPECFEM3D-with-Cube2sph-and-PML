@@ -67,10 +67,12 @@ program write_cmt_file
            Mxy(NSOURCES), &
            Mxz(NSOURCES), &
            Myz(NSOURCES), stat=ier)
-  allocate(ibathy_topo(NX_BATHY,NY_BATHY),stat=ier)
-  call make_ellipticity(nspl,rspl,espl,espl2,ONE_CRUST)
-  ibathy_topo(:,:) = 0
-  call read_topo_bathy_file(ibathy_topo)
+  if (TOPOGRAPHY) then
+    allocate(ibathy_topo(NX_BATHY,NY_BATHY),stat=ier)
+    call make_ellipticity(nspl,rspl,espl,espl2,ONE_CRUST)
+    ibathy_topo(:,:) = 0
+    call read_topo_bathy_file(ibathy_topo)
+  endif
   call get_cmt(yr,jda,mo,da,ho,mi,sec,tshift_src,hdur,lat,long,depth,&
                moment_tensor,DT,NSOURCES,min_tshift_src_original,sph_cmt_fn)
   ! dimensionalize
@@ -207,6 +209,6 @@ program write_cmt_file
              phi_source, &
              nu_source, &
              Mxx, Myy, Mzz, Mxy, Mxz, Myz)
-  deallocate(ibathy_topo)
+  if (TOPOGRAPHY) deallocate(ibathy_topo)
   call MPI_Finalize(ier)
 end program write_cmt_file

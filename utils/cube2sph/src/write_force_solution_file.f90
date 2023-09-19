@@ -60,10 +60,12 @@ program write_force_solution_file
            comp_dir_vect_source_E(NSOURCES), &
            comp_dir_vect_source_N(NSOURCES), &
            comp_dir_vect_source_Z_UP(NSOURCES),stat=ier)
-  allocate(ibathy_topo(NX_BATHY,NY_BATHY),stat=ier)
-  call make_ellipticity(nspl,rspl,espl,espl2,ONE_CRUST)
-  ibathy_topo(:,:) = 0
-  call read_topo_bathy_file(ibathy_topo)
+  if (TOPOGRAPHY) then
+    allocate(ibathy_topo(NX_BATHY,NY_BATHY),stat=ier)
+    call make_ellipticity(nspl,rspl,espl,espl2,ONE_CRUST)
+    ibathy_topo(:,:) = 0
+    call read_topo_bathy_file(ibathy_topo)
+  endif
   call get_force(tshift_src,hdur,lat,long,depth,DT,NSOURCES, &
                  min_tshift_src_original,force_stf,factor_force_source, &
                  comp_dir_vect_source_E,comp_dir_vect_source_N, &
@@ -183,6 +185,6 @@ program write_force_solution_file
              comp_dir_vect_source_E, &
              comp_dir_vect_source_N, &
              comp_dir_vect_source_Z_UP)
-  deallocate(ibathy_topo)
+  if (TOPOGRAPHY) deallocate(ibathy_topo)
   call MPI_Finalize(ier)
 end program write_force_solution_file

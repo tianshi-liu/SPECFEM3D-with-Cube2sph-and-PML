@@ -1,0 +1,25 @@
+# number of interfaces
+ 5
+#
+# We describe each interface below, structured as a 2D-grid, with several parameters : 
+# number of points along XI and ETA, minimal XI ETA coordinates
+# and spacing between points which must be constant.
+# Then the records contain the Z coordinates of the NXI x NETA points.
+#
+# SUPPRESS_UTM_PROJECTION  NXI  NETA LONG_MIN   LAT_MIN    SPACING_XI SPACING_ETA
+ .true.  2  2  -1223144.1931  -1223144.1931  2446288.3862  2446288.3862
+ interface_90.dat
+ .true.  401  401  -1223144.1931  -1223144.1931  6115.7209655  6115.7209655
+ moho_topo_25000_45000.dat
+ .true.  401  401  -1223144.1931  -1223144.1931  6115.7209655  6115.7209655
+ moho_topo_12000_16000.dat
+ .true.  401  401  -1223144.1931  -1223144.1931  6115.7209655  6115.7209655
+ sediment_topo_4000_8000.dat
+ .true.  401  401  -1223144.1931  -1223144.1931  6115.7209655  6115.7209655
+ topo.txt
+# for each layer, we give the number of spectral elements in the vertical direction
+6
+3
+2
+1
+1
