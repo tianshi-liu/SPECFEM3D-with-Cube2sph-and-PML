@@ -30,8 +30,8 @@ bash quick_installation
 
 9. Performing rotation for the seismograms.
 
-Examples provided in `utils/cube2sph/cube2sph\_examples` directory:
-- `pml\_prem`: PML with PREM-onecrust model on a 20\*20 degrees domain
-- `stacey\_prem`: Stacey boundary condition with PML-onecrust model on a 20\*20 degrees domain
-- `alaska\_example`: mesh with surface and Moho topography and 3D tomographic model on a 22\*22 degrees domain
-- `northeast\_china`: example for wavefield injection using Cube2sph-AxiSEM coupling (under development)
+Examples provided in `utils/cube2sph/cube2sph_examples` directory:
+- `pml_prem`: PML with PREM-onecrust model on a 20\*20 degrees domain
+- `stacey_prem`: Stacey boundary condition with PML-onecrust model on a 20\*20 degrees domain
+- `alaska_example`: mesh with surface and Moho topography and 3D tomographic model on a 22\*22 degrees domain
+- `northeast_china`: example for wavefield injection using Cube2sph-AxiSEM coupling (under development)
