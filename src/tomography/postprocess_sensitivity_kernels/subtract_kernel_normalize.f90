@@ -1,16 +1,18 @@
-program get_max_absolute_value
+program subtract_kernel_normalize
   use postprocess_par, only : MAX_KERNEL_NAMES
   use specfem_par
   use specfem_par_elastic, only: ispec_is_elastic
       !nspec_inner_elastic,nspec_outer_elastic,phase_ispec_inner_elastic
   use specfem_par_acoustic, only: ispec_is_acoustic
   use specfem_par_poroelastic, only: ispec_is_poroelastic
-  integer, parameter :: NARGS = 3
+  integer, parameter :: NARGS = 4
   character(len=MAX_STRING_LEN) :: arg(NARGS)
   character(len=MAX_STRING_LEN) :: kernel_names(MAX_KERNEL_NAMES)
-  character(len=MAX_STRING_LEN) :: in_kernel_path, out_fn, &
+  character(len=MAX_STRING_LEN) :: in_kernel_path1, in_kernel_path2, dir_out, &
                                    kernel_names_comma_delimited
-  real(kind=CUSTOM_REAL),dimension(:,:,:,:,:), allocatable :: kernel_array
+  character(len=MAX_STRING_LEN) :: filename
+  real(kind=CUSTOM_REAL),dimension(:,:,:,:,:), allocatable :: kernel_array1, &
+                      kernel_array2, kernel_array
   integer :: i,ier,nker
   real(kind=CUSTOM_REAL) :: max_val
   logical :: BROADCAST_AFTER_READ
@@ -19,7 +21,7 @@ program get_max_absolute_value
   call world_rank(myrank)
 
   if (myrank == 0) then
-    write(*,*) 'getting maximum absolute value'
+    write(*,*) 'subtracting kernel and normalize'
     write(*,*)
   endif
   call synchronize_all()
@@ -28,9 +30,11 @@ program get_max_absolute_value
     call get_command_argument(i,arg(i),status=ier)
   enddo
 
-  read(arg(1),'(a)') in_kernel_path
-  read(arg(2),'(a)') kernel_names_comma_delimited
-  read(arg(3),'(a)') out_fn
+  read(arg(1),'(a)') in_kernel_path1
+  read(arg(2),'(a)') in_kernel_path2
+  read(arg(3),'(a)') kernel_names_comma_delimited
+  read(arg(4),'(a)') dir_out
+
   call parse_kernel_names(kernel_names_comma_delimited,kernel_names,nker)
   
 ! set up coordinates of the Gauss-Lobatto-Legendre points
@@ -43,29 +47,50 @@ program get_max_absolute_value
   ! reads in external mesh
   call read_mesh_databases()
 
-  allocate(kernel_array(NGLLX,NGLLY,NGLLZ,NSPEC_AB,nker), stat=ier)
+  allocate(kernel_array1(NGLLX,NGLLY,NGLLZ,NSPEC_AB,nker), &
+           kernel_array2(NGLLX,NGLLY,NGLLZ,NSPEC_AB,nker), &
+           kernel_array(NGLLX,NGLLY,NGLLZ,NSPEC_AB,nker), stat=ier)
 
-  call read_kernel_from_path(in_kernel_path,kernel_names,nker,kernel_array)
+  call read_kernel_from_path(in_kernel_path1,kernel_names,nker,kernel_array1)
   if (myrank == 0) then
-    print *, in_kernel_path
+    print *, in_kernel_path1
   endif
 
-  call max_all_cr(maxval(abs(kernel_array)), max_val)
+  call read_kernel_from_path(in_kernel_path2,kernel_names,nker,kernel_array2)
+  if (myrank == 0) then
+    print *, in_kernel_path2
+  endif
+
+  kernel_array(:,:,:,:,:) = kernel_array1(:,:,:,:,:) - kernel_array2(:,:,:,:,:)
+
+  call max_all_all_cr(maxval(abs(kernel_array)), max_val)
 
   if (myrank == 0) then
-    open(unit=IOUT, file=trim(out_fn), form='formatted', &
-         action='write', status='unknown', iostat=ier)
-    write(IOUT, *) max_val
+    print *, 'normalize with max absolute value = ', max_val, ' at rank ', myrank
+  endif
+
+  if (myrank == (sizeprocs - 1)) then
+    print *, 'normalize with max absolute value = ', max_val, ' at rank ', myrank
+  endif
+
+  kernel_array(:,:,:,:,:) = kernel_array(:,:,:,:,:) / max_val
+
+  do i = 1, nker
+    write(filename,'(a,i6.6,a)') trim(dir_out) // &
+                '/proc',myrank,'_'// trim(kernel_names(i))//'.bin'
+    open(IOUT,file=trim(filename),form='unformatted',action='write',&
+              status='unknown', iostat=ier)
+    write(IOUT) kernel_array(:,:,:,:,i)
     close(IOUT)
-  endif
+  enddo
   deallocate(ibool,irregular_element_number)
   deallocate(xix,xiy,xiz,etax,etay,etaz,gammax,gammay,gammaz,jacobian)
   deallocate(xstore,ystore,zstore,kappastore,mustore)
   deallocate(ispec_is_acoustic, ispec_is_elastic, ispec_is_poroelastic)
-  deallocate(kernel_array)
+  deallocate(kernel_array1, kernel_array2, kernel_array)
   call finalize_mpi()
   
-end program get_max_absolute_value
+end program subtract_kernel_normalize
 
 
 subroutine read_kernel_from_path(kernel_path,kernel_names,nker,array)

@@ -9,8 +9,10 @@ make decompose_mesh
 make aux
 make generate_databases
 make specfem3D
-#make bin/xcreate_slice_loc -f Makefile_slice
-#make bin/xcreate_slice -f Makefile_slice
+make postprocess
+make all -f Makefile_sph
+make bin/xcreate_slice_loc -f Makefile_slice
+make bin/xcreate_slice -f Makefile_slice
 cd utils/cube2sph
 mkdir -p bin/ obj/
 make clean

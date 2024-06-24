@@ -59,5 +59,13 @@ $E/xbin_to_xyz: src/auxiliaries/bin_to_xyz.f90 $(bin_to_xyz_obj) $(xcombine_vol_
 $E/xwrite_gll_model_from_xyz: src/auxiliaries/write_gll_model_from_xyz.f90 $(bin_to_xyz_obj) $(xcombine_vol_data_SHARED_OBJECTS)
 	${MPIFC} ${FCFLAGS} ${FCFLAGS_f90} -o $@ $^
 
+$O/parallel_for_inverse_problem.invmpi.o: src/inverse_problem_for_model/parallel_for_inverse_problem.f90 setup/constants.h
+	${MPIFC} ${FCFLAGS_f90} -c -o $@ $<
+
+$O/projection_on_FD_grid_mod.inv_projection.o: src/inverse_problem_for_model/projection_on_FD_grid/projection_on_FD_grid_mod.f90 setup/constants.h $O/inverse_problem_par.inv_par.o
+	${MPIFC} ${FCFLAGS_f90} -c -o $@ $<
+
+$O/inverse_problem_par.inv_par.o: src/inverse_problem_for_model/inverse_problem_par.f90 setup/constants.h $O/shared_par.shared_module.o $O/specfem3D_par.spec_module.o
+	${MPIFC} ${FCFLAGS_f90} -c -o $@ $<
 all: $E/xcreate_slice_loc $E/xcreate_slice
 .PHONY: all

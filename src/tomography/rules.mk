@@ -119,6 +119,9 @@ xadd_model_SHARED_OBJECTS = \
 	$O/specfem3D_par.spec_module.o \
 	$O/pml_par.spec_module.o \
 	$O/read_mesh_databases.spec.o \
+	$O/wavefield_discontinuity_solver_mod.spec.o \
+	$O/wavefield_discontinuity.spec.o \
+	$O/read_adepml_files.spec.o \
 	$O/shared_par.shared_module.o \
 	$O/create_name_database.shared.o \
 	$O/exit_mpi.shared.o \
@@ -167,6 +170,9 @@ xmodel_update_SHARED_OBJECTS = \
 	$O/pml_par.spec_module.o \
 	$O/initialize_simulation.spec.o \
 	$O/read_mesh_databases.spec.o \
+	$O/wavefield_discontinuity_solver_mod.spec.o \
+	$O/wavefield_discontinuity.spec.o \
+	$O/read_adepml_files.spec.o \
 	$O/shared_par.shared_module.o \
 	$O/check_mesh_resolution.shared.o \
 	$O/create_name_database.shared.o \

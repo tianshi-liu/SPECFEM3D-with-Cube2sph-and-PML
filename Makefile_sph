@@ -7,6 +7,8 @@ FCFLAGS=-g   -xHost -fpe0 -ftz -assume buffered_io -assume byterecl -align seque
 FCFLAGS_f90 = -module ./obj -I./obj -I.  -I${SETUP}
 O=./obj
 E=./bin
+ADIOS = no
+ASDF = no
 
 smooth_sem_SHARED_OBJECTS = \
 	$O/shared_par.shared_module.o \
@@ -47,7 +49,12 @@ smooth_sem_obj= \
 	$O/specfem3D_par.spec_module.o \
 	$O/pml_par.spec_module.o \
 	$O/read_adepml_files.spec.o \
-	$O/read_mesh_databases.spec.o
+	$O/wavefield_discontinuity_solver_mod.spec.o \
+	$O/wavefield_discontinuity.spec.o \
+	$O/wavefield_discontinuity_par.shared.o \
+	$O/read_mesh_databases.spec.o \
+	$O/initialize_simulation.spec.o \
+	$O/asdf_data.spec_module.o
 
 combine_sem_obj = \
 	$O/postprocess_par.postprocess_module.o \
@@ -62,26 +69,44 @@ combine_sem_SHARED_OBJECTS = \
 select_control_group_obj = \
 	$O/postprocess_par.postprocess_module.o \
 	$O/parse_kernel_names.postprocess.o \
+	$O/smooth_sem_cuda_stubs.postprocess.o \
 	$O/specfem3D_par.spec_module.o \
 	$O/pml_par.spec_module.o \
 	$O/read_adepml_files.spec.o \
-	$O/read_mesh_databases.spec.o
+	$O/wavefield_discontinuity_solver_mod.spec.o \
+	$O/wavefield_discontinuity.spec.o \
+	$O/wavefield_discontinuity_par.shared.o \
+	$O/read_mesh_databases.spec.o \
+	$O/initialize_simulation.spec.o \
+	$O/asdf_data.spec_module.o
 
 write_lbfgs_direction_obj = \
 	$O/postprocess_par.postprocess_module.o \
 	$O/parse_kernel_names.postprocess.o \
+	$O/smooth_sem_cuda_stubs.postprocess.o \
 	$O/specfem3D_par.spec_module.o \
 	$O/pml_par.spec_module.o \
 	$O/read_adepml_files.spec.o \
-	$O/read_mesh_databases.spec.o
+	$O/wavefield_discontinuity_solver_mod.spec.o \
+	$O/wavefield_discontinuity.spec.o \
+	$O/wavefield_discontinuity_par.shared.o \
+	$O/read_mesh_databases.spec.o \
+	$O/initialize_simulation.spec.o \
+	$O/asdf_data.spec_module.o
 
 get_max_absolute_value_obj = \
 	$O/postprocess_par.postprocess_module.o \
 	$O/parse_kernel_names.postprocess.o \
+	$O/smooth_sem_cuda_stubs.postprocess.o \
 	$O/specfem3D_par.spec_module.o \
 	$O/pml_par.spec_module.o \
 	$O/read_adepml_files.spec.o \
-	$O/read_mesh_databases.spec.o
+	$O/wavefield_discontinuity_solver_mod.spec.o \
+	$O/wavefield_discontinuity.spec.o \
+	$O/wavefield_discontinuity_par.shared.o \
+	$O/read_mesh_databases.spec.o \
+	$O/initialize_simulation.spec.o \
+	$O/asdf_data.spec_module.o
 
 div_kernel_by_nmeas_obj = \
 	$O/postprocess_par.postprocess_module.o \
@@ -89,6 +114,9 @@ div_kernel_by_nmeas_obj = \
 	$O/specfem3D_par.spec_module.o \
 	$O/pml_par.spec_module.o \
 	$O/read_adepml_files.spec.o \
+	$O/wavefield_discontinuity_solver_mod.spec.o \
+	$O/wavefield_discontinuity.spec.o \
+	$O/wavefield_discontinuity_par.shared.o \
 	$O/read_mesh_databases.spec.o 
 
 update_model_by_perturbation_obj = \
@@ -97,6 +125,9 @@ update_model_by_perturbation_obj = \
 	$O/specfem3D_par.spec_module.o \
 	$O/pml_par.spec_module.o \
 	$O/read_adepml_files.spec.o \
+	$O/wavefield_discontinuity_solver_mod.spec.o \
+	$O/wavefield_discontinuity.spec.o \
+	$O/wavefield_discontinuity_par.shared.o \
 	$O/read_mesh_databases.spec.o
 
 scale_rho_with_vs_obj = \
@@ -105,6 +136,9 @@ scale_rho_with_vs_obj = \
 	$O/specfem3D_par.spec_module.o \
 	$O/pml_par.spec_module.o \
 	$O/read_adepml_files.spec.o \
+	$O/wavefield_discontinuity_solver_mod.spec.o \
+	$O/wavefield_discontinuity.spec.o \
+	$O/wavefield_discontinuity_par.shared.o \
 	$O/read_mesh_databases.spec.o
 
 get_isotropic_vbulk_obj = \
@@ -113,6 +147,9 @@ get_isotropic_vbulk_obj = \
 	$O/specfem3D_par.spec_module.o \
 	$O/pml_par.spec_module.o \
 	$O/read_adepml_files.spec.o \
+	$O/wavefield_discontinuity_solver_mod.spec.o \
+	$O/wavefield_discontinuity.spec.o \
+	$O/wavefield_discontinuity_par.shared.o \
 	$O/read_mesh_databases.spec.o
 
 write_zero_array_obj = \
@@ -121,9 +158,117 @@ write_zero_array_obj = \
 	$O/specfem3D_par.spec_module.o \
 	$O/pml_par.spec_module.o \
 	$O/read_adepml_files.spec.o \
+	$O/wavefield_discontinuity_solver_mod.spec.o \
+	$O/wavefield_discontinuity.spec.o \
+	$O/wavefield_discontinuity_par.shared.o \
 	$O/read_mesh_databases.spec.o
 
-all: $E/xsmooth_sem_sph_pde $E/xselect_control_group $E/xselect_control_group_joint $E/xcombine_sem_joint $E/xwrite_lbfgs_direction $E/xdiv_kernel_by_nmeas $E/xupdate_model_by_perturbation $E/xscale_rho_with_vs $E/xget_isotropic_vbulk $E/xwrite_zero_array
+
+###
+### ADIOS
+###
+
+# using ADIOS files
+
+adios_specfem3D_OBJECTS= \
+	$O/read_mesh_databases_adios.spec_adios.o \
+	$O/save_forward_arrays_adios.spec_adios.o \
+	$O/read_forward_arrays_adios.spec_adios.o \
+	$O/save_kernels_adios.spec_adios.o
+
+adios_specfem3D_PREOBJECTS = \
+	$O/adios_manager.shared_adios.o \
+	$O/adios_helpers_definitions.shared_adios_module.o \
+	$O/adios_helpers_writers.shared_adios_module.o \
+	$O/adios_helpers.shared_adios.o
+
+adios_specfem3D_STUBS = \
+	$O/specfem3D_adios_stubs.spec_noadios.o
+
+adios_specfem3D_PRESTUBS = \
+	$O/adios_manager_stubs.shared_noadios.o
+
+# conditional adios linking
+ifeq ($(ADIOS),no)
+adios_specfem3D_OBJECTS = $(adios_specfem3D_STUBS)
+adios_specfem3D_PREOBJECTS = $(adios_specfem3D_PRESTUBS)
+endif
+smooth_sem_obj += $(adios_specfem3D_OBJECTS)
+select_control_group_obj += $(adios_specfem3D_OBJECTS)
+write_lbfgs_direction_obj += $(adios_specfem3D_OBJECTS)
+get_max_absolute_value_obj += $(adios_specfem3D_OBJECTS)
+subtract_kernel_normalize_obj += $(adios_specfem3D_OBJECTS)
+smooth_sem_SHARED_OBJECTS += $(adios_specfem3D_PREOBJECTS)
+
+###
+### ASDF
+###
+
+asdf_specfem3D_OBJECTS = \
+	$O/write_output_ASDF.spec.o \
+	$O/read_adjoint_sources_ASDF.spec.o \
+	$(EMPTY_MACRO)
+
+asdf_specfem3D_SHARED_OBJECTS = \
+	$O/asdf_manager.shared_asdf.o \
+	$(EMPTY_MACRO)
+
+asdf_specfem3D_SHARED_STUBS = \
+	$O/asdf_method_stubs.cc.o \
+	$O/asdf_manager_stubs.shared_asdf.o \
+	$(EMPTY_MACRO)
+
+# conditional asdf linking
+ifeq ($(ASDF),yes)
+SPECFEM_LINK_FLAGS += $(ASDF_LIBS) -lhdf5hl_fortran -lhdf5_hl -lhdf5 -lstdc++
+smooth_sem_obj += $(asdf_specfem3D_OBJECTS)
+select_control_group_obj += $(asdf_specfem3D_OBJECTS)
+write_lbfgs_direction_obj += $(asdf_specfem3D_OBJECTS)
+get_max_absolute_value_obj += $(asdf_specfem3D_OBJECTS)
+subtract_kernel_normalize_obj += $(asdf_specfem3D_OBJECTS)
+smooth_sem_SHARED_OBJECTS += $(asdf_specfem3D_SHARED_OBJECTS)
+else
+smooth_sem_obj += $(asdf_specfem3D_STUBS)
+select_control_group_obj += $(asdf_specfem3D_STUBS)
+write_lbfgs_direction_obj += $(asdf_specfem3D_STUBS)
+get_max_absolute_value_obj += $(asdf_specfem3D_STUBS)
+subtract_kernel_normalize_obj += $(asdf_specfem3D_STUBS)
+smooth_sem_SHARED_OBJECTS += $(asdf_specfem3D_SHARED_STUBS)
+endif
+#
+
+## adios
+$O/read_forward_arrays_adios.spec_adios.o: $O/pml_par.spec_module.o
+$O/read_mesh_databases_adios.spec_adios.o: $O/pml_par.spec_module.o
+$O/initialize_simulation.spec.o: $(adios_specfem3D_PREOBJECTS)
+$O/save_kernels_adios.spec_adios.o: $(adios_specfem3D_PREOBJECTS)
+$O/save_forward_arrays_adios.spec_adios.o: $O/pml_par.spec_module.o $(adios_specfem3D_PREOBJECTS)
+$O/finalize_simulation.spec.o: $O/pml_par.spec_module.o $O/gravity_perturbation.spec.o $(adios_specfem3D_PREOBJECTS)
+$O/specfem3D_adios_stubs.spec_noadios.o: $O/adios_manager_stubs.shared_noadios.o
+$O/adios_helpers.shared_adios.o: \
+	$O/adios_helpers_definitions.shared_adios_module.o \
+	$O/adios_helpers_writers.shared_adios_module.o
+
+## ASDF compilation
+$O/write_output_ASDF.spec.o: $O/asdf_data.spec_module.o
+
+###
+### ADIOS compilation
+###
+
+$O/%.spec_adios.o: $S/%.F90 $O/specfem3D_par.spec_module.o
+	${FC} ${FCFLAGS} ${FCFLAGS_f90} -c -o $@ $<
+
+$O/%.spec_adios.o: $S/%.f90 $O/specfem3D_par.spec_module.o
+	${FC} ${FCFLAGS} ${FCFLAGS_f90} -c -o $@ $<
+
+$O/%.spec_noadios.o: $S/%.F90 $O/specfem3D_par.spec_module.o
+	${FC} ${FCFLAGS} ${FCFLAGS_f90} -c -o $@ $<
+
+$O/%.spec_noadios.o: $S/%.f90 $O/specfem3D_par.spec_module.o
+	${FC} ${FCFLAGS} ${FCFLAGS_f90} -c -o $@ $<
+
+all: $E/xsmooth_sem_sph_pde $E/xselect_control_group $E/xselect_control_group_joint $E/xcombine_sem_joint $E/xwrite_lbfgs_direction_smooth $E/xdiv_kernel_by_nmeas $E/xupdate_model_by_perturbation $E/xscale_rho_with_vs $E/xget_isotropic_vbulk $E/xwrite_zero_array $E/xwrite_lbfgs_direction_smooth $E/xget_max_absolute_value
 
 
 $E/xsmooth_sem_sph: $O/smooth_sem_sph_multi.postprocess.o $(smooth_sem_obj) $(smooth_sem_SHARED_OBJECTS)
