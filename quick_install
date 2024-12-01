@@ -1,21 +1,34 @@
 source module_load
-mkdir -p bin/ obj/
-./configure FC=ifort CC=icc MPIFC=mpif90 --with-mpi -enable-vectorization
-#./configure FC=gfortran CC=gcc MPIFC=mpif90 --with-mpi
-make realclean
-#make all > compile_log
-make meshfem3D
-make decompose_mesh
-make aux
-make generate_databases
-make specfem3D
-make postprocess
-make all -f Makefile_sph
-make bin/xcreate_slice_loc -f Makefile_slice
-make bin/xcreate_slice -f Makefile_slice
+rm -rf build bin/ obj/
+mkdir build bin/ obj/
+cd build
+cmake .. -DFC=mpif90 -DCC=mpicc 
+make -j8
+cd ..
 cd utils/cube2sph
-mkdir -p bin/ obj/
-make clean
-make all
-cd ../..
-#make bin/xsmooth_sem_sph -f Makefile_sph
+source module_load
+rm -rf build bin/ obj/
+mkdir build bin/ obj/
+cd build
+cmake .. -DFC=mpif90 -DCC=mpicc 
+make -j8 
+
+# ./configure FC=ifort CC=icc MPIFC=mpif90 --with-mpi -enable-vectorization
+# #./configure FC=gfortran CC=gcc MPIFC=mpif90 --with-mpi
+# make realclean
+# #make all > compile_log
+# make meshfem3D
+# make decompose_mesh
+# make aux
+# make generate_databases
+# make specfem3D
+# make postprocess
+# make all -f Makefile_sph
+# make bin/xcreate_slice_loc -f Makefile_slice
+# make bin/xcreate_slice -f Makefile_slice
+# cd utils/cube2sph
+# mkdir -p bin/ obj/
+# make clean
+# make all
+# cd ../..
+# #make bin/xsmooth_sem_sph -f Makefile_sph
