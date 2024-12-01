@@ -1,0 +1,10 @@
+file(REMOVE_RECURSE
+  "../bin/write_force_solution_file"
+  "../bin/write_force_solution_file.pdb"
+  "CMakeFiles/write_force_solution_file.dir/src/write_force_solution_file.f90.o"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang Fortran)
+  include(CMakeFiles/write_force_solution_file.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

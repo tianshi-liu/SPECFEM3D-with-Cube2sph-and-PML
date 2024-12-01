@@ -3,10 +3,11 @@
 !! Tianshi Liu, 2023.5
 
 subroutine read_mesh_databases_wavefield_discontinuity()
-  use specfem_par, only: IIN, CUSTOM_REAL, &
+  use specfem_par, only: CUSTOM_REAL,&
                          NSPEC_AB, NGLLX, NGLLY, NGLLZ, NDIM, NGLLSQUARE
   use wavefield_discontinuity_solver
   implicit none
+  integer :: IIN = 27 ! file number for proc*_external_mesh.bin in this version
   allocate(ispec_to_elem_wd(NSPEC_AB))
   read(IIN) ispec_to_elem_wd
   read(IIN) nglob_wd
@@ -26,7 +27,7 @@ subroutine read_mesh_databases_wavefield_discontinuity()
   read(IIN) face_ispec_wd
   read(IIN) face_normal_wd
   read(IIN) face_jacobian2Dw_wd
-  allocate(displ_wd(NDIM, nglob_wd), &
+  allocate(displ_wd(NDIM, nglob_wd), & 
            accel_wd(NDIM, nglob_wd), &
            traction_wd(NDIM, NGLLSQUARE, nfaces_wd))
 end subroutine read_mesh_databases_wavefield_discontinuity
@@ -35,24 +36,45 @@ subroutine open_wavefield_discontinuity_file()
   use specfem_par, only: prname
   use wavefield_discontinuity_solver, only: IFILE_WAVEFIELD_DISCONTINUITY
   implicit none
+  ! open(unit=IFILE_WAVEFIELD_DISCONTINUITY, &
+  !      file=trim(prname)//'displ.bin', access='stream', &
+  !      status='old',action='read',form='unformatted')
+  ! open(unit=IFILE_WAVEFIELD_DISCONTINUITY+1, &
+  !      file=trim(prname)//'traction.bin', access='stream', &
+  !      status='old',action='read',form='unformatted')
   open(unit=IFILE_WAVEFIELD_DISCONTINUITY, &
        file=trim(prname)//'wavefield_discontinuity.bin', &
        status='old',action='read',form='unformatted')
+
 end subroutine open_wavefield_discontinuity_file
 
 subroutine read_wavefield_discontinuity_file()
   use wavefield_discontinuity_solver, only: IFILE_WAVEFIELD_DISCONTINUITY, &
                  displ_wd, accel_wd, traction_wd
+  ! use specfem_par, only: NDIM
+  ! use wavefield_discontinuity_solver, only: nglob_wd, nfaces_wd
   implicit none
+  ! integer :: i
+  ! do i =1, nglob_wd
+  !   read(IFILE_WAVEFIELD_DISCONTINUITY) displ_wd(1:NDIM, i)
+  !   read(IFILE_WAVEFIELD_DISCONTINUITY) accel_wd(1:NDIM, i)
+  ! enddo
+  ! do i = 1, nfaces_wd
+  ! read(IFILE_WAVEFIELD_DISCONTINUITY+1) traction_wd(:,:,i)
+  ! enddo
   read(IFILE_WAVEFIELD_DISCONTINUITY) displ_wd
   read(IFILE_WAVEFIELD_DISCONTINUITY) accel_wd
   read(IFILE_WAVEFIELD_DISCONTINUITY) traction_wd
+  ! if(size(displ_wd)> 0) then
+  !   print*,maxval(displ_wd),maxval(traction_wd),maxval(accel_wd),trim(prname),maxloc(traction_wd)
+  ! endif
 end subroutine read_wavefield_discontinuity_file
 
 subroutine finalize_wavefield_discontinuity()
   use wavefield_discontinuity_solver
   implicit none
   close(IFILE_WAVEFIELD_DISCONTINUITY)
+  ! close(IFILE_WAVEFIELD_DISCONTINUITY+1)
   deallocate(ispec_to_elem_wd, ibool_wd, boundary_to_iglob_wd, mass_in_wd, &
              face_ijk_wd, face_ispec_wd, face_normal_wd, face_jacobian2Dw_wd, &
              displ_wd, accel_wd, traction_wd)

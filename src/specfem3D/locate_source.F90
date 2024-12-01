@@ -531,11 +531,15 @@
       call flush_IMAIN()
     endif
 
+ 
+    !! Tianshi Liu: only output for NSOURCES >= 1
+    if (NSOURCES >= 1) then
     ! display maximum error in location estimate
     write(IMAIN,*)
     write(IMAIN,*) 'maximum error in location of the sources: ',sngl(maxval(final_distance)),' m'
     write(IMAIN,*)
     call flush_IMAIN()
+    endif
 
   endif     ! end of section executed by main process only
 

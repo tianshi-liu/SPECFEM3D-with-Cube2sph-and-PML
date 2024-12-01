@@ -2,7 +2,6 @@
 src/Makefile.inc
 
 # Build time
-include/
 src/libscotch/*.o
 src/libscotch/*.a
 src/libscotch/dummysizes

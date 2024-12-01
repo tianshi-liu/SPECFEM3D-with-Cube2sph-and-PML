@@ -545,9 +545,13 @@
   subroutine prepare_timerun_pml()
 
   use pml_par
-  use specfem_par, only: myrank,SIMULATION_TYPE,GPU_MODE,UNDO_ATTENUATION_AND_OR_PML
-  use constants, only: IMAIN,NGNOD_EIGHT_CORNERS,USE_ADE_PML,&
-                       SUBSAMPLE_FORWARD_WAVEFIELD
+  !nqdu comment
+  ! use specfem_par, only: myrank,SIMULATION_TYPE,GPU_MODE,UNDO_ATTENUATION_AND_OR_PML
+  ! use constants, only: IMAIN,NGNOD_EIGHT_CORNERS,USE_ADE_PML,&
+  !                      SUBSAMPLE_FORWARD_WAVEFIELD
+  use specfem_par, only: myrank,SIMULATION_TYPE,GPU_MODE,UNDO_ATTENUATION_AND_OR_PML,&
+                         SUBSAMPLE_FORWARD_WAVEFIELD
+  use constants, only: IMAIN,NGNOD_EIGHT_CORNERS,USE_ADE_PML
 
   implicit none
 

@@ -254,6 +254,10 @@
   ispec_is_elastic(:) = .false.
   ispec_is_poroelastic(:) = .false.
 
+  ! nqdu
+  ! determin the NSTEP_PER_FORWARD_OUTPUT if required
+  call determine_ntsamp
+
   ! initializes adjoint simulations
   call initialize_simulation_adjoint()
 
@@ -518,3 +522,62 @@
   endif
 
   end subroutine initialize_GPU
+
+
+!nqdu
+subroutine determine_ntsamp()
+  use specfem_par,only: NSTEP_PER_FORWARD_OUTPUT,SUBSAMPLE_FORWARD_WAVEFIELD,DT
+  implicit none
+
+  ! read par file to get KERNEL_SPP and KERNEL_T0
+  integer :: KERNEL_SPP,myrank,ier,sit,samp  
+  double precision :: KERNEL_T0,dt_c
+
+  call world_rank(myrank)
+
+  if(myrank == 0) then 
+    ! opens file Par_file
+    call open_parameter_file(ier)
+
+    call read_value_logical(SUBSAMPLE_FORWARD_WAVEFIELD,'SUBSAMPLE_FORWARD_WAVEFIELD',ier)
+    if(ier /=0) then 
+      print*,'please check SUBSAMPLE_FORWARD_WAVEFIELD in Par_file'
+      stop 
+    endif
+
+    call read_value_integer(NSTEP_PER_FORWARD_OUTPUT,'NSTEP_PER_FORWARD_OUTPUT',ier)
+    if(ier /=0) then 
+      print*,'please check NSTEP_PER_FORWARD_OUTPUT in Par_file'
+      stop 
+    endif
+
+    call read_value_integer(KERNEL_SPP, 'KERNEL_SPP', ier)
+    if(ier /=0) then 
+      print*,'please check KERNEL_SPP in Par_file'
+      stop 
+    endif
+
+    call read_value_double_precision(KERNEL_T0,'KERNEL_T0',ier)
+    if(ier /=0) then 
+      print*,'please check KERNEL_T0 in Par_file'
+      stop 
+    endif
+
+    ! determine NSTEP_PER_FORWARD_OUTPUT based on the two parameters
+    if (SUBSAMPLE_FORWARD_WAVEFIELD .and. NSTEP_PER_FORWARD_OUTPUT == 0) then 
+      sit = floor(KERNEL_T0 / KERNEL_SPP / DT)
+      dt_c = max(DT,DT*sit)
+      samp = int(KERNEL_T0 / dt_c)
+      sit = floor(KERNEL_T0 / samp / DT)
+      NSTEP_PER_FORWARD_OUTPUT = sit 
+    endif
+
+    ! closes parameter file
+    call close_parameter_file()
+  endif
+
+  ! bcast
+  call bcast_all_singlei(NSTEP_PER_FORWARD_OUTPUT)
+  call bcast_all_singlel(SUBSAMPLE_FORWARD_WAVEFIELD)
+  
+end subroutine determine_ntsamp

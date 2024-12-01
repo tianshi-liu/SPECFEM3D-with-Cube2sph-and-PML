@@ -168,6 +168,7 @@ subroutine adepml_set_local_dampingcoeff(myrank,xstore,ystore,zstore)
   CPML_width_y_back   = CPML_y_back - y_min_all
   CPML_width_z_top    = z_max_all - CPML_z_top
   CPML_width_z_bottom = CPML_z_bottom - z_min_all
+  !print*, myrank,'i finish here'
 
   call max_all_all_cr(CPML_width_x_left,CPML_width_x_left_max_all)
   call max_all_all_cr(CPML_width_x_right,CPML_width_x_right_max_all)
@@ -232,7 +233,6 @@ subroutine adepml_set_local_dampingcoeff(myrank,xstore,ystore,zstore)
   endif
 
   call synchronize_all()
-
   !call wait_for_attach(myrank)
 
   ! loops over all C-PML elements
@@ -242,6 +242,7 @@ subroutine adepml_set_local_dampingcoeff(myrank,xstore,ystore,zstore)
     vp = vp_max_all
 
     iglobc = ibool(MIDX,MIDY,MIDZ,ispec)
+
     !! right PML
     if (xstore(iglobc) - xoriginright > xtol) then
 
@@ -252,6 +253,7 @@ subroutine adepml_set_local_dampingcoeff(myrank,xstore,ystore,zstore)
 
         ! determines distance to C-PML/mesh interface
         dist = abscissa_in_PML_x / CPML_width_x
+        if (dist < 0.) dist = 0.
           
         d_temp = pml_damping_profile_l(myrank,iglob,dist,vp,CPML_width_x)
         pml_d(1,i,j,k,ispec_CPML)=pml_d(1,i,j,k,ispec_CPML)+d_temp
@@ -264,6 +266,14 @@ subroutine adepml_set_local_dampingcoeff(myrank,xstore,ystore,zstore)
         pml_kappa(1,i,j,k,ispec_CPML)=ONE+(PML_KAPPA0-ONE)*(dist**NPOWER)
       enddo;enddo;enddo
     endif
+  enddo
+
+  do ispec_CPML = 1,nspec_cpml
+
+    ispec = CPML_to_spec(ispec_CPML)
+    vp = vp_max_all
+
+    iglobc = ibool(MIDX,MIDY,MIDZ,ispec)
 
     !! left PML
     if (xstore(iglobc) - xoriginleft < -xtol) then
@@ -275,6 +285,7 @@ subroutine adepml_set_local_dampingcoeff(myrank,xstore,ystore,zstore)
 
         ! determines distance to C-PML/mesh interface
         dist = abscissa_in_PML_x / CPML_width_x
+        if (dist < 0.) dist = 0.
 
         d_temp = pml_damping_profile_l(myrank,iglob,dist,vp,CPML_width_x)
         pml_d(1,i,j,k,ispec_CPML)=pml_d(1,i,j,k,ispec_CPML)+d_temp
@@ -287,6 +298,14 @@ subroutine adepml_set_local_dampingcoeff(myrank,xstore,ystore,zstore)
         pml_kappa(1,i,j,k,ispec_CPML)=ONE+(PML_KAPPA0-ONE)*(dist**NPOWER)
       enddo;enddo;enddo
     endif
+  enddo 
+
+  do ispec_CPML = 1,nspec_cpml
+
+    ispec = CPML_to_spec(ispec_CPML)
+    vp = vp_max_all
+
+    iglobc = ibool(MIDX,MIDY,MIDZ,ispec)
 
     !! front PML
     if (ystore(iglobc) - yoriginfront > ytol) then
@@ -298,6 +317,7 @@ subroutine adepml_set_local_dampingcoeff(myrank,xstore,ystore,zstore)
 
         ! determines distance to C-PML/mesh interface
         dist = abscissa_in_PML_y / CPML_width_y
+        if (dist < 0.) dist = 0.
 
         d_temp = pml_damping_profile_l(myrank,iglob,dist,vp,CPML_width_y)
         pml_d(2,i,j,k,ispec_CPML)=pml_d(2,i,j,k,ispec_CPML)+d_temp
@@ -310,6 +330,18 @@ subroutine adepml_set_local_dampingcoeff(myrank,xstore,ystore,zstore)
         pml_kappa(2,i,j,k,ispec_CPML)=ONE+(PML_KAPPA0-ONE)*(dist**NPOWER)
       enddo;enddo;enddo
     endif
+  enddo 
+
+  ! if(myrank == 0) print*,'finish front'
+  ! call synchronize_all()
+
+
+  do ispec_CPML = 1,nspec_cpml
+
+    ispec = CPML_to_spec(ispec_CPML)
+    vp = vp_max_all
+
+    iglobc = ibool(MIDX,MIDY,MIDZ,ispec)
 
     !! back PML
     if (ystore(iglobc) - yoriginback < -ytol) then
@@ -321,6 +353,7 @@ subroutine adepml_set_local_dampingcoeff(myrank,xstore,ystore,zstore)
 
         ! determines distance to C-PML/mesh interface
         dist = abscissa_in_PML_y / CPML_width_y
+        if (dist < 0.) dist = 0.
 
         d_temp = pml_damping_profile_l(myrank,iglob,dist,vp,CPML_width_y)
         pml_d(2,i,j,k,ispec_CPML)=pml_d(2,i,j,k,ispec_CPML)+d_temp
@@ -344,6 +377,7 @@ subroutine adepml_set_local_dampingcoeff(myrank,xstore,ystore,zstore)
 
         ! determines distance to C-PML/mesh interface
         dist = abscissa_in_PML_z / CPML_width_z
+        if (dist < 0.) dist = 0.
 
         d_temp = pml_damping_profile_l(myrank,iglob,dist,vp,CPML_width_z)
         pml_d(3,i,j,k,ispec_CPML)=pml_d(3,i,j,k,ispec_CPML)+d_temp
@@ -367,6 +401,7 @@ subroutine adepml_set_local_dampingcoeff(myrank,xstore,ystore,zstore)
 
         ! determines distance to C-PML/mesh interface
         dist = abscissa_in_PML_z / CPML_width_z
+        if (dist < 0.) dist = 0.
 
         d_temp = pml_damping_profile_l(myrank,iglob,dist,vp,CPML_width_z)
         pml_d(3,i,j,k,ispec_CPML)=pml_d(3,i,j,k,ispec_CPML)+d_temp
@@ -380,13 +415,13 @@ subroutine adepml_set_local_dampingcoeff(myrank,xstore,ystore,zstore)
       enddo;enddo;enddo
     endif
 
-
-
   enddo  !ispec_CPML = 1,nspec_cpml
   pml_d(:,:,:,:,:) = pml_d(:,:,:,:,:)&
           /(pml_kappa(:,:,:,:,:)**2)
   pml_beta(:,:,:,:,:) = pml_beta(:,:,:,:,:)&
           +pml_d(:,:,:,:,:)*pml_kappa(:,:,:,:,:)
+  ! print*,myrank,sum(pml_d), sum(pml_beta)
+  ! call synchronize_all()
 
   !!! identifying PML outer interface and indexing
   ! do a counting first

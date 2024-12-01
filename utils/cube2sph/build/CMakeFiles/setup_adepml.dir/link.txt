@@ -1,0 +1,1 @@
+/scinet/niagara/software/2019b/opt/intel-2019u4/openmpi/4.0.1-hpcx2.5/bin/mpif90  -xHost -traceback -O3 CMakeFiles/setup_adepml.dir/src/setup_adepml.f90.o -o ../bin/setup_adepml  libcube2sph.a /scinet/niagara/software/2019b/opt/intel-2019u4-hdf5-1.8.21/netcdf/4.6.3/lib/libnetcdff.so -lirng -ldecimal -lcilkrts -lstdc++ 

@@ -347,11 +347,15 @@
   ! convert the half duration for triangle STF to the one for Gaussian STF
   hdur_Gaussian(:) = hdur(:)/SOURCE_DECAY_MIMIC_TRIANGLE
 
+  !! Tianshi Liu: if no source, set t0 = 0
+  if (NSOURCES == 0) then
+    t0 = -0.0
+  else
   ! define t0 as the earliest start time
   ! note: an earlier start time also reduces numerical noise due to a
   !          non-zero offset at the beginning of the source time function
-  t0 = - 2.0d0 * minval(tshift_src(:) - hdur(:))   ! - 1.5d0 * minval(tshift_src-hdur)
-
+    t0 = - 2.0d0 * minval(tshift_src(:) - hdur(:))   ! - 1.5d0 * minval(tshift_src-hdur)
+  endif
   ! uses an earlier start time if source is acoustic with a Gaussian source time function
   t0_acoustic = 0.0d0
   do isource = 1,NSOURCES

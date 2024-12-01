@@ -35,7 +35,7 @@
 
   !! Tianshi Liu: setup wavefield discontinuity boundary
   use wavefield_discontinuity_generate_databases, only: &
-           IS_WAVEFIELD_DISCONTINUITY, read_wavefield_discontinuity_switch
+         IS_WAVEFIELD_DISCONTINUITY, read_wavefield_discontinuity_switch
 
   implicit none
 

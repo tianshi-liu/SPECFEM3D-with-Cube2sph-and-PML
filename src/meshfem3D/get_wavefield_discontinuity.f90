@@ -44,16 +44,45 @@ subroutine find_wavefield_discontinuity_elements()
   double precision :: x_min, x_max, y_min, y_max, z_min, z_max
   double precision :: dx, dy, dz, x_mid, y_mid, z_mid, ratio_small=1.0e-6
   double precision :: xelm(27), yelm(27), zelm(27)
-  open(unit=IFILE_WAVEFIELD_DISCONTINUITY, &
-       file='wavefield_discontinuity_box', &
-       form='formatted', action='read')
-  read(IFILE_WAVEFIELD_DISCONTINUITY, *) x_min
-  read(IFILE_WAVEFIELD_DISCONTINUITY, *) x_max
-  read(IFILE_WAVEFIELD_DISCONTINUITY, *) y_min
-  read(IFILE_WAVEFIELD_DISCONTINUITY, *) y_max
-  read(IFILE_WAVEFIELD_DISCONTINUITY, *) z_min
-  read(IFILE_WAVEFIELD_DISCONTINUITY, *) z_max
-  close(IFILE_WAVEFIELD_DISCONTINUITY)
+  !nqdu
+  integer :: ier 
+  integer :: myrank
+
+  !nqdu comment, move to par_file
+  ! open(unit=IFILE_WAVEFIELD_DISCONTINUITY, &
+  !      file='wavefield_discontinuity_box', &
+  !      form='formatted', action='read')
+  ! !print*, 
+  ! read(IFILE_WAVEFIELD_DISCONTINUITY, *) x_min
+  ! read(IFILE_WAVEFIELD_DISCONTINUITY, *) x_max
+  ! read(IFILE_WAVEFIELD_DISCONTINUITY, *) y_min
+  ! read(IFILE_WAVEFIELD_DISCONTINUITY, *) y_max
+  ! read(IFILE_WAVEFIELD_DISCONTINUITY, *) z_min
+  ! read(IFILE_WAVEFIELD_DISCONTINUITY, *) z_max
+  ! close(IFILE_WAVEFIELD_DISCONTINUITY)
+
+  !nqdu read from par_file
+  call world_rank(myrank)
+  if(myrank == 0) then 
+    call open_parameter_file(ier)
+    call read_value_double_precision(x_min,'WAVEFIELD_DISCON_BOX_XMIN',ier)
+    call read_value_double_precision(y_min,'WAVEFIELD_DISCON_BOX_YMIN',ier)
+    call read_value_double_precision(z_min,'WAVEFIELD_DISCON_BOX_ZMIN',ier)
+    call read_value_double_precision(x_max,'WAVEFIELD_DISCON_BOX_XMAX',ier)
+    call read_value_double_precision(y_max,'WAVEFIELD_DISCON_BOX_YMAX',ier)
+    call read_value_double_precision(z_max,'WAVEFIELD_DISCON_BOX_ZMAX',ier)
+
+    ! CLOSE
+    call close_parameter_file()
+  endif
+  call bcast_all_singledp(x_min)
+  call bcast_all_singledp(y_min)
+  call bcast_all_singledp(z_min)
+  call bcast_all_singledp(x_max)
+  call bcast_all_singledp(y_max)
+  call bcast_all_singledp(z_max)
+
+  !
   nb_wd = 0
   do ispec = 1, nspec
     covered(:) = .false.

@@ -2,11 +2,12 @@ CC=icc
 FC=ifort
 MPIFC=mpif90
 
-FCFLAGS=-O3 -traceback -module ./obj -I./obj -I. -I./include
-CFLAGS=-O3 -traceback -I./include
+#FCFLAGS=-O3 -march=native -J ./obj -I./obj -I. -I./include
+FCFLAGS= -O3 -xHost -module ./obj -I./obj -I. -I./include -traceback 
+CFLAGS=-O3 -I./include
 
-NCDFCFLAGS=-I/usr/local/include
-NCDFLDFLAGS=-L/usr/local/lib
+NCDFCFLAGS=-I$(shell dirname `which nf-config`)/../include
+NCDFLDFLAGS=-L$(shell dirname `which nf-config`)/../lib
 NCDFLDLIBS=-lnetcdff
 
 FC_MODEXT=mod
@@ -165,17 +166,12 @@ create_ckbd_obj= \
 	$O/get_ellipticity.check.o \
 	$O/add_topography.check.o
 
-$O/read_write_wavefield_discontinuity.gen.o: $O/wavefield_discontinuity_cube2sph_mod.gen.o
-$O/read_partition_files.gen.o: $O/wavefield_discontinuity_cube2sph_mod.gen.o
-$O/write_partition_files.gen.o: $O/wavefield_discontinuity_cube2sph_mod.gen.o
+
 ## rules
-all: $E/cube2sph $E/cube2sph_station_inv $E/cube2sph_boundary_gmt $E/cube2sph_force $E/cube2sph_station $E/write_horizontal_slice_vtk $E/write_vertical_slice_vtk $E/write_force_solution_file $E/write_cmt_solution_file $E/write_stations_file
+all: $E/setup_adepml $E/cube2sph_adepml $E/cube2sph_station_inv $E/cube2sph_boundary_gmt $E/cube2sph_force $E/cube2sph_station $E/write_horizontal_slice_vtk $E/write_vertical_slice_vtk $E/cube2sph_nopml $E/write_force_solution_file $E/write_cmt_solution_file $E/write_stations_file
 
 $E/setup_adepml: ./src/setup_adepml.f90 $(shared_obj) $(adios_shared_STUBS) $(generate_databases_obj) $(setup_adepml_obj)
 	${MPIFC} ${FCFLAGS} -o $@ $^
-
-$E/cube2sph: ./src/cube2sph.f90 $(setup_model_obj) $(node_stretching_obj) $(shared_obj) $(adios_shared_STUBS) $(generate_databases_obj) $(cube2sph_adepml_obj)
-	${MPIFC} ${FCFLAGS} ${NCDFLDFLAGS} -o $@ $^ ${NCDFLDLIBS}
 
 $E/cube2sph_adepml: ./src/cube2sph_adepml.f90 $(setup_model_obj) $(node_stretching_obj) $(shared_obj) $(adios_shared_STUBS) $(generate_databases_obj) $(cube2sph_adepml_obj)
 	${MPIFC} ${FCFLAGS} ${NCDFLDFLAGS} -o $@ $^ ${NCDFLDLIBS}

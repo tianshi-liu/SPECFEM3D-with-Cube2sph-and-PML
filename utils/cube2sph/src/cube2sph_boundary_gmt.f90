@@ -1,14 +1,41 @@
 program cube2sph_boundary_gmt
-  character(300) :: outfn
+  implicit none
+  character(300) :: outfn,line
   integer :: IOUT, i, ier
   integer :: N = 20
   double precision, dimension(3,1) :: nodes_coords, nodes_coords_new
-  double precision, parameter :: r_earth=6371000.0
+  double precision, parameter :: r_earth=6371000.0,pi = atan(1.0) * 4.0
   double precision :: center_lat=43.5,&
           center_lon=121.8,rotation_azi=0.0,rs,dummy
   double precision ::  lat, lon, r, margin=2.0, &
                        x1=-10.0, x2=10.0, y1=-5.0, y2=5.0
-  double precision, parameter :: meter_per_deg = r_earth * 3.1415926535 / 180.0
+  double precision, parameter :: meter_per_deg = r_earth * pi / 180.0
+
+  if (command_argument_count() /= 8) then 
+    print*, 'Usage: ./cube2sph_boundary_gmt cen_lat cen_lon rotangl xmin xmax ymin ymax margin'
+    stop
+  endif
+
+  call get_command_argument(1,line)
+  read(line,*) center_lat
+  call get_command_argument(2,line)
+  read(line,*) center_lon 
+  call get_command_argument(3,line)
+  read(line,*) rotation_azi
+  call get_command_argument(4,line)
+  read(line,*) x1 
+  call get_command_argument(5,line)
+  read(line,*) x2
+  call get_command_argument(6,line)
+  read(line,*) y1
+  call get_command_argument(7,line)
+  read(line,*) y2
+  call get_command_argument(8,line)
+  read(line,*),margin
+  print*, 'cen_lat cen_lon rotangl = ',center_lat,center_lon,rotation_azi
+  print*,'study region in deg = ', x1,x2,y1,y2
+  print*,'margin in deg = ', margin
+
   IOUT = 21
   outfn = 'boundary_2d.gmt'
   open(unit=IOUT,file=trim(outfn), &

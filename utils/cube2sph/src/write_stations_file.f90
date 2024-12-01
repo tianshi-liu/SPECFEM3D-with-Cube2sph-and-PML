@@ -43,6 +43,12 @@ program write_stations_file
   double precision :: lat,lon,r
   call MPI_Init(ier)
   call MPI_Comm_rank(MPI_COMM_WORLD, myrank, ier)
+  
+  if (command_argument_count() /= 5) then
+    print*, 'Usage: ./this station_sph stations_cart rotation_nu use_topo use_ellipticity '
+    stop
+  endif
+
   call get_command_argument(1, STATIONS_FILE)
   !STATIONS_FILE = 'DATA/STATIONS'
   ONE_CRUST = .true.
@@ -50,6 +56,7 @@ program write_stations_file
   read(arg_str, *) TOPOGRAPHY
   call get_command_argument(5, arg_str)
   read(arg_str, *) ELLIPTICITY
+  !print*,TOPOGRAPHY,ELLIPTICITY
   !TOPOGRAPHY = .true.
   !ELLIPTICITY = .true.
   open(unit=IIN,file=trim(STATIONS_FILE),status='old',action='read',iostat=ier)
@@ -74,12 +81,10 @@ program write_stations_file
   allocate(x_target(nrec), &
            y_target(nrec), &
            z_target(nrec),stat=ier)
-  if (TOPOGRAPHY) then
-    allocate(ibathy_topo(NX_BATHY,NY_BATHY),stat=ier)
-    call make_ellipticity(nspl,rspl,espl,espl2,ONE_CRUST)
-    ibathy_topo(:,:) = 0
-    call read_topo_bathy_file(ibathy_topo)
-  endif
+  allocate(ibathy_topo(NX_BATHY,NY_BATHY),stat=ier)
+  if(ELLIPTICITY) call make_ellipticity(nspl,rspl,espl,espl2,ONE_CRUST)
+  ibathy_topo(:,:) = 0
+  if(TOPOGRAPHY) call read_topo_bathy_file(ibathy_topo)
   open(unit=IIN,file=trim(STATIONS_FILE),status='old',action='read',iostat=ier)
   if (ier /= 0 ) call exit_MPI(myrank,'Error opening STATIONS file')
 
@@ -243,7 +248,7 @@ program write_stations_file
   deallocate(x_target, &
            y_target, &
            z_target)
-  if (TOPOGRAPHY) deallocate(ibathy_topo)
+  deallocate(ibathy_topo)
   call MPI_Finalize(ier)
 end program write_stations_file
 

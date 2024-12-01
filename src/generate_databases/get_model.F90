@@ -41,6 +41,8 @@
   use constants, only: INJECTION_TECHNIQUE_IS_FK,INJECTION_TECHNIQUE_IS_DSM,INJECTION_TECHNIQUE_IS_AXISEM
   use shared_parameters, only: COUPLE_WITH_INJECTION_TECHNIQUE,MESH_A_CHUNK_OF_THE_EARTH,INJECTION_TECHNIQUE_TYPE
 
+  !nqdu
+  use constants, only: INJECTION_TECHNIQUE_IS_WAVEDISCON
   implicit none
 
   integer :: myrank
@@ -108,6 +110,9 @@
         write(IMAIN,*) '     INJECTION TECHNIQUE TYPE = ', INJECTION_TECHNIQUE_TYPE,' (AXISEM) '
       case (INJECTION_TECHNIQUE_IS_FK)
         write(IMAIN,*) '     INJECTION TECHNIQUE TYPE = ', INJECTION_TECHNIQUE_TYPE,' (FK) '
+      !nqdu
+      case (INJECTION_TECHNIQUE_IS_WAVEDISCON) 
+        write(IMAIN,*) ' type of injection technique is wavefield discontinuity'
       case default
         stop 'Invalid INJECTION_TECHNIQUE_TYPE chosen, must be 1 == DSM, 2 == AXISEM or 3 == FK'
       end select
@@ -115,7 +120,10 @@
       write(IMAIN,*)
     endif
 
-    if (INJECTION_TECHNIQUE_TYPE /= INJECTION_TECHNIQUE_IS_FK) then
+    !nqdu
+    !if (INJECTION_TECHNIQUE_TYPE /= INJECTION_TECHNIQUE_IS_FK) then
+    if (INJECTION_TECHNIQUE_TYPE /= INJECTION_TECHNIQUE_IS_FK .and. & 
+       INJECTION_TECHNIQUE_TYPE /= INJECTION_TECHNIQUE_IS_WAVEDISCON) then
       ! MESH_A_CHUNK_OF_THE_EARTH, DSM or AxiSEM
       if ((NGLLX == 5) .and. (NGLLY == 5) .and. (NGLLZ == 5)) then
         ! gets xyz coordinates of GLL point
@@ -138,7 +146,10 @@
   do ispec = 1, nspec
 
     if (COUPLE_WITH_INJECTION_TECHNIQUE .or. MESH_A_CHUNK_OF_THE_EARTH) then
-      if (INJECTION_TECHNIQUE_TYPE /= INJECTION_TECHNIQUE_IS_FK) then
+      !NQDU
+      !if (INJECTION_TECHNIQUE_TYPE /= INJECTION_TECHNIQUE_IS_FK) then
+      if (INJECTION_TECHNIQUE_TYPE /= INJECTION_TECHNIQUE_IS_FK .and. & 
+          INJECTION_TECHNIQUE_TYPE /= INJECTION_TECHNIQUE_IS_WAVEDISCON) then
         iglob = ibool(3,3,3,ispec)
         xmesh = xstore_dummy(iglob)
         ymesh = ystore_dummy(iglob)
@@ -207,7 +218,9 @@
           !! VM VM for coupling with DSM
           !! find the layer in which the middle of the element is located
           if (COUPLE_WITH_INJECTION_TECHNIQUE .or. MESH_A_CHUNK_OF_THE_EARTH) then
-            if (INJECTION_TECHNIQUE_TYPE /= INJECTION_TECHNIQUE_IS_FK) then
+            !nqdu if (INJECTION_TECHNIQUE_TYPE /= INJECTION_TECHNIQUE_IS_FK) then
+            if (INJECTION_TECHNIQUE_TYPE /= INJECTION_TECHNIQUE_IS_FK .and. & 
+                INJECTION_TECHNIQUE_TYPE /= INJECTION_TECHNIQUE_IS_WAVEDISCON) then
               if (i == 3 .and. j == 3 .and. k == 3) call model_coupled_FindLayer(xmesh,ymesh,zmesh)
             endif
           endif

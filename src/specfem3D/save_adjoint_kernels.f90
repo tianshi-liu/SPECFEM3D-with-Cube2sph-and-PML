@@ -173,6 +173,9 @@
       allocate(rhop_kl(NGLLX,NGLLY,NGLLZ,NSPEC_ADJOINT),stat=ier)
       if (ier /= 0) call exit_MPI_without_rank('error allocating array 2252')
       if (ier /= 0) stop 'error allocating array rhop_kl'
+
+      ! nqdu set zero
+      alpha_kl = 0.0; beta_kl = 0.0; rhop_kl = 0.0;
     endif
     if (CUBE2SPH_MESH .and. ANISOTROPIC_KL) then
       call save_kernels_elastic_cube2sph(adios_handle, alphav_kl, alphah_kl, &
@@ -599,6 +602,9 @@ subroutine save_kernels_acoustic(adios_handle)
                          ADIOS_FOR_KERNELS,IOUT,prname,SAVE_MOHO_MESH
   use specfem_par_elastic
 
+  !nqdu
+  use pml_par,only : is_CPML
+
   implicit none
 
   interface
@@ -637,7 +643,7 @@ subroutine save_kernels_acoustic(adios_handle)
   do ispec = 1, NSPEC_AB
 
     ! elastic simulations
-    if (ispec_is_elastic(ispec)) then
+    if (ispec_is_elastic(ispec) .and. (.not. is_CPML(ispec))) then
 
       do k = 1, NGLLZ
         do j = 1, NGLLY

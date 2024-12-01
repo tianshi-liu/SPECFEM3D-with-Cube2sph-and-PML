@@ -6,6 +6,11 @@ program cube2sph_station
   double precision :: r_earth=6371000.0,center_lat,center_lon,rotation_azi,&
                       rs,dummy
   double precision ::  lat, lon, r
+
+  if (command_argument_count() /= 5) then
+    print*, 'Usage: ./this stations_cart stations_sph lat0 lon0 rot'
+    stop
+  endif
   call get_command_argument(1, infn)
   call get_command_argument(2, outfn)
   call get_command_argument(3, string)

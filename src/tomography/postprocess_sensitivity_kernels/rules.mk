@@ -51,7 +51,6 @@ tomography/postprocess_sensitivity_kernels_SHARED_OBJECTS = \
 
 tomography/postprocess_sensitivity_kernels_MODULES = \
 	$(FC_MODDIR)/postprocess_par.$(FC_MODEXT) \
-	$(FC_MODDIR)/wavefield_discontinuity_par.$(FC_MODEXT) \
 	$(EMPTY_MACRO)
 
 ####
@@ -150,10 +149,6 @@ xsmooth_sem_SHARED_OBJECTS = \
 	$O/specfem3D_par.spec_module.o \
 	$O/pml_par.spec_module.o \
 	$O/read_mesh_databases.spec.o \
-	$O/wavefield_discontinuity_solver_mod.spec.o \
-	$O/wavefield_discontinuity.spec.o \
-	$O/wavefield_discontinuity_par.shared.o \
-	$O/read_adepml_files.spec.o \
 	$O/shared_par.shared_module.o \
 	$O/check_mesh_resolution.shared.o \
 	$O/create_name_database.shared.o \
@@ -163,6 +158,10 @@ xsmooth_sem_SHARED_OBJECTS = \
 	$O/read_parameter_file.shared.o \
 	$O/read_value_parameters.shared.o \
 	$O/write_VTK_data.shared.o \
+	$O/read_adepml_files.spec.o \
+	$O/wavefield_discontinuity_par.shared.o \
+	$O/wavefield_discontinuity.spec.o \
+	$O/wavefield_discontinuity_solver_mod.spec.o \
 	$(EMPTY_MACRO)
 
 cuda_smooth_sem_STUBS = \

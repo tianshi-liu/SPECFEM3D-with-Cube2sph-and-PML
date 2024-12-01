@@ -6,6 +6,11 @@ program cube2sph_station_inv
   double precision, parameter :: DEGREES_TO_RADIANS = 3.1415926535 / 180.0
   double precision :: center_lat,center_lon,rotation_azi,rs,dummy
   double precision ::  lat, lon, r, elev, depth, theta, phi
+ 
+  if (command_argument_count() /= 5) then
+    print*, 'Usage: ./this stations_sph stations_cart lat0 lon0 rot'
+    stop
+  endif
   call get_command_argument(1, infn)
   call get_command_argument(2, outfn)
   call get_command_argument(3, string)

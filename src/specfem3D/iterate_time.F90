@@ -206,9 +206,15 @@
   t_update = 0.0
   t_update_pml = 0.0
 
+  !nqdu
+  ! mask IS_WAVEFIELD_DISCONTINUITY for simu_type == 3
+  if(SIMULATION_TYPE == 3) IS_WAVEFIELD_DISCONTINUITY = .false.
+
   !! Tianshi Liu: for solving wavefield discontinuity problem with
   !! non-split-node scheme
-  if (IS_WAVEFIELD_DISCONTINUITY) then
+  !nqdu only open for injection
+  !if (IS_WAVEFIELD_DISCONTINUITY) then
+  if(IS_WAVEFIELD_DISCONTINUITY .and. COUPLE_WITH_INJECTION_TECHNIQUE) then
     call open_wavefield_discontinuity_file()
   endif
 
@@ -353,7 +359,9 @@
 
   !! Tianshi Liu: for solving wavefield discontinuity problem with
   !! non-split-node scheme
-  if (IS_WAVEFIELD_DISCONTINUITY) then
+  !nqdu for injection
+  !if (IS_WAVEFIELD_DISCONTINUITY) then
+  if(IS_WAVEFIELD_DISCONTINUITY .and. COUPLE_WITH_INJECTION_TECHNIQUE) then
     call finalize_wavefield_discontinuity()
   endif
 

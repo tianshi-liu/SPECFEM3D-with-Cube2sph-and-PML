@@ -6,7 +6,7 @@ program create_slice
             NSPEC_IRREGULAR, NSPEC_AB, NGLOB_AB, ibool, xstore, ystore, zstore
   implicit none
   logical, parameter :: USE_GLL_POINTS = .true.
-  logical, parameter :: LINEAR_INTERP = .true.
+  logical, parameter :: LINEAR_INTERP = .false.
   !logical, parameter :: normalize = .true.
   integer, parameter :: MAX_POINTS_IN_SLICE = 10000000
   integer, dimension(:), allocatable :: iaddx, iaddy, iaddz
@@ -21,7 +21,8 @@ program create_slice
   real(kind=CUSTOM_REAL), parameter :: FILL_VAL = -1.0e10
   integer :: irank, current_rank, ios, ispec, iglob, ier
   character(len=MAX_STRING_LEN) slice_fn, loc_fn, out_fn, prname, &
-                                model_name, model_dir, norm_string
+                                model_name, model_dir, norm_string,&
+                                database_dir
   logical :: normalize
   integer :: ipt, npts, i, j, k
   real(kind=CUSTOM_REAL) :: norm
@@ -32,14 +33,22 @@ program create_slice
   call zwgljd(yigll,wygll,NGLLY,GAUSSALPHA,GAUSSBETA)
   call zwgljd(zigll,wzgll,NGLLZ,GAUSSALPHA,GAUSSBETA)
   current_rank = -1
+
+  if ( command_argument_count() /= 7) then 
+    print*,'usage: ./xcreate_slice model_name model_dir database_dir coordfile glllocfile  outfile do_norm'
+    stop
+  endif
+
   call get_command_argument(1, model_name)
   call get_command_argument(2, model_dir)
-  call get_command_argument(3, slice_fn)
-  call get_command_argument(4, loc_fn)
-  call get_command_argument(5, out_fn)
-  call get_command_argument(6, norm_string)
+  call get_command_argument(3, database_dir)
+  call get_command_argument(4, slice_fn)
+  call get_command_argument(5, loc_fn)
+  call get_command_argument(6, out_fn)
+  call get_command_argument(7, norm_string)
   read(norm_string, *) normalize
-  call read_parameter_file(0, .true.)
+  !call read_parameter_file(0, .true.)
+  NGNOD = 27
   print *, 'NGNOD=', NGNOD
   allocate(iaddx(NGNOD), iaddy(NGNOD), iaddz(NGNOD), shape3D(NGNOD))
   npts = 0
@@ -61,7 +70,7 @@ program create_slice
       !if (current_rank >= 0) deallocate(ibool, xstore, ystore, zstore, database)
       if (allocated(ibool)) &
         deallocate(ibool, xstore, ystore, zstore, database)
-      write(prname,'(a,i6.6,a)') 'DATABASES_MPI/proc',irank,'_'
+      write(prname,'(a,i6.6,a)') TRIM(database_dir) // '/proc',irank,'_'
       open(unit=27,file=prname(1:len_trim(prname))//'external_mesh.bin', &
          status='old',action='read',form='unformatted',iostat=ier)
       read(27) NSPEC_AB
@@ -88,53 +97,53 @@ program create_slice
     if (dist > dist_rec(ipt)) cycle
     v = 0.d0
     if (USE_GLL_POINTS) then
-    call lagrange_any(xi, NGLLX, xigll, hxis, hpxis)
-    call lagrange_any(eta, NGLLY, yigll, hetas, hpetas)
-    call lagrange_any(gamma, NGLLZ, zigll, hgammas, hpgammas)
-    if (LINEAR_INTERP) then
-    igll = 1
-    do i = 2, NGLLX-1
-      if (xi > xigll(i)) igll = i
-    enddo
-    ratio_x = (xi - xigll(igll)) / (xigll(igll+1)-xigll(igll))
-    jgll = 1
-    do j = 2, NGLLY-1
-      if (eta > yigll(j)) jgll = j
-    enddo
-    ratio_y = (eta - yigll(jgll)) / (yigll(jgll+1)-yigll(jgll))
-    kgll = 1
-    do k = 2, NGLLZ-1
-      if (gamma > zigll(k)) kgll = k
-    enddo
-    ratio_z = (gamma - zigll(kgll)) / (zigll(kgll+1)-zigll(kgll))
-    v=dble(database(igll,jgll,kgll,ispec))*(1.0-ratio_x)*(1.0-ratio_y)*(1.0-ratio_z) + &
-      dble(database(igll+1,jgll,kgll,ispec))*ratio_x*(1.0-ratio_y)*(1.0-ratio_z)+ &
-      dble(database(igll,jgll+1,kgll,ispec))*(1.0-ratio_x)*ratio_y*(1.0-ratio_z)+ &
-      dble(database(igll+1,jgll+1,kgll,ispec))*ratio_x*ratio_y*(1.0-ratio_z) + &
-      dble(database(igll,jgll,kgll+1,ispec))*(1.0-ratio_x)*(1.0-ratio_y)*ratio_z+ &
-      dble(database(igll+1,jgll,kgll+1,ispec))*ratio_x*(1.0-ratio_y)*ratio_z + &
-      dble(database(igll,jgll+1,kgll+1,ispec))*(1.0-ratio_x)*ratio_y*ratio_z + &
-      dble(database(igll+1,jgll+1,kgll+1,ispec))*ratio_x*ratio_y*ratio_z
-    else
-    do k = 1, NGLLZ
-      do j = 1, NGLLY
-        do i = 1, NGLLX
-          iglob = ibool(i, j, k, ispec)
-          v = v + hxis(i) * hetas(j) * hgammas(k) * dble(database(i,j,k,ispec))
+      call lagrange_any(xi, NGLLX, xigll, hxis, hpxis)
+      call lagrange_any(eta, NGLLY, yigll, hetas, hpetas)
+      call lagrange_any(gamma, NGLLZ, zigll, hgammas, hpgammas)
+      if (LINEAR_INTERP) then
+        igll = 1
+        do i = 2, NGLLX-1
+          if (xi > xigll(i)) igll = i
         enddo
-      enddo
-    enddo
-    endif
+        ratio_x = (xi - xigll(igll)) / (xigll(igll+1)-xigll(igll))
+        jgll = 1
+        do j = 2, NGLLY-1
+          if (eta > yigll(j)) jgll = j
+        enddo
+        ratio_y = (eta - yigll(jgll)) / (yigll(jgll+1)-yigll(jgll))
+        kgll = 1
+        do k = 2, NGLLZ-1
+          if (gamma > zigll(k)) kgll = k
+        enddo
+        ratio_z = (gamma - zigll(kgll)) / (zigll(kgll+1)-zigll(kgll))
+        v=dble(database(igll,jgll,kgll,ispec))*(1.0-ratio_x)*(1.0-ratio_y)*(1.0-ratio_z) + &
+          dble(database(igll+1,jgll,kgll,ispec))*ratio_x*(1.0-ratio_y)*(1.0-ratio_z)+ &
+          dble(database(igll,jgll+1,kgll,ispec))*(1.0-ratio_x)*ratio_y*(1.0-ratio_z)+ &
+          dble(database(igll+1,jgll+1,kgll,ispec))*ratio_x*ratio_y*(1.0-ratio_z) + &
+          dble(database(igll,jgll,kgll+1,ispec))*(1.0-ratio_x)*(1.0-ratio_y)*ratio_z+ &
+          dble(database(igll+1,jgll,kgll+1,ispec))*ratio_x*(1.0-ratio_y)*ratio_z + &
+          dble(database(igll,jgll+1,kgll+1,ispec))*(1.0-ratio_x)*ratio_y*ratio_z + &
+          dble(database(igll+1,jgll+1,kgll+1,ispec))*ratio_x*ratio_y*ratio_z
+      else
+        do k = 1, NGLLZ
+          do j = 1, NGLLY
+            do i = 1, NGLLX
+              iglob = ibool(i, j, k, ispec)
+              v = v + hxis(i) * hetas(j) * hgammas(k) * dble(database(i,j,k,ispec))
+            enddo
+          enddo
+        enddo
+      endif
     else
-    call usual_hex_nodes(NGNOD, iaddx, iaddy, iaddz)
-    call eval_shape3D_single(0, shape3D, xi, eta, gamma, NGNOD)
-    iaddx = iaddx * 2 + 1
-    iaddy = iaddy * 2 + 1
-    iaddz = iaddz * 2 + 1
-    do i = 1, NGNOD
-      iglob = ibool(iaddx(i), iaddy(i), iaddz(i), ispec)
-      v = v + shape3D(i) * dble(database(iaddx(i),iaddy(i),iaddz(i),ispec))
-    enddo
+      call usual_hex_nodes(NGNOD, iaddx, iaddy, iaddz)
+      call eval_shape3D_single(0, shape3D, xi, eta, gamma, NGNOD)
+      iaddx = iaddx * 2 + 1
+      iaddy = iaddy * 2 + 1
+      iaddz = iaddz * 2 + 1
+      do i = 1, NGNOD
+        iglob = ibool(iaddx(i), iaddy(i), iaddz(i), ispec)
+        v = v + shape3D(i) * dble(database(iaddx(i),iaddy(i),iaddz(i),ispec))
+      enddo
     endif
     val(ipt) = v
     dist_rec(ipt) = dist
@@ -145,9 +154,9 @@ program create_slice
   print *, 'max abs:', norm
   do ipt = 1, npts
     if (normalize) then
-      write(12, *) val(ipt) / norm, dist_rec(ipt)
+      write(12, '(2(G0,1x))') val(ipt) / norm, dist_rec(ipt)
     else
-      write(12, *) val(ipt), dist_rec(ipt)
+      write(12,'(2(G0,1x))') val(ipt), dist_rec(ipt)
     endif
   enddo
   close(12)

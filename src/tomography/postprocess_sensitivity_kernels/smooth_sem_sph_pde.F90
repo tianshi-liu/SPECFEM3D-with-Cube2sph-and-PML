@@ -1,5 +1,4 @@
 #include "config.fh"
-
 program smooth_sem_sph_pde
   use constants, only: HUGEVAL
   use postprocess_par, only: CUSTOM_REAL,NGLLX,NGLLY,NGLLZ,NDIM,NGLLSQUARE, &
@@ -10,10 +9,11 @@ program smooth_sem_sph_pde
   use specfem_par_acoustic, only: ispec_is_acoustic
   use specfem_par_poroelastic, only: ispec_is_poroelastic
   use pml_par, only: is_CPML
+  use wavefield_discontinuity_par,only: IS_WAVEFIELD_DISCONTINUITY
 
   implicit none 
   integer, parameter :: NARGS = 6
-  integer, parameter :: PRINT_INFO_PER_STEP = 100000
+  integer, parameter :: PRINT_INFO_PER_STEP = 1000
   real(kind=CUSTOM_REAL), dimension(:,:,:,:),allocatable :: dat
   real(kind=CUSTOM_REAL), dimension(:,:,:,:,:),allocatable :: rotate_r
   real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: &
@@ -95,9 +95,107 @@ program smooth_sem_sph_pde
     print *,"  GPU_MODE: ", USE_GPU
     print *
   endif
-
-  call initialize_simulation()
   
+  ! reads the parameter file
+  BROADCAST_AFTER_READ = .true.
+  call read_parameter_file(myrank,BROADCAST_AFTER_READ)
+
+  if (ADIOS_ENABLED) stop 'Flag ADIOS_ENABLED not supported yet for smoothing, please rerun program...'
+
+  ! check that the code is running with the requested nb of processes
+  if (sizeprocs /= NPROC) then
+    if (myrank == 0) then
+      print *,'Error number of processors supposed to run on: ',NPROC
+      print *,'Error number of MPI processors actually run on: ',sizeprocs
+      print *
+      print *,'Please rerun with: mpirun -np ',NPROC,' bin/xsmooth_sem .. '
+    endif
+    call exit_MPI(myrank,'Error wrong number of MPI processes')
+  endif
+
+  ! read the value of NSPEC_AB and NGLOB_AB because we need it to define some
+  ! array sizes below
+  call read_mesh_for_init()
+  
+  allocate(ibool(NGLLX,NGLLY,NGLLZ,NSPEC_AB),irregular_element_number(NSPEC_AB),stat=ier)
+  if (ier /= 0) call exit_MPI_without_rank('error allocating array 980')
+
+  if (NSPEC_IRREGULAR > 0) then
+    ! allocate arrays for storing the databases
+    allocate(xix(NGLLX,NGLLY,NGLLZ,NSPEC_IRREGULAR),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 981')
+    allocate(xiy(NGLLX,NGLLY,NGLLZ,NSPEC_IRREGULAR),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 982')
+    allocate(xiz(NGLLX,NGLLY,NGLLZ,NSPEC_IRREGULAR),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 983')
+    allocate(etax(NGLLX,NGLLY,NGLLZ,NSPEC_IRREGULAR),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 984')
+    allocate(etay(NGLLX,NGLLY,NGLLZ,NSPEC_IRREGULAR),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 985')
+    allocate(etaz(NGLLX,NGLLY,NGLLZ,NSPEC_IRREGULAR),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 986')
+    allocate(gammax(NGLLX,NGLLY,NGLLZ,NSPEC_IRREGULAR),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 987')
+    allocate(gammay(NGLLX,NGLLY,NGLLZ,NSPEC_IRREGULAR),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 988')
+    allocate(gammaz(NGLLX,NGLLY,NGLLZ,NSPEC_IRREGULAR),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 989')
+    allocate(jacobian(NGLLX,NGLLY,NGLLZ,NSPEC_IRREGULAR),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 990')
+   else
+       ! allocate arrays for storing the databases
+    allocate(xix(1,1,1,1),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 991')
+    allocate(xiy(1,1,1,1),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 992')
+    allocate(xiz(1,1,1,1),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 993')
+    allocate(etax(1,1,1,1),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 994')
+    allocate(etay(1,1,1,1),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 995')
+    allocate(etaz(1,1,1,1),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 996')
+    allocate(gammax(1,1,1,1),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 997')
+    allocate(gammay(1,1,1,1),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 998')
+    allocate(gammaz(1,1,1,1),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 999')
+    allocate(jacobian(1,1,1,1),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1000')
+  endif
+  if (ier /= 0) stop 'Error allocating arrays for databases'
+
+  ! mesh node locations
+  allocate(xstore(NGLOB_AB),stat=ier)
+  if (ier /= 0) call exit_MPI_without_rank('error allocating array 1001')
+  allocate(ystore(NGLOB_AB),stat=ier)
+  if (ier /= 0) call exit_MPI_without_rank('error allocating array 1002')
+  allocate(zstore(NGLOB_AB),stat=ier)
+  if (ier /= 0) call exit_MPI_without_rank('error allocating array 1003')
+  if (ier /= 0) stop 'Error allocating arrays for mesh nodes'
+
+  ! material properties
+  allocate(kappastore(NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
+  if (ier /= 0) call exit_MPI_without_rank('error allocating array 1004')
+  allocate(mustore(NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
+  if (ier /= 0) call exit_MPI_without_rank('error allocating array 1005')
+  if (ier /= 0) stop 'Error allocating arrays for material properties'
+
+  ! material flags
+  allocate(ispec_is_acoustic(NSPEC_AB),stat=ier)
+  if (ier /= 0) call exit_MPI_without_rank('error allocating array 1006')
+  allocate(ispec_is_elastic(NSPEC_AB),stat=ier)
+  if (ier /= 0) call exit_MPI_without_rank('error allocating array 1007')
+  allocate(ispec_is_poroelastic(NSPEC_AB),stat=ier)
+  if (ier /= 0) call exit_MPI_without_rank('error allocating array 1008')
+  if (ier /= 0) stop 'Error allocating arrays for material flags'
+  ispec_is_acoustic(:) = .false.
+  ispec_is_elastic(:) = .false.
+  ispec_is_poroelastic(:) = .false.
+
+
   ! reads in external mesh
   call read_mesh_databases()
 
@@ -122,6 +220,7 @@ program smooth_sem_sph_pde
     print *,'  Min element size = ',elemsize_min_glob
     print *,'  Max/min ratio = ',elemsize_max_glob/elemsize_min_glob
     print *
+    print*, 'has wavefield_discon =',  IS_WAVEFIELD_DISCONTINUITY
   endif
 
   !! broadcast distance_min_glob to other processors
@@ -151,7 +250,8 @@ program smooth_sem_sph_pde
   deallocate(ispec_is_acoustic, ispec_is_elastic, ispec_is_poroelastic)
 
   !! determine ch, cv, ntstep
-  cmax = distance_min_glob ** 2 / 6.0
+  !cmax = distance_min_glob ** 2 / 6.0
+  cmax = distance_min_glob ** 2 / 9.0
   if (sigma_v >= sigma_h) then
     cv = cmax
     ch = cv * (sigma_h ** 2) / (sigma_v ** 2)
@@ -378,10 +478,9 @@ program smooth_sem_sph_pde
     do ispec = 1, NSPEC_AB
       do k=1,NGLLZ;do j=1,NGLLY;do i=1,NGLLX
         iglob = ibool(i,j,k,ispec)
-        !! mute everything in the PML domain
-        if (is_CPML(ispec)) then
-          dat_glob(iglob) = 0.0
-        endif
+        if ( is_CPML(ispec) ) then 
+          dat_glob(iglob) = 0. !dat_glob(iglob) * 1.
+        end if
         dat(i,j,k,ispec) = dat_glob(iglob)
       enddo;enddo;enddo
     enddo

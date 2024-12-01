@@ -2514,7 +2514,7 @@ unsigned int                parsermethtokentab[] = { /* Table for parameter/toke
 ** - NULL   : on error.
 */
 
-Strat *
+Strat * 
 stratParserParse (
 const StratTab * const      strattab,             /*+ Pointer to parsing tables +*/
 const char * const          string)               /*+ Strategy string to parse  +*/

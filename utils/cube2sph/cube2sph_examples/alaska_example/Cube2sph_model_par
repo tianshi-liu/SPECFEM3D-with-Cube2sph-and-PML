@@ -1,9 +1,0 @@
-ELLIPTICITY = .true.
-TOPOGRAPHY = .false.
-CASE_3D = .false.
-CRUSTAL = .false.
-ISOTROPIC_3D_MANTLE = .false.
-ONE_CRUST = .true.
-TRANSVERSE_ISOTROPY = .false.
-#MODEL = EMC:AK_EMB_2019JGRSE/MCMC_EMBerg_highres_2019_AK.nc
-MODEL = default

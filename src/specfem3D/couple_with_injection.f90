@@ -80,6 +80,9 @@
         write(IMAIN,*) ' type of injection technique is AXISEM'
       case (INJECTION_TECHNIQUE_IS_FK)
         write(IMAIN,*) ' type of injection technique is FK'
+      !nqdu
+      case (INJECTION_TECHNIQUE_IS_WAVEDISCON) 
+        write(IMAIN,*) ' type of injection technique is wavefield discontinuity'
       case default
         stop 'Invalid INJECTION_TECHNIQUE_TYPE chosen, must be 1 == DSM, 2 == AXISEM or 3 == FK'
       end select

@@ -41,6 +41,8 @@ subroutine compute_forces_viscoelastic_calling()
   !! Tianshi Liu: for solving wavefield discontinuity problem with
   !! non-split-node scheme
   use wavefield_discontinuity_solver, only: IS_WAVEFIELD_DISCONTINUITY
+  !nqdu check injection
+  use specfem_par,only : COUPLE_WITH_INJECTION_TECHNIQUE
 
   implicit none
 
@@ -65,7 +67,8 @@ subroutine compute_forces_viscoelastic_calling()
 
   !! Tianshi Liu: for solving wavefield discontinuity problem with
   !! non-split-node scheme
-  if (IS_WAVEFIELD_DISCONTINUITY) then
+  !nqdu if (IS_WAVEFIELD_DISCONTINUITY) then
+  if (IS_WAVEFIELD_DISCONTINUITY .and. COUPLE_WITH_INJECTION_TECHNIQUE) then
     call read_wavefield_discontinuity_file()
   endif
 
@@ -90,7 +93,8 @@ subroutine compute_forces_viscoelastic_calling()
     if (iphase == 1) then
       !! Tianshi Liu: for solving wavefield discontinuity problem with
       !! non-split-node scheme
-      if (IS_WAVEFIELD_DISCONTINUITY) then
+      !nqdu if (IS_WAVEFIELD_DISCONTINUITY) then
+      if(IS_WAVEFIELD_DISCONTINUITY .AND. COUPLE_WITH_INJECTION_TECHNIQUE) then 
         call add_traction_discontinuity()
       endif
 

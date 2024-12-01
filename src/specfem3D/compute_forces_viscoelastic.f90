@@ -52,6 +52,9 @@
                         ANISOTROPY,SIMULATION_TYPE, &
                         NSPEC_ADJOINT,is_moho_top,is_moho_bot, &
                         irregular_element_number,xix_regular,jacobian_regular
+  
+  !nqdu
+  use specfem_par, only: hprimewgll_xxT,hprime_xx                     
 
   use specfem_par_elastic, only: c11store,c12store,c13store,c14store,c15store,c16store, &
                         c22store,c23store,c24store,c25store,c26store,c33store, &
@@ -82,6 +85,9 @@
   !! Tianshi Liu: for solving wavefield discontinuity problem with
   !! non-split-node scheme
   use wavefield_discontinuity_solver, only: IS_WAVEFIELD_DISCONTINUITY
+
+  !nqdu check couple with injection
+  use specfem_par,only : COUPLE_WITH_INJECTION_TECHNIQUE
 
   implicit none
 
@@ -114,8 +120,8 @@
   integer :: i,j,k,l
 
   real(kind=CUSTOM_REAL) :: xixl,xiyl,xizl,etaxl,etayl,etazl,gammaxl,gammayl,gammazl,jacobianl
+  
   real(kind=CUSTOM_REAL) :: duxdxl,duxdyl,duxdzl,duydxl,duydyl,duydzl,duzdxl,duzdyl,duzdzl
-
   real(kind=CUSTOM_REAL) :: duxdxl_plus_duydyl,duxdxl_plus_duzdzl,duydyl_plus_duzdzl
   real(kind=CUSTOM_REAL) :: duxdyl_plus_duydxl,duzdxl_plus_duxdzl,duzdyl_plus_duydzl
 
@@ -162,7 +168,9 @@
             tempx1_att_new,tempx2_att_new,tempx3_att_new, &
             tempy1_att_new,tempy2_att_new,tempy3_att_new, &
             tempz1_att_new,tempz2_att_new,tempz3_att_new
-  real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: zero_array
+  
+  !nqdu
+  integer,parameter :: m1 = NGLLX, m2 = NGLLX * NGLLY
 
   ! choses inner/outer elements
   if (iphase == 1) then
@@ -170,9 +178,6 @@
   else
     num_elements = nspec_inner_elastic
   endif
-
-! generate an array equal to zero
-  zero_array(:,:,:) = 0._CUSTOM_REAL
 
   do ispec_p = 1,num_elements
 
@@ -228,7 +233,8 @@
       enddo
       !! Tianshi Liu: for solving wavefield discontinuity problem with
       !! non-split-node scheme
-      if (IS_WAVEFIELD_DISCONTINUITY) then
+      !nqdu if (IS_WAVEFIELD_DISCONTINUITY) then
+      if (IS_WAVEFIELD_DISCONTINUITY .and. COUPLE_WITH_INJECTION_TECHNIQUE) then
         call add_displacement_discontinuity_element(ispec, dummyx_loc, &
                                                   dummyy_loc, dummyz_loc)
       endif
@@ -240,18 +246,24 @@
         ! Thus no computation needs to be done in the PML region in this case.
         if (.not. backward_simulation) then
           ispec_CPML = spec_to_CPML(ispec)
-          do k=1,NGLLZ
-            do j=1,NGLLY
-              do i=1,NGLLX
-                 dummyx_loc_att(i,j,k) = PML_displ_old(1,i,j,k,ispec_CPML)
-                 dummyy_loc_att(i,j,k) = PML_displ_old(2,i,j,k,ispec_CPML)
-                 dummyz_loc_att(i,j,k) = PML_displ_old(3,i,j,k,ispec_CPML)
-                 dummyx_loc_att_new(i,j,k) = PML_displ_new(1,i,j,k,ispec_CPML)
-                 dummyy_loc_att_new(i,j,k) = PML_displ_new(2,i,j,k,ispec_CPML)
-                 dummyz_loc_att_new(i,j,k) = PML_displ_new(3,i,j,k,ispec_CPML)
-              enddo
-            enddo
-          enddo
+          dummyx_loc_att(:,:,:) = PML_displ_old(1,:,:,:,ispec_CPML)
+          dummyy_loc_att(:,:,:) = PML_displ_old(2,:,:,:,ispec_CPML)
+          dummyz_loc_att(:,:,:) = PML_displ_old(3,:,:,:,ispec_CPML)
+          dummyx_loc_att_new(:,:,:) = PML_displ_new(1,:,:,:,ispec_CPML)
+          dummyy_loc_att_new(:,:,:) = PML_displ_new(2,:,:,:,ispec_CPML)
+          dummyz_loc_att_new(:,:,:) = PML_displ_new(3,:,:,:,ispec_CPML)
+          ! do k=1,NGLLZ
+          !   do j=1,NGLLY
+          !     do i=1,NGLLX
+          !        dummyx_loc_att(i,j,k) = PML_displ_old(1,i,j,k,ispec_CPML)
+          !        dummyy_loc_att(i,j,k) = PML_displ_old(2,i,j,k,ispec_CPML)
+          !        dummyz_loc_att(i,j,k) = PML_displ_old(3,i,j,k,ispec_CPML)
+          !        dummyx_loc_att_new(i,j,k) = PML_displ_new(1,i,j,k,ispec_CPML)
+          !        dummyy_loc_att_new(i,j,k) = PML_displ_new(2,i,j,k,ispec_CPML)
+          !        dummyz_loc_att_new(i,j,k) = PML_displ_new(3,i,j,k,ispec_CPML)
+          !     enddo
+          !   enddo
+          ! enddo
         endif
     endif
 
@@ -279,39 +291,54 @@
     !------------------------------------------------------------------------------
     !---------------------computation of strain in element-------------------------
     !------------------------------------------------------------------------------
-
-    call compute_strain_in_element( &
-                 tempx1,tempx2,tempx3,zero_array,zero_array,zero_array, &
-                 tempy1,tempy2,tempy3,zero_array,zero_array,zero_array, &
-                 tempz1,tempz2,tempz3,zero_array,zero_array,zero_array, &
-                 dummyx_loc,dummyy_loc,dummyz_loc, &
-                 hprime_xxT,hprime_yyT,hprime_zzT)
+    ! call compute_strain_in_element(tempx1,tempx2,tempx3,&
+    !                                tempy1,tempy2,tempy3, &
+    !                               tempz1,tempz2,tempz3, &
+    !                               dummyx_loc,dummyy_loc,dummyz_loc,&
+    !                               hprime_xxT,hprime_xx)
+    ! mxm 
+    call mxm5_3comp_singleA(hprime_xx,m1,dummyx_loc,dummyy_loc,dummyz_loc,tempx1,tempy1,tempz1,m2)
+    call mxm5_3comp_3dmat_single(dummyx_loc,dummyy_loc,dummyz_loc,m1,hprime_xxT,m1,tempx2,tempy2,tempz2,m1)
+    call mxm5_3comp_singleB(dummyx_loc,dummyy_loc,dummyz_loc,m2,hprime_xxT,tempx3,tempy3,tempz3,m1)
 
     if (is_CPML(ispec)) then
         if (.not. backward_simulation) then
-          call compute_strain_in_element( &
-                       tempx1_att,tempx2_att,tempx3_att,zero_array,zero_array,zero_array, &
-                       tempy1_att,tempy2_att,tempy3_att,zero_array,zero_array,zero_array, &
-                       tempz1_att,tempz2_att,tempz3_att,zero_array,zero_array,zero_array, &
-                       dummyx_loc_att,dummyy_loc_att,dummyz_loc_att, &
-                       hprime_xxT,hprime_yyT,hprime_zzT)
-
-          call compute_strain_in_element( &
-                       tempx1_att_new,tempx2_att_new,tempx3_att_new,zero_array,zero_array,zero_array, &
-                       tempy1_att_new,tempy2_att_new,tempy3_att_new,zero_array,zero_array,zero_array, &
-                       tempz1_att_new,tempz2_att_new,tempz3_att_new,zero_array,zero_array,zero_array, &
-                       dummyx_loc_att_new,dummyy_loc_att_new,dummyz_loc_att_new, &
-                       hprime_xxT,hprime_yyT,hprime_zzT)
+          ! call compute_strain_in_element( &
+          !              tempx1_att,tempx2_att,tempx3_att, &
+          !              tempy1_att,tempy2_att,tempy3_att, &
+          !              tempz1_att,tempz2_att,tempz3_att, &
+          !              dummyx_loc_att,dummyy_loc_att,dummyz_loc_att, &
+          !              hprime_xxT,hprime_xx)
+          call mxm5_3comp_singleA(hprime_xx,m1,dummyx_loc_att,dummyy_loc_att,&
+                                  dummyz_loc_att,tempx1_att,tempy1_att,tempz1_att,m2)
+          call mxm5_3comp_3dmat_single(dummyx_loc_att,dummyy_loc_att,dummyz_loc_att,m1&
+                                      ,hprime_xxT,m1,tempx2_att,tempy2_att,tempz2_att,m1)
+          call mxm5_3comp_singleB(dummyx_loc_att,dummyy_loc_att,dummyz_loc_att,m2,&
+                                  hprime_xxT,tempx3_att,tempy3_att,tempz3_att,m1)
+          ! call compute_strain_in_element( &
+          !              tempx1_att_new,tempx2_att_new,tempx3_att_new, &
+          !              tempy1_att_new,tempy2_att_new,tempy3_att_new, &
+          !              tempz1_att_new,tempz2_att_new,tempz3_att_new, &
+          !              dummyx_loc_att_new,dummyy_loc_att_new,dummyz_loc_att_new, &
+          !              hprime_xxT,hprime_xx)
+          call mxm5_3comp_singleA(hprime_xx,m1,dummyx_loc_att_new,dummyy_loc_att_new,&
+                                    dummyz_loc_att_new,tempx1_att_new,tempy1_att_new,&
+                                    tempz1_att_new,m2)
+          call mxm5_3comp_3dmat_single(dummyx_loc_att_new,dummyy_loc_att_new,dummyz_loc_att_new,&
+                                  m1,hprime_xxT,m1,tempx2_att_new,tempy2_att_new,&
+                                  tempz2_att_new,m1)
+          call mxm5_3comp_singleB(dummyx_loc_att_new,dummyy_loc_att_new,dummyz_loc_att_new,m2,&
+                                  hprime_xxT,tempx3_att_new,tempy3_att_new,tempz3_att_new,m1)
         endif
     endif
 
     if (ATTENUATION .and. COMPUTE_AND_STORE_STRAIN .and. .not. is_CPML(ispec)) then
-        call compute_strain_in_element( &
+        call compute_strain_in_element_att( &
                      tempx1_att,tempx2_att,tempx3_att,tempx1,tempx2,tempx3, &
                      tempy1_att,tempy2_att,tempy3_att,tempy1,tempy2,tempy3, &
                      tempz1_att,tempz2_att,tempz3_att,tempz1,tempz2,tempz3, &
                      dummyx_loc_att,dummyy_loc_att,dummyz_loc_att, &
-                     hprime_xxT,hprime_yyT,hprime_zzT)
+                     hprime_xxT,hprime_xx)
     endif
 
     ispec_irreg = irregular_element_number(ispec)
@@ -692,40 +719,45 @@
           call pml_compute_accel_contribution_elastic(ispec,ispec_CPML,displ,veloc,rmemory_displ_elastic)
     endif
 
+    ! matmul for second loop
+    call mxm5_3comp_singleA(hprimewgll_xxT,m1,tempx1,tempy1,tempz1,newtempx1,newtempy1,newtempz1,m2)
+    call mxm5_3comp_3dmat_single(tempx2,tempy2,tempz2,m1,hprimewgll_xx,m1,newtempx2,newtempy2,newtempz2,m1)
+    call mxm5_3comp_singleB(tempx3,tempy3,tempz3,m2,hprimewgll_xx,newtempx3,newtempy3,newtempz3,m1)
+
     ! second double-loop over GLL to compute all the terms
     do k=1,NGLLZ
       do j=1,NGLLY
         do i=1,NGLLX
+          ! nqdu 
+          ! newtempx1(i,j,k) = 0._CUSTOM_REAL
+          ! newtempy1(i,j,k) = 0._CUSTOM_REAL
+          ! newtempz1(i,j,k) = 0._CUSTOM_REAL
 
-          newtempx1(i,j,k) = 0._CUSTOM_REAL
-          newtempy1(i,j,k) = 0._CUSTOM_REAL
-          newtempz1(i,j,k) = 0._CUSTOM_REAL
+          ! newtempx2(i,j,k) = 0._CUSTOM_REAL
+          ! newtempy2(i,j,k) = 0._CUSTOM_REAL
+          ! newtempz2(i,j,k) = 0._CUSTOM_REAL
 
-          newtempx2(i,j,k) = 0._CUSTOM_REAL
-          newtempy2(i,j,k) = 0._CUSTOM_REAL
-          newtempz2(i,j,k) = 0._CUSTOM_REAL
+          ! newtempx3(i,j,k) = 0._CUSTOM_REAL
+          ! newtempy3(i,j,k) = 0._CUSTOM_REAL
+          ! newtempz3(i,j,k) = 0._CUSTOM_REAL
 
-          newtempx3(i,j,k) = 0._CUSTOM_REAL
-          newtempy3(i,j,k) = 0._CUSTOM_REAL
-          newtempz3(i,j,k) = 0._CUSTOM_REAL
+          ! ! we can merge these loops because NGLLX = NGLLY = NGLLZ
+          ! do l=1,NGLLX
+          !   fac1 = hprimewgll_xx(l,i)
+          !   newtempx1(i,j,k) = newtempx1(i,j,k) + tempx1(l,j,k) * fac1
+          !   newtempy1(i,j,k) = newtempy1(i,j,k) + tempy1(l,j,k) * fac1
+          !   newtempz1(i,j,k) = newtempz1(i,j,k) + tempz1(l,j,k) * fac1
 
-          ! we can merge these loops because NGLLX = NGLLY = NGLLZ
-          do l=1,NGLLX
-            fac1 = hprimewgll_xx(l,i)
-            newtempx1(i,j,k) = newtempx1(i,j,k) + tempx1(l,j,k) * fac1
-            newtempy1(i,j,k) = newtempy1(i,j,k) + tempy1(l,j,k) * fac1
-            newtempz1(i,j,k) = newtempz1(i,j,k) + tempz1(l,j,k) * fac1
+          !   fac2 = hprimewgll_yy(l,j)
+          !   newtempx2(i,j,k) = newtempx2(i,j,k) + tempx2(i,l,k) * fac2
+          !   newtempy2(i,j,k) = newtempy2(i,j,k) + tempy2(i,l,k) * fac2
+          !   newtempz2(i,j,k) = newtempz2(i,j,k) + tempz2(i,l,k) * fac2
 
-            fac2 = hprimewgll_yy(l,j)
-            newtempx2(i,j,k) = newtempx2(i,j,k) + tempx2(i,l,k) * fac2
-            newtempy2(i,j,k) = newtempy2(i,j,k) + tempy2(i,l,k) * fac2
-            newtempz2(i,j,k) = newtempz2(i,j,k) + tempz2(i,l,k) * fac2
-
-            fac3 = hprimewgll_zz(l,k)
-            newtempx3(i,j,k) = newtempx3(i,j,k) + tempx3(i,j,l) * fac3
-            newtempy3(i,j,k) = newtempy3(i,j,k) + tempy3(i,j,l) * fac3
-            newtempz3(i,j,k) = newtempz3(i,j,k) + tempz3(i,j,l) * fac3
-          enddo
+          !   fac3 = hprimewgll_zz(l,k)
+          !   newtempx3(i,j,k) = newtempx3(i,j,k) + tempx3(i,j,l) * fac3
+          !   newtempy3(i,j,k) = newtempy3(i,j,k) + tempy3(i,j,l) * fac3
+          !   newtempz3(i,j,k) = newtempz3(i,j,k) + tempz3(i,j,l) * fac3
+          ! enddo
 
           fac1 = wgllwgll_yz(j,k)
           fac2 = wgllwgll_xz(i,k)
@@ -791,82 +823,258 @@
     endif
 
   enddo  ! spectral element loop
-
-contains
+  end subroutine compute_forces_viscoelastic
 
 !
 !---------------
 !
 
 ! put the code used for computation of strain in element in a subroutine
-
-  subroutine compute_strain_in_element(tempx1_att,tempx2_att,tempx3_att,tempx1,tempx2,tempx3, &
-                                            tempy1_att,tempy2_att,tempy3_att,tempy1,tempy2,tempy3, &
-                                            tempz1_att,tempz2_att,tempz3_att,tempz1,tempz2,tempz3, &
-                                            dummyx_loc,dummyy_loc,dummyz_loc,hprime_xxT,hprime_yyT,hprime_zzT)
+subroutine compute_strain_in_element(tempx1,tempx2,tempx3,tempy1,tempy2,tempy3, &
+    tempz1,tempz2,tempz3,dummyx_loc,dummyy_loc,dummyz_loc, &
+    hprime_xxT,hprime_xx)
 
   use constants, only: CUSTOM_REAL,NGLLX,NGLLY,NGLLZ
+  implicit none
 
-  real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: tempx1_att,tempx2_att,tempx3_att, &
+
+  integer,parameter :: m1 = NGLLX, m2 = NGLLX * NGLLY
+
+  real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ),intent(inout) :: tempx1,tempx2,tempx3, &
+                            tempy1,tempy2,tempy3, &
+                            tempz1,tempz2,tempz3
+
+  real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ),intent(in) :: dummyx_loc,dummyy_loc,dummyz_loc
+  real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLX),intent(in) :: hprime_xxT,hprime_xx
+
+  ! mxm 
+  call mxm5_3comp_singleA(hprime_xx,m1,dummyx_loc,dummyy_loc,dummyz_loc,tempx1,tempy1,tempz1,m2)
+  call mxm5_3comp_3dmat_single(dummyx_loc,dummyy_loc,dummyz_loc,m1,hprime_xxT,m1,tempx2,tempy2,tempz2,m1)
+  call mxm5_3comp_singleB(dummyx_loc,dummyy_loc,dummyz_loc,m2,hprime_xxT,tempx3,tempy3,tempz3,m1)
+
+end subroutine compute_strain_in_element
+
+
+subroutine compute_strain_in_element_att(tempx1_att,tempx2_att,tempx3_att,tempx1,tempx2,tempx3, &
+                              tempy1_att,tempy2_att,tempy3_att,tempy1,tempy2,tempy3, &
+                              tempz1_att,tempz2_att,tempz3_att,tempz1,tempz2,tempz3, &
+                              dummyx_loc,dummyy_loc,dummyz_loc,hprime_xxT,hprime_xx)
+
+  use constants, only: CUSTOM_REAL,NGLLX,NGLLY,NGLLZ
+  implicit none
+  integer,parameter :: m1 = NGLLX, m2 = NGLLX * NGLLY
+
+  real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ),intent(inout) :: tempx1_att,tempx2_att,tempx3_att, &
                                                           tempy1_att,tempy2_att,tempy3_att, &
                                                           tempz1_att,tempz2_att,tempz3_att
 
-  real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: tempx1,tempx2,tempx3, &
+  real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ),intent(in) :: tempx1,tempx2,tempx3, &
                                                           tempy1,tempy2,tempy3, &
                                                           tempz1,tempz2,tempz3
 
-  real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: dummyx_loc,dummyy_loc,dummyz_loc
-  real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLX) :: hprime_xxT
-  real(kind=CUSTOM_REAL), dimension(NGLLY,NGLLY) :: hprime_yyT
-  real(kind=CUSTOM_REAL), dimension(NGLLZ,NGLLZ) :: hprime_zzT
+  real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ),intent(in) :: dummyx_loc,dummyy_loc,dummyz_loc
+  real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLX),intent(in) :: hprime_xxT,hprime_xx
 
-  ! local variables
-  integer :: i,j,k,l
-  real(kind=CUSTOM_REAL) :: hp1,hp2,hp3
+  call compute_strain_in_element(tempx1_att,tempx2_att,tempx3_att,&
+                                 tempy1_att,tempy2_att,tempy3_att,&
+                                 tempz1_att,tempz2_att,tempz3_att,&
+                                 dummyx_loc,dummyy_loc,dummyz_loc,&
+                                 hprime_xxT,hprime_xx)
 
-  tempx1_att(:,:,:) = tempx1(:,:,:)
-  tempx2_att(:,:,:) = tempx2(:,:,:)
-  tempx3_att(:,:,:) = tempx3(:,:,:)
 
-  tempy1_att(:,:,:) = tempy1(:,:,:)
-  tempy2_att(:,:,:) = tempy2(:,:,:)
-  tempy3_att(:,:,:) = tempy3(:,:,:)
+  tempx1_att(:,:,:) = tempx1_att(:,:,:) + tempx1(:,:,:)
+  tempx2_att(:,:,:) = tempx2_att(:,:,:) + tempx2(:,:,:)
+  tempx3_att(:,:,:) = tempx3_att(:,:,:) + tempx3(:,:,:)
 
-  tempz1_att(:,:,:) = tempz1(:,:,:)
-  tempz2_att(:,:,:) = tempz2(:,:,:)
-  tempz3_att(:,:,:) = tempz3(:,:,:)
+  tempy1_att(:,:,:) = tempy1_att(:,:,:) + tempy1(:,:,:)
+  tempy2_att(:,:,:) = tempy2_att(:,:,:) + tempy2(:,:,:)
+  tempy3_att(:,:,:) = tempy3_att(:,:,:) + tempy3(:,:,:)
 
-  ! use first order Taylor expansion of displacement for local storage of stresses
-  ! at this current time step, to fix attenuation in a consistent way
-  do k=1,NGLLZ
-    do j=1,NGLLY
-      do i=1,NGLLX
+  tempz1_att(:,:,:) = tempz1_att(:,:,:) + tempz1(:,:,:)
+  tempz2_att(:,:,:) = tempz2_att(:,:,:) + tempz2(:,:,:)
+  tempz3_att(:,:,:) = tempz3_att(:,:,:) + tempz3(:,:,:)
 
-        ! we can merge these loops because NGLLX = NGLLY = NGLLZ
-        do l=1,NGLLX
-          hp1 = hprime_xxT(l,i)
-          tempx1_att(i,j,k) = tempx1_att(i,j,k) + dummyx_loc(l,j,k) * hp1
-          tempy1_att(i,j,k) = tempy1_att(i,j,k) + dummyy_loc(l,j,k) * hp1
-          tempz1_att(i,j,k) = tempz1_att(i,j,k) + dummyz_loc(l,j,k) * hp1
 
-          hp2 = hprime_yyT(l,j)
-          tempx2_att(i,j,k) = tempx2_att(i,j,k) + dummyx_loc(i,l,k) * hp2
-          tempy2_att(i,j,k) = tempy2_att(i,j,k) + dummyy_loc(i,l,k) * hp2
-          tempz2_att(i,j,k) = tempz2_att(i,j,k) + dummyz_loc(i,l,k) * hp2
+end subroutine compute_strain_in_element_att
 
-          hp3 = hprime_zzT(l,k)
-          tempx3_att(i,j,k) = tempx3_att(i,j,k) + dummyx_loc(i,j,l) * hp3
-          tempy3_att(i,j,k) = tempy3_att(i,j,k) + dummyy_loc(i,j,l) * hp3
-          tempz3_att(i,j,k) = tempz3_att(i,j,k) + dummyz_loc(i,j,l) * hp3
-        enddo
 
+! nqdu add fast derivative module
+
+  subroutine mxm5_3comp_singleA(A,n1,B1,B2,B3,C1,C2,C3,n3)
+
+! we can force inlining (Intel compiler)
+#if defined __INTEL_COMPILER
+!DIR$ ATTRIBUTES FORCEINLINE :: mxm5_3comp_singleA
+#else
+! cray
+!DIR$ INLINEALWAYS mxm5_3comp_singleA
+#endif
+
+! 3 different arrays for x/y/z-components, 2-dimensional arrays (25,5)/(5,25), same A matrix for all 3 component arrays
+
+  use constants, only: CUSTOM_REAL
+
+  implicit none
+
+  integer,intent(in) :: n1,n3
+  real(kind=CUSTOM_REAL),dimension(n1,5),intent(in) :: A
+  real(kind=CUSTOM_REAL),dimension(5,n3),intent(in) :: B1,B2,B3
+  real(kind=CUSTOM_REAL),dimension(n1,n3),intent(out) :: C1,C2,C3
+
+  ! local parameters
+  integer :: i,j
+
+  ! matrix-matrix multiplication
+  do j = 1,n3
+!DIR$ IVDEP
+#if defined __INTEL_COMPILER
+!DIR$ SIMD
+#endif
+    do i = 1,n1
+      ! C1(i,j) =  A(i,1) * B1(1,j) &
+      !          + A(i,2) * B1(2,j) &
+      !          + A(i,3) * B1(3,j) &
+      !          + A(i,4) * B1(4,j) &
+      !          + A(i,5) * B1(5,j)
+
+      ! C2(i,j) =  A(i,1) * B2(1,j) &
+      !          + A(i,2) * B2(2,j) &
+      !          + A(i,3) * B2(3,j) &
+      !          + A(i,4) * B2(4,j) &
+      !          + A(i,5) * B2(5,j)
+
+      ! C3(i,j) =  A(i,1) * B3(1,j) &
+      !          + A(i,2) * B3(2,j) &
+      !          + A(i,3) * B3(3,j) &
+      !          + A(i,4) * B3(4,j) &
+      !          + A(i,5) * B3(5,j)
+
+      !nqdu
+      C1(i,j) = sum(A(i,:)*B1(:,j))
+      C2(i,j) = sum(A(i,:)*B2(:,j))
+      C3(i,j) = sum(A(i,:)*B3(:,j))
+    enddo
+  enddo
+
+  end subroutine mxm5_3comp_singleA
+
+  subroutine mxm5_3comp_singleB(A1,A2,A3,n1,B,C1,C2,C3,n3)
+
+! we can force inlining (Intel compiler)
+#if defined __INTEL_COMPILER
+!DIR$ ATTRIBUTES FORCEINLINE :: mxm5_3comp_singleB
+#else
+! cray
+!DIR$ INLINEALWAYS mxm5_3comp_singleB
+#endif
+
+! 3 different arrays for x/y/z-components, 2-dimensional arrays (25,5)/(5,25), same B matrix for all 3 component arrays
+
+  use constants, only: CUSTOM_REAL
+
+  implicit none
+
+  integer,intent(in) :: n1,n3
+  real(kind=CUSTOM_REAL),dimension(n1,5),intent(in) :: A1,A2,A3
+  real(kind=CUSTOM_REAL),dimension(5,n3),intent(in) :: B
+  real(kind=CUSTOM_REAL),dimension(n1,n3),intent(out) :: C1,C2,C3
+
+  ! local parameters
+  integer :: i,j
+
+  ! matrix-matrix multiplication
+  do j = 1,n3
+!DIR$ IVDEP
+#if defined __INTEL_COMPILER
+!DIR$ SIMD
+#endif
+    do i = 1,n1
+      ! C1(i,j) =  A1(i,1) * B(1,j) &
+      !          + A1(i,2) * B(2,j) &
+      !          + A1(i,3) * B(3,j) &
+      !          + A1(i,4) * B(4,j) &
+      !          + A1(i,5) * B(5,j)
+
+      ! C2(i,j) =  A2(i,1) * B(1,j) &
+      !          + A2(i,2) * B(2,j) &
+      !          + A2(i,3) * B(3,j) &
+      !          + A2(i,4) * B(4,j) &
+      !          + A2(i,5) * B(5,j)
+
+      ! C3(i,j) =  A3(i,1) * B(1,j) &
+      !          + A3(i,2) * B(2,j) &
+      !          + A3(i,3) * B(3,j) &
+      !          + A3(i,4) * B(4,j) &
+      !          + A3(i,5) * B(5,j)
+      
+      !nqdu
+      C1(i,j) = sum(A1(i,:)*B(:,j))
+      C2(i,j) = sum(A2(i,:)*B(:,j))
+      C3(i,j) = sum(A3(i,:)*B(:,j))
+    enddo
+  enddo
+
+  end subroutine mxm5_3comp_singleB
+
+
+
+
+  subroutine mxm5_3comp_3dmat_single(A1,A2,A3,n1,B,n2,C1,C2,C3,n3)
+
+! we can force inlining (Intel compiler)
+#if defined __INTEL_COMPILER
+!DIR$ ATTRIBUTES FORCEINLINE :: mxm5_3comp_3dmat_single
+#else
+! cray
+!DIR$ INLINEALWAYS mxm5_3comp_3dmat_single
+#endif
+
+! 3 different arrays for x/y/z-components, 3-dimensional arrays (5,5,5), same B matrix for all 3 component arrays
+
+  use constants, only: CUSTOM_REAL
+
+  implicit none
+
+  integer,intent(in) :: n1,n2,n3
+  real(kind=CUSTOM_REAL),dimension(n1,5,n3),intent(in) :: A1,A2,A3
+  real(kind=CUSTOM_REAL),dimension(5,n2),intent(in) :: B
+  real(kind=CUSTOM_REAL),dimension(n1,n2,n3),intent(out) :: C1,C2,C3
+
+  ! local parameters
+  integer :: i,j,k
+
+  ! matrix-matrix multiplication
+  do k = 1,n3
+    do j = 1,n2
+!DIR$ IVDEP
+#if defined __INTEL_COMPILER
+!DIR$ SIMD
+#endif
+      do i = 1,n1
+        ! C1(i,j,k) =  A1(i,1,k) * B(1,j) &
+        !            + A1(i,2,k) * B(2,j) &
+        !            + A1(i,3,k) * B(3,j) &
+        !            + A1(i,4,k) * B(4,j) &
+        !            + A1(i,5,k) * B(5,j)
+
+        ! C2(i,j,k) =  A2(i,1,k) * B(1,j) &
+        !            + A2(i,2,k) * B(2,j) &
+        !            + A2(i,3,k) * B(3,j) &
+        !            + A2(i,4,k) * B(4,j) &
+        !            + A2(i,5,k) * B(5,j)
+
+        ! C3(i,j,k) =  A3(i,1,k) * B(1,j) &
+        !            + A3(i,2,k) * B(2,j) &
+        !            + A3(i,3,k) * B(3,j) &
+        !            + A3(i,4,k) * B(4,j) &
+        !            + A3(i,5,k) * B(5,j)
+
+        !nqdu
+        C1(i,j,k) = sum(A1(i,:,k)*B(:,j))
+        C2(i,j,k) = sum(A2(i,:,k)*B(:,j))
+        C3(i,j,k) = sum(A3(i,:,k)*B(:,j))
       enddo
     enddo
   enddo
 
-  end subroutine compute_strain_in_element
-
-
-  end subroutine compute_forces_viscoelastic
-
-
+  end subroutine mxm5_3comp_3dmat_single

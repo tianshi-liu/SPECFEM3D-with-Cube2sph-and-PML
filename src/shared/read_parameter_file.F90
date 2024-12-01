@@ -660,9 +660,12 @@
     !  stop 'MESH_A_CHUNK_OF_THE_EARTH only available with COUPLE_WITH_INJECTION_TECHNIQUE for now, easy to change but not done yet'
 
     if (COUPLE_WITH_INJECTION_TECHNIQUE) then
+      !nqdu add
       if (INJECTION_TECHNIQUE_TYPE /= INJECTION_TECHNIQUE_IS_DSM .and. &
          INJECTION_TECHNIQUE_TYPE /= INJECTION_TECHNIQUE_IS_AXISEM .and. &
-         INJECTION_TECHNIQUE_TYPE /= INJECTION_TECHNIQUE_IS_FK) stop 'Error incorrect value of INJECTION_TECHNIQUE_TYPE read'
+         INJECTION_TECHNIQUE_TYPE /= INJECTION_TECHNIQUE_IS_FK .and. & 
+         INJECTION_TECHNIQUE_TYPE /= InJECTION_TECHNIQUE_IS_WAVEDISCON) &
+           stop 'Error incorrect value of INJECTION_TECHNIQUE_TYPE read'
 
       if ( (INJECTION_TECHNIQUE_TYPE == INJECTION_TECHNIQUE_IS_DSM ) .and. &
            (.not. MESH_A_CHUNK_OF_THE_EARTH) ) stop 'Error, coupling with DSM only works with a Earth chunk mesh'
@@ -1021,7 +1024,8 @@
 !  use constants
   use shared_parameters
   !! TL: chack if wavefield subsampling is used
-  use constants, only: SUBSAMPLE_FORWARD_WAVEFIELD
+  ! nqdu comment it
+  !use constants, only: SUBSAMPLE_FORWARD_WAVEFIELD
 
   implicit none
 
@@ -1075,9 +1079,11 @@
 !! DK DK we will soon add it
     !! TL: allow PML for adjoint simulation if subsampling
     !!if (SAVE_FORWARD .or. SIMULATION_TYPE == 3) &
-    if ((SAVE_FORWARD .or. SIMULATION_TYPE == 3) .and. &
-        (.not. SUBSAMPLE_FORWARD_WAVEFIELD)) &
-      stop 'PML_CONDITIONS is still under test for adjoint simulation'
+    
+    !!nqdu comment it 
+    ! if ((SAVE_FORWARD .or. SIMULATION_TYPE == 3) .and. &
+    !     (.not. SUBSAMPLE_FORWARD_WAVEFIELD)) &
+    !   stop 'PML_CONDITIONS is still under test for adjoint simulation'
 
     ! only one absorbing condition is possible
     if (STACEY_ABSORBING_CONDITIONS) &

@@ -1,214 +1,79 @@
-!! takes the undeformed partition files, proc*_external_mesh.bin and
-!! proc*_adepml_damping_indexing.bin, do node stretching, set up model
-!! and output ADE-PML parameter arrays
-!! ./cube2sph_adepml indir outdir center_lat center_lon rotation_azi
 program cube2sph
   use mpi
   use constants
   use meshfem3D_par, only: LOCAL_PATH
   use meshfem3D_models_par, only: myrank
   use generate_databases_par, only: &
-      prname, npts, nodes_coords, nmat_ext_mesh, nundefMat_ext_mesh, &
-      materials_ext_mesh, undef_mat_prop, nelmnts_ext_mesh, &
-      elmnts_ext_mesh, mat_ext_mesh, NSPEC_AB, &
-      nspec2D_xmin, nspec2D_xmax, nspec2D_ymin, nspec2D_ymax, &
-      nspec2D_bottom_ext, nspec2D_top_ext, NSPEC2D_BOTTOM, NSPEC2D_TOP, &
-      ibelm_xmin, nodes_ibelm_xmin, ibelm_xmax, nodes_ibelm_xmax, &
-      ibelm_ymin, nodes_ibelm_ymin, ibelm_ymax, nodes_ibelm_ymax, &
-      ibelm_bottom, nodes_ibelm_bottom, ibelm_top, nodes_ibelm_top, &
-      nspec_cpml, nspec_cpml_tot, CPML_to_spec, CPML_regions, &
-      is_CPML, NPROC, SAVE_MOHO_MESH, &
-      boundary_number, nspec2D_moho_ext, ibelm_moho, nodes_ibelm_moho
-  !! ADE-PML:
-  use generate_databases_par, only: &
-      pml_d,pml_beta,pml_kappa,num_pml_physical,pml_physical_ispec,&
-      pml_physical_ijk
-      !nglob_CPML,ibool_CPML,CPML_to_glob
+          prname, npts, nodes_coords, nmat_ext_mesh, nundefMat_ext_mesh, &
+          materials_ext_mesh, undef_mat_prop, nelmnts_ext_mesh, &
+          elmnts_ext_mesh, mat_ext_mesh, NSPEC_AB, &
+          nspec2D_xmin, nspec2D_xmax, nspec2D_ymin, nspec2D_ymax, &
+          nspec2D_bottom_ext, nspec2D_top_ext, NSPEC2D_BOTTOM, NSPEC2D_TOP, &
+          ibelm_xmin, nodes_ibelm_xmin, ibelm_xmax, nodes_ibelm_xmax, &
+          ibelm_ymin, nodes_ibelm_ymin, ibelm_ymax, nodes_ibelm_ymax, &
+          ibelm_bottom, nodes_ibelm_bottom, ibelm_top, nodes_ibelm_top, &
+          nspec_cpml, nspec_cpml_tot, CPML_to_spec, CPML_regions, &
+          is_CPML, NPROC, num_interfaces_ext_mesh, &
+          max_interface_size_ext_mesh, &
+          my_neighbors_ext_mesh, my_nelmnts_neighbors_ext_mesh, &
+          my_interfaces_ext_mesh, ibool_interfaces_ext_mesh, &
+          nibool_interfaces_ext_mesh, num_interface, SAVE_MOHO_MESH, &
+          boundary_number, nspec2D_moho_ext, ibelm_moho, nodes_ibelm_moho
   implicit none
-  !! local variables
-  integer :: ipts, ispec,inode,ier
-  double precision, dimension(NGNOD) :: xelm, yelm, zelm
-  double precision, dimension(:,:), allocatable :: &
-          nodes_coords_sph,nodes_coords_new
-  character(len=MAX_STRING_LEN) :: infn, outfn, indir, outdir, string_dummy
-  double precision, dimension(:,:,:,:), allocatable :: &
-          xstore,ystore,zstore,xstore_sph,ystore_sph,zstore_sph,&
-          xstore_new,ystore_new,zstore_new,jacobian3D
-  real, dimension(:,:,:,:), allocatable :: rho_new, vp_new,vs_new
-  real, dimension(:,:,:,:,:,:), allocatable :: r_trans,r_trans_inv
-  real, dimension(:,:,:,:), allocatable :: rvolume_loc
-  real, dimension(:,:,:), allocatable :: pml_physical_normal
-  real, dimension(:,:), allocatable :: pml_physical_jacobianw
-  ! C-PML spectral elements global indexing
-  integer, dimension(:), allocatable :: CPML_to_spec_dummy
-
-  ! C-PML regions
-  integer, dimension(:), allocatable :: CPML_regions_dummy
-
-  ! mask of C-PML elements for the global mesh
-  logical, dimension(:), allocatable :: is_CPML_dummy
-
-  ! cube2sph
-  double precision :: r = 6371000.0, center_lat, center_lon, rotation_azi
-
-  call get_command_argument(1, indir)
-  call get_command_argument(2, outdir)
-  call get_command_argument(3, string_dummy)
-  read(string_dummy, *) center_lat
-  call get_command_argument(4, string_dummy)
-  read(string_dummy, *) center_lon
-  call get_command_argument(5, string_dummy)
-  read(string_dummy, *) rotation_azi
+  integer :: ipt, ier
+  character(len=MAX_STRING_LEN) :: arg_string
+  double precision, dimension(:,:), allocatable :: nodes_coords_new
+  double precision :: center_lat, center_lon, rotation_azi, &
+     alpha, beta, gamma, cosa, sina, cosb, sinb, cosg, sing, t1, t2, &
+     M11, M12, M13, M21, M22, M23, M31, M32, M33, xi, eta, x, y, z
+  call get_command_argument(1, arg_string)
+  read(arg_string, *) center_lat
+  call get_command_argument(2, arg_string)
+  read(arg_string, *) center_lon
+  call get_command_argument(3, arg_string)
+  read(arg_string, *) rotation_azi
   call MPI_Init(ier)
   call MPI_Comm_rank(MPI_COMM_WORLD, myrank, ier)
   call MPI_Comm_size(MPI_COMM_WORLD, NPROC, ier)
-  LOCAL_PATH = trim(indir)
-  if (myrank == 0) then
-    open(unit=IMAIN, file="OUTPUT_FILES/output_cube2sph.txt", form="formatted")
-  endif
+  LOCAL_PATH = 'DATABASES_MPI'
   call read_partition_files()
-  allocate(nodes_coords_sph(NDIM,npts),stat=ier)
-  allocate(nodes_coords_new(NDIM,npts),stat=ier)
-  call cube2sph_trans(nodes_coords,nodes_coords_sph,npts,&
-          r,center_lat,center_lon,rotation_azi)
-  
-  allocate(xstore(NGLLX,NGLLY,NGLLZ,NSPEC_AB),&
-           ystore(NGLLX,NGLLY,NGLLZ,NSPEC_AB),&
-           zstore(NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
-  allocate(xstore_sph(NGLLX,NGLLY,NGLLZ,NSPEC_AB),&
-           ystore_sph(NGLLX,NGLLY,NGLLZ,NSPEC_AB),&
-           zstore_sph(NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
-  allocate(xstore_new(NGLLX,NGLLY,NGLLZ,NSPEC_AB),&
-           ystore_new(NGLLX,NGLLY,NGLLZ,NSPEC_AB),&
-           zstore_new(NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
-  allocate(jacobian3D(NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
-  !! get all points for undeformed mesh
-  call get_gll_xyz(nodes_coords,npts,xstore,ystore,zstore,jacobian3D,NSPEC_AB)
-  !! get gll points for spherical mesh, to setup velocity model
-  call get_gll_xyz(nodes_coords_sph,npts,xstore_sph,&
-          ystore_sph,zstore_sph,jacobian3D,NSPEC_AB)
-  
-
-  allocate(rho_new(NGLLX,NGLLY,NGLLZ,NSPEC_AB),&
-           vp_new(NGLLX,NGLLY,NGLLZ,NSPEC_AB),&
-           vs_new(NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
-  ! setup gll model
-  call setup_gll_model_cartesian(xstore_sph,ystore_sph,zstore_sph,&
-          rho_new,vp_new,vs_new,NSPEC_AB)
-  if (myrank == 0) write(IMAIN, *) 'done setting up velocity model'
-  !! node stretching
-  call node_stretching(nodes_coords_sph,nodes_coords_new)
-  !! get all points for deformed mesh
-  call get_gll_xyz(nodes_coords_new,npts,xstore_new,&
-          ystore_new,zstore_new,jacobian3D,NSPEC_AB)
-
-  if (nspec_cpml_tot > 0) then
-  !! ADE-PML is used
-  !! read adepml damping indexing files
-  infn = prname(1:len_trim(prname))//'adepml_damping_indexing.bin'
-  open(unit=IIN,file=trim(infn),status='unknown',action='read',form='unformatted',iostat=ier)
-  read(IIN) nspec_cpml
-  if(nspec_cpml>0) then
-    allocate(CPML_regions_dummy(nspec_cpml))
-    allocate(CPML_to_spec_dummy(nspec_cpml))
-    allocate(is_CPML_dummy(NSPEC_AB))
-    allocate(pml_d(NDIM,NGLLX,NGLLY,NGLLZ,nspec_cpml))
-    allocate(pml_kappa(NDIM,NGLLX,NGLLY,NGLLZ,nspec_cpml))
-    allocate(pml_beta(NDIM,NGLLX,NGLLY,NGLLZ,nspec_cpml))
-    read(IIN) CPML_regions_dummy
-    read(IIN) CPML_to_spec_dummy
-    read(IIN) is_CPML_dummy
-    read(IIN) pml_d
-    read(IIN) pml_beta
-    read(IIN) pml_kappa
-  endif
-  read(IIN) num_pml_physical
-  if (num_pml_physical > 0) then
-    allocate(pml_physical_ispec(num_pml_physical))
-    allocate(pml_physical_ijk(NDIM, NGLLSQUARE, num_pml_physical))
-    read(IIN) pml_physical_ispec
-    read(IIN) pml_physical_ijk
-  endif
-  close(IIN)
-  
-  if (num_pml_physical > 0) then
-    allocate(pml_physical_normal(NDIM,NGLLSQUARE,num_pml_physical))
-    allocate(pml_physical_jacobianw(NGLLSQUARE,num_pml_physical))
-    call calc_adepml_physical_jacobian(num_pml_physical,xstore_new,ystore_new,&
-          zstore_new,NSPEC_AB,pml_physical_ispec,pml_physical_ijk,&
-          pml_physical_normal,pml_physical_jacobianw)
-  endif
-
-  if (nspec_cpml>0) then
-    allocate(r_trans(NDIM,NDIM,NGLLX,NGLLY,NGLLZ,nspec_cpml))
-    allocate(r_trans_inv(NDIM,NDIM,NGLLX,NGLLY,NGLLZ,nspec_cpml))
-    allocate(rvolume_loc(NGLLX,NGLLY,NGLLZ,nspec_cpml))
-
-    call calc_r_trans(nodes_coords,nodes_coords_new,npts,nspec_cpml,&
-                      r_trans,r_trans_inv)
-    call create_volume_matrices_pml_elastic_loc(NSPEC_AB,jacobian3D,&
-          nspec_cpml,rvolume_loc)
-    outfn = prname(1:len_trim(prname))//'adepml_param.bin'
-    open(unit=IOUT,file=trim(outfn),status='unknown',action='write',form='unformatted',iostat=ier)
-    if (num_pml_physical > 0) then
-      write(IOUT) pml_physical_normal
-      write(IOUT) pml_physical_jacobianw
-    endif
-    write(IOUT) rvolume_loc
-    write(IOUT) r_trans
-    write(IOUT) r_trans_inv
-    close(IOUT)
-  endif
-  endif
+  allocate(nodes_coords_new(NDIM, npts), stat=ier)
+  alpha = center_lon / RADIANS_TO_DEGREES
+  beta = PI / 2.0 - center_lat / RADIANS_TO_DEGREES
+  gamma = rotation_azi / RADIANS_TO_DEGREES
+  cosa = cos(alpha)
+  sina = sin(alpha)
+  cosb = cos(beta)
+  sinb = sin(beta)
+  cosg = cos(gamma)
+  sing = sin(gamma)
+  M11 = cosg * cosb * cosa - sing * sina
+  M12 = - sing* cosb * cosa - cosg * sina
+  M13 = sinb * cosa
+  M21 = cosg * cosb * sina + sing * cosa
+  M22 = - sing * cosb * sina + cosg * cosa
+  M23 = sinb * sina
+  M31 = - cosg * sinb
+  M32 = sing * sinb
+  M33 = cosb
+  do ipt = 1, npts
+    x = nodes_coords(1, ipt)
+    y = nodes_coords(2, ipt)
+    z = nodes_coords(3, ipt)
+    xi = x / R_EARTH
+    eta = y / R_EARTH
+    t1 = tan(xi)
+    t2 = tan(eta)
+    z = (1.0+z/R_EARTH)/sqrt(1.0+t1*t1+t2*t2)
+    x = -z*t2*R_EARTH
+    y = z*t1*R_EARTH
+    z = z*R_EARTH
+    nodes_coords_new(1, ipt) = M11 * x + M12 * y + M13 * z
+    nodes_coords_new(2, ipt) = M21 * x + M22 * y + M23 * z
+    nodes_coords_new(3, ipt) = M31 * x + M32 * y + M33 * z
+  enddo
   nodes_coords(:,:) = nodes_coords_new(:,:)
-  LOCAL_PATH = trim(outdir)
   call write_partition_files()
-
-  if (myrank == 0) write(IMAIN, *) 'writing to '//prname(1:len_trim(prname))//'undeformed_xyz.bin'
-  ! write new vp
-  open(unit=IOUT,file=prname(1:len_trim(prname))//'undeformed_xyz.bin',&
-         status='unknown',form='unformatted',iostat=ier)
-  if (ier /= 0) stop 'error opening file undeformed_xyz.bin'
-  write(IOUT) xstore
-  write(IOUT) ystore
-  write(IOUT) zstore
-  close(IOUT)
-
-  ! write new vp
-  if (myrank == 0) write(IMAIN, *) 'writing to '//prname(1:len_trim(prname))//'vp.bin'
-  open(unit=IOUT,file=prname(1:len_trim(prname))//'vp.bin',status='unknown',form='unformatted',iostat=ier)
-  if (ier /= 0) stop 'error opening file vp.bin'
-  write(IOUT) vp_new
-  close(IOUT)
-
-  ! write new vs
-  if (myrank == 0) write(IMAIN, *) 'writing to '//prname(1:len_trim(prname))//'vs.bin'
-  open(unit=IOUT,file=prname(1:len_trim(prname))//'vs.bin',status='unknown',form='unformatted',iostat=ier)
-  if (ier /= 0) stop 'error opening file vs.bin'
-  write(IOUT) vs_new
-  close(IOUT)
-
-  ! write new rho
-  if (myrank == 0) write(IMAIN, *) 'writing to '//prname(1:len_trim(prname))//'rho.bin'
-  open(unit=IOUT,file=prname(1:len_trim(prname))//'rho.bin',status='unknown',form='unformatted',iostat=ier)
-  if (ier /= 0) stop 'error opening file rho.bin'
-  write(IOUT) rho_new
-  close(IOUT)
-
-  deallocate(xstore,ystore,zstore,&
-             xstore_sph,ystore_sph,zstore_sph, &
-             xstore_new,ystore_new,zstore_new, jacobian3D)
-  if (nspec_cpml_tot > 0) then
-  if (nspec_cpml > 0) &
-    deallocate(CPML_regions_dummy,CPML_to_spec_dummy,is_CPML_dummy,&
-               pml_d,pml_kappa,pml_beta)
-  if (num_pml_physical > 0) &
-    deallocate(pml_physical_ispec,pml_physical_ijk,pml_physical_normal,&
-               pml_physical_jacobianw)
-  if (nspec_cpml > 0) deallocate(r_trans,r_trans_inv,rvolume_loc)
-  endif
-  if (myrank == 0) close(IMAIN)
-  deallocate(rho_new,vp_new,vs_new)
+  deallocate(nodes_coords_new)
   call MPI_Finalize(ier)
 end program cube2sph
-

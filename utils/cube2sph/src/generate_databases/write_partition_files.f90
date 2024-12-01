@@ -172,7 +172,6 @@
 
   !! Tianshi Liu: setup wavefield discontinuity boundary
   if (IS_WAVEFIELD_DISCONTINUITY) then
-    write(IMAIN,*) 'writing wavefield discontinuity faces...'
     call write_partition_files_wavefield_discontinuity()
     call synchronize_all()
   endif

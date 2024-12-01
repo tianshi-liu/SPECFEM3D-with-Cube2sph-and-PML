@@ -43,6 +43,10 @@ program write_force_solution_file
   DT = 0.0
   NUMBER_OF_SIMULTANEOUS_RUNS = 1
   isource = 1
+  if (command_argument_count() /= 4) then
+      print*, 'Usage: ./this sph_force_file cart_force_file use_topo use_ellipticity '
+      stop
+  endif
   call get_command_argument(1, sph_force_fn)
   call get_command_argument(2, cart_force_fn)
   call get_command_argument(3, arg_str)
@@ -60,12 +64,10 @@ program write_force_solution_file
            comp_dir_vect_source_E(NSOURCES), &
            comp_dir_vect_source_N(NSOURCES), &
            comp_dir_vect_source_Z_UP(NSOURCES),stat=ier)
-  if (TOPOGRAPHY) then
-    allocate(ibathy_topo(NX_BATHY,NY_BATHY),stat=ier)
-    call make_ellipticity(nspl,rspl,espl,espl2,ONE_CRUST)
-    ibathy_topo(:,:) = 0
-    call read_topo_bathy_file(ibathy_topo)
-  endif
+  allocate(ibathy_topo(NX_BATHY,NY_BATHY),stat=ier)
+  if(ELLIPTICITY) call make_ellipticity(nspl,rspl,espl,espl2,ONE_CRUST)
+  ibathy_topo(:,:) = 0
+  if( TOPOGRAPHY) call read_topo_bathy_file(ibathy_topo)
   call get_force(tshift_src,hdur,lat,long,depth,DT,NSOURCES, &
                  min_tshift_src_original,force_stf,factor_force_source, &
                  comp_dir_vect_source_E,comp_dir_vect_source_N, &
@@ -185,6 +187,6 @@ program write_force_solution_file
              comp_dir_vect_source_E, &
              comp_dir_vect_source_N, &
              comp_dir_vect_source_Z_UP)
-  if (TOPOGRAPHY) deallocate(ibathy_topo)
+  deallocate(ibathy_topo)
   call MPI_Finalize(ier)
 end program write_force_solution_file

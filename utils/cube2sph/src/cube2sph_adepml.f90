@@ -18,6 +18,11 @@ program cube2sph
       ibelm_bottom, nodes_ibelm_bottom, ibelm_top, nodes_ibelm_top, &
       nspec_cpml, nspec_cpml_tot, CPML_to_spec, CPML_regions, &
       is_CPML, NPROC, SAVE_MOHO_MESH, &
+      !, num_interfaces_ext_mesh, &
+      !max_interface_size_ext_mesh, &
+      !my_neighbors_ext_mesh, my_nelmnts_neighbors_ext_mesh, &
+      !my_interfaces_ext_mesh, ibool_interfaces_ext_mesh, &
+      !nibool_interfaces_ext_mesh, num_interface, SAVE_MOHO_MESH, &
       boundary_number, nspec2D_moho_ext, ibelm_moho, nodes_ibelm_moho
   !! ADE-PML:
   use generate_databases_par, only: &

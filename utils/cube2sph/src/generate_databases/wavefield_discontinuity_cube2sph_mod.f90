@@ -5,9 +5,7 @@
 module wavefield_discontinuity_cube2sph
   use constants, only: CUSTOM_REAL
 
-  logical :: IS_WAVEFIELD_DISCONTINUITY=.false.
-
-  integer, parameter :: IFILE_WAVEFIELD_DISCONTINUITY=527
+  logical, parameter :: IS_WAVEFIELD_DISCONTINUITY=.true.
 
   !! boundary of wavefield discontinuity, read from database file
   integer :: nb_wd
@@ -25,31 +23,5 @@ module wavefield_discontinuity_cube2sph
   !! side_wd = 9--20: only one edge is on the boundary
   !! side_wd = 21--26: one face is on the boundary
   integer, dimension(:), allocatable :: side_wd
-
-  contains
-
-  subroutine read_wavefield_discontinuity_switch()
-    implicit none
-    integer :: ier
-    !integer :: myrank
-    !call world_rank(myrank)
-    open(unit=IFILE_WAVEFIELD_DISCONTINUITY, &
-       file='wavefield_discontinuity_switch', &
-       form='formatted', action='read', iostat=ier)
-    if (ier /= 0) then
-      !if (myrank == 0) print *, 'cannot find switch file for wavefield
-      !discontinuity, skip'
-      return
-    else
-      read(IFILE_WAVEFIELD_DISCONTINUITY, *) IS_WAVEFIELD_DISCONTINUITY
-      close(IFILE_WAVEFIELD_DISCONTINUITY)
-      !if (myrank == 0) then
-      !  print *, 'found switch file for wavefield discontinuity'
-      !  print *, 'IS_WAVEFIELD_DISCONTINUITY = ', IS_WAVEFIELD_DISCONTINUITY
-      !  print *, 'IS_TOP_WAVEFIELD_DISCONTINUITY = ',
-      !  IS_TOP_WAVEFIELD_DISCONTINUITY
-      !endif
-    endif
-  end subroutine read_wavefield_discontinuity_switch
 
 end module wavefield_discontinuity_cube2sph

@@ -54,8 +54,7 @@
           boundary_number, nspec2D_moho_ext, ibelm_moho, nodes_ibelm_moho
 
   !! Tianshi Liu: setup wavefield discontinuity boundary
-  use wavefield_discontinuity_cube2sph, only: IS_WAVEFIELD_DISCONTINUITY, &
-                                          read_wavefield_discontinuity_switch
+  use wavefield_discontinuity_cube2sph, only: IS_WAVEFIELD_DISCONTINUITY
 
   implicit none
 
@@ -168,7 +167,6 @@
   call synchronize_all()
 
   !! Tianshi Liu: setup wavefield discontinuity boundary
-  call read_wavefield_discontinuity_switch()
   if (IS_WAVEFIELD_DISCONTINUITY) then
     call read_partition_files_wavefield_discontinuity()
     call synchronize_all()

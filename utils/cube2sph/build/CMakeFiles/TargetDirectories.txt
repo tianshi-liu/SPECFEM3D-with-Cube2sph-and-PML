@@ -1,0 +1,15 @@
+/home/l/liuqy/nqdu/specfem3d-cube2sph.1/utils/cube2sph/build/CMakeFiles/rebuild_cache.dir
+/home/l/liuqy/nqdu/specfem3d-cube2sph.1/utils/cube2sph/build/CMakeFiles/write_horizontal_slice_vtk.dir
+/home/l/liuqy/nqdu/specfem3d-cube2sph.1/utils/cube2sph/build/CMakeFiles/write_cmt_solution_file.dir
+/home/l/liuqy/nqdu/specfem3d-cube2sph.1/utils/cube2sph/build/CMakeFiles/cube2sph_station_inv.dir
+/home/l/liuqy/nqdu/specfem3d-cube2sph.1/utils/cube2sph/build/CMakeFiles/cube2sph_nopml.dir
+/home/l/liuqy/nqdu/specfem3d-cube2sph.1/utils/cube2sph/build/CMakeFiles/write_vertical_slice_vtk.dir
+/home/l/liuqy/nqdu/specfem3d-cube2sph.1/utils/cube2sph/build/CMakeFiles/cube2sph_boundary_gmt.dir
+/home/l/liuqy/nqdu/specfem3d-cube2sph.1/utils/cube2sph/build/CMakeFiles/write_stations_file.dir
+/home/l/liuqy/nqdu/specfem3d-cube2sph.1/utils/cube2sph/build/CMakeFiles/cube2sph.dir
+/home/l/liuqy/nqdu/specfem3d-cube2sph.1/utils/cube2sph/build/CMakeFiles/edit_cache.dir
+/home/l/liuqy/nqdu/specfem3d-cube2sph.1/utils/cube2sph/build/CMakeFiles/cube2sph_force.dir
+/home/l/liuqy/nqdu/specfem3d-cube2sph.1/utils/cube2sph/build/CMakeFiles/cube2sph_station.dir
+/home/l/liuqy/nqdu/specfem3d-cube2sph.1/utils/cube2sph/build/CMakeFiles/cube2sph_adepml.dir
+/home/l/liuqy/nqdu/specfem3d-cube2sph.1/utils/cube2sph/build/CMakeFiles/setup_adepml.dir
+/home/l/liuqy/nqdu/specfem3d-cube2sph.1/utils/cube2sph/build/CMakeFiles/write_force_solution_file.dir
