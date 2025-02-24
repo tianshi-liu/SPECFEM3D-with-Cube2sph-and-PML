@@ -68,9 +68,6 @@ if(ENABLE_CUDA)
   include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo")
   set(GPULIBS CUDA::cudart)
-
-  # set your architecture here
-  set_target_properties(cuda PROPERTIES CUDA_ARCHITECTURES native)
 endif()
 
 ################# include paths #################
@@ -86,3 +83,8 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/src/specfem3D)
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/auxiliaries) 
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/decompose_mesh) 
 add_subdirectory(${PROJECT_SOURCE_DIR}/src/tomography) 
+
+if(ENABLE_CUDA) 
+  # set your architecture here
+  set_target_properties(cuda PROPERTIES CUDA_ARCHITECTURES native)
+endif()
