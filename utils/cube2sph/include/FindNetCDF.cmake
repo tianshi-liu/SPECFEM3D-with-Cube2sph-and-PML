@@ -42,10 +42,15 @@ Search details:
 
 include(CheckSourceCompiles)
 
+set(NetCDF_HINTS
+    $ENV{NETCDF_HOME}
+)
+
 function(netcdf_c)
 
 find_path(NetCDF_C_INCLUDE_DIR
-NAMES netcdf.h
+NAMES netcdf.h 
+HINTS $ENV{NETCDF_HOME}
 DOC "NetCDF C include directory"
 )
 
