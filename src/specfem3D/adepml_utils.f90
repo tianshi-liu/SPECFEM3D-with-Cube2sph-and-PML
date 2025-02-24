@@ -721,7 +721,8 @@ subroutine update_Qt_conv()
     Qt_t(:,:,i) = Qt_t(:,:,i)*rvolume(i)
   enddo
   do i = 1, 3
-    Qt(:,i,:)=Qt(:,i,:)*coeff_glob_exp1(:,:)+coeff_glob_exp2(:,:)*Qt_t(:,i,:)
+    Qt(:,i,:)=Qt(:,i,:)*coeff_glob_exp1(:,:)+&
+              coeff_glob_exp2(:,:)*Qt_t(:,i,:)
   enddo
   !do i = 1, nglob_pml_in
   !  Qt(:,:,pml_in_iglob(i)) = 0.0
@@ -729,6 +730,13 @@ subroutine update_Qt_conv()
   Qt_t(:,:,:) = 0.0
   !Qt_t_ext(:,:,:) = 0.0
 end subroutine update_Qt_conv
+
+subroutine update_Qt_conv_GPU()
+  use specfem_par,only: Mesh_pointer
+  implicit none
+  
+  call update_Qt_conv_device(Mesh_pointer)
+end subroutine update_Qt_conv_GPU
 
 subroutine update_Qu_conv()
   !use specfem_par, only: deltat, deltatover2
@@ -742,22 +750,39 @@ subroutine update_Qu_conv()
   Qu_t(:,:,:,:,:,:) = 0.0
 end subroutine update_Qu_conv
 
+subroutine update_Qu_conv_GPU()
+  use specfem_par,only: Mesh_pointer
+  implicit none
+  
+  call update_Qu_conv_device(Mesh_pointer)
+
+end subroutine update_Qu_conv_GPU
+
 
 subroutine include_adepml_accel_aux()
   use pml_par, only: nglob_CPML,CPML_to_glob,Qt,rvolume
-  use specfem_par_elastic, only: rmassx, rmassy, rmassz, accel
+  use specfem_par_elastic, only:  accel
   integer :: iglob_CPML, iglob
   do iglob_CPML = 1, nglob_CPML
     iglob = CPML_to_glob(iglob_CPML)
     accel(1,iglob)=accel(1,iglob)+(Qt(1,1,iglob_CPML)+Qt(2,1,iglob_CPML)+ &
-                     Qt(3,1,iglob_CPML))*rmassx(iglob)/rvolume(iglob_CPML)
+                     Qt(3,1,iglob_CPML))/rvolume(iglob_CPML)
     accel(2,iglob)=accel(2,iglob)+(Qt(1,2,iglob_CPML)+Qt(2,2,iglob_CPML)+ &
-                     Qt(3,2,iglob_CPML))*rmassy(iglob)/rvolume(iglob_CPML)
+                     Qt(3,2,iglob_CPML))/rvolume(iglob_CPML)
     accel(3,iglob)=accel(3,iglob)+(Qt(1,3,iglob_CPML)+Qt(2,3,iglob_CPML)+ &
-                     Qt(3,3,iglob_CPML))*rmassz(iglob)/rvolume(iglob_CPML)
+                     Qt(3,3,iglob_CPML))/rvolume(iglob_CPML)
     
   enddo
 end subroutine include_adepml_accel_aux
+
+
+subroutine include_adepml_accel_aux_GPU()
+  use specfem_par,only: Mesh_pointer
+  implicit none
+  
+  call include_adepml_accel_aux_device(Mesh_pointer)
+
+end subroutine include_adepml_accel_aux_GPU
 
 subroutine prepare_adepml_update_coeff()
   use constants, only: NGLLX,NGLLY,NGLLZ,CUSTOM_REAL

@@ -222,15 +222,16 @@ subroutine compute_forces_viscoelastic_calling()
 
   !call wait_for_attach(myrank)
 
-! Percy, Fault boundary term B*tau is added to the assembled forces
-!        which at this point are stored in the array 'accel'
+  ! Percy, Fault boundary term B*tau is added to the assembled forces
+  !        which at this point are stored in the array 'accel'
   if (SIMULATION_TYPE_DYN) call bc_dynflt_set3d_all(accel,veloc,displ)
   if (SIMULATION_TYPE_KIN) call bc_kinflt_set_all(accel,veloc,displ)
 
  ! multiplies with inverse of mass matrix (note: rmass has been inverted already)
-  accel(1,:) = accel(1,:)*rmassx(:)
-  accel(2,:) = accel(2,:)*rmassy(:)
-  accel(3,:) = accel(3,:)*rmassz(:)
+  !don't need nqdu
+  ! accel(1,:) = accel(1,:)*rmassx(:)
+  ! accel(2,:) = accel(2,:)*rmassy(:)
+  ! accel(3,:) = accel(3,:)*rmassz(:)
   !! TL: corrector to update PML auxiliary variables !!
   if (PML_CONDITIONS .and. USE_ADE_PML.and.(nglob_CPML>0)) then
   !                   call update_pml_aux_conv()
@@ -245,7 +246,12 @@ subroutine compute_forces_viscoelastic_calling()
   endif
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-! updates acceleration with ocean load term
+  ! apply dirichlet massmatrix
+  accel(1,:) = accel(1,:)*rmassx(:)
+  accel(2,:) = accel(2,:)*rmassy(:)
+  accel(3,:) = accel(3,:)*rmassz(:)
+
+  ! updates acceleration with ocean load term
   if (APPROXIMATE_OCEAN_LOAD) then
     call compute_coupling_ocean(NSPEC_AB,NGLOB_AB, &
                                 ibool,rmassx,rmassy,rmassz, &
@@ -254,22 +260,22 @@ subroutine compute_forces_viscoelastic_calling()
                                 num_free_surface_faces)
   endif
 
-! impose Dirichlet conditions on the outer edges of the C-PML layers
-  if (PML_CONDITIONS .and. USE_ADE_PML.and.(nglob_dirichlet>0)) then
-    ! TL: timing
-    t_clock = wtime()
-    do igll = 1, nglob_dirichlet
-      iglob = iglob_dirichlet(igll)
-      accel(:,iglob) = 0._CUSTOM_REAL
-      veloc(:,iglob) = 0._CUSTOM_REAL
-      displ(:,iglob) = 0._CUSTOM_REAL
-    enddo
-    t_update_pml = t_update_pml + (wtime() - t_clock)
-  endif
+  ! impose Dirichlet conditions on the outer edges of the C-PML layers
+  ! if (PML_CONDITIONS .and. USE_ADE_PML.and.(nglob_dirichlet>0)) then
+  !   ! TL: timing
+  !   t_clock = wtime()
+  !   do igll = 1, nglob_dirichlet
+  !     iglob = iglob_dirichlet(igll)
+  !     accel(:,iglob) = 0._CUSTOM_REAL
+  !     veloc(:,iglob) = 0._CUSTOM_REAL
+  !     displ(:,iglob) = 0._CUSTOM_REAL
+  !   enddo
+  !   t_update_pml = t_update_pml + (wtime() - t_clock)
+  ! endif
   if (PML_CONDITIONS .and. (.not. USE_ADE_PML)) then
     do iface = 1,num_abs_boundary_faces
       ispec = abs_boundary_ispec(iface)
-!!! It is better to move this into do iphase=1,2 loop
+    !!! It is better to move this into do iphase=1,2 loop
       if (ispec_is_elastic(ispec) .and. is_CPML(ispec)) then
         ! reference GLL points on boundary face
         ispec_CPML = spec_to_CPML(ispec)
@@ -293,7 +299,7 @@ subroutine compute_forces_viscoelastic_calling()
 
         enddo
       endif ! ispec_is_elastic
-!!!        endif
+      !!!        endif
     enddo
   endif
 
@@ -372,7 +378,7 @@ subroutine compute_forces_viscoelastic_backward_calling()
   ! distinguishes two runs: for elements in contact with MPI interfaces, and elements within the partitions
   do iphase = 1,2
 
-! elastic term
+    ! elastic term
     ! adjoint simulations: backward/reconstructed wavefield
     call compute_forces_viscoelastic(iphase, &
                         b_displ,b_veloc,b_accel, &
@@ -455,34 +461,34 @@ subroutine compute_forces_viscoelastic_backward_calling()
   b_accel(2,:) = b_accel(2,:)*rmassy(:)
   b_accel(3,:) = b_accel(3,:)*rmassz(:)
 
-! updates acceleration with ocean load term
-  if (APPROXIMATE_OCEAN_LOAD) then
-    call compute_coupling_ocean_backward(NSPEC_AB,NGLOB_AB, &
-                                     ibool,rmassx,rmassy,rmassz, &
-                                     rmass_ocean_load, &
-                                     free_surface_normal,free_surface_ijk,free_surface_ispec, &
-                                     num_free_surface_faces, &
-                                     SIMULATION_TYPE, &
-                                     NGLOB_ADJOINT,b_accel)
-  endif
+  ! updates acceleration with ocean load term
+    if (APPROXIMATE_OCEAN_LOAD) then
+      call compute_coupling_ocean_backward(NSPEC_AB,NGLOB_AB, &
+                                      ibool,rmassx,rmassy,rmassz, &
+                                      rmass_ocean_load, &
+                                      free_surface_normal,free_surface_ijk,free_surface_ispec, &
+                                      num_free_surface_faces, &
+                                      SIMULATION_TYPE, &
+                                      NGLOB_ADJOINT,b_accel)
+    endif
 
 
-! updates velocities
-! Newmark finite-difference time scheme with elastic domains:
-! (see e.g. Hughes, 1987; Chaljub et al., 2003)
-!
-! u(t+delta_t) = u(t) + delta_t  v(t) + 1/2  delta_t**2 a(t)
-! v(t+delta_t) = v(t) + 1/2 delta_t a(t) + 1/2 delta_t a(t+delta_t)
-! a(t+delta_t) = 1/M_elastic ( -K_elastic u(t+delta) + B_elastic chi_dot_dot(t+delta_t) + f( t+delta_t))
-!
-! where
-!   u, v, a are displacement,velocity & acceleration
-!   M is mass matrix, K stiffness matrix and B boundary term for acoustic/elastic domains
-!   f denotes a source term (acoustic/elastic)
-!   chi_dot_dot is acoustic (fluid) potential ( dotted twice with respect to time)
-!
-! corrector:
-!   updates the velocity term which requires a(t+delta)
+  ! updates velocities
+  ! Newmark finite-difference time scheme with elastic domains:
+  ! (see e.g. Hughes, 1987; Chaljub et al., 2003)
+  !
+  ! u(t+delta_t) = u(t) + delta_t  v(t) + 1/2  delta_t**2 a(t)
+  ! v(t+delta_t) = v(t) + 1/2 delta_t a(t) + 1/2 delta_t a(t+delta_t)
+  ! a(t+delta_t) = 1/M_elastic ( -K_elastic u(t+delta) + B_elastic chi_dot_dot(t+delta_t) + f( t+delta_t))
+  !
+  ! where
+  !   u, v, a are displacement,velocity & acceleration
+  !   M is mass matrix, K stiffness matrix and B boundary term for acoustic/elastic domains
+  !   f denotes a source term (acoustic/elastic)
+  !   chi_dot_dot is acoustic (fluid) potential ( dotted twice with respect to time)
+  !
+  ! corrector:
+  !   updates the velocity term which requires a(t+delta)
   ! adjoint simulations
   b_veloc(:,:) = b_veloc(:,:) + b_deltatover2*b_accel(:,:)
 
@@ -503,13 +509,24 @@ subroutine compute_forces_viscoelastic_GPU_calling()
   use pml_par
   use fault_solver_dynamic, only: bc_dynflt_set3d_all,SIMULATION_TYPE_DYN,synchronize_GPU
   use fault_solver_kinematic, only: bc_kinflt_set_all,SIMULATION_TYPE_KIN
+  
+  !nqdu added
+  use wavefield_discontinuity_par,only: IS_WAVEFIELD_DISCONTINUITY
 
   implicit none
 
   integer:: iphase
 
   ! check
-  if (PML_CONDITIONS) call exit_MPI(myrank,'PML conditions not yet implemented on GPUs')
+  !if (PML_CONDITIONS) call exit_MPI(myrank,'PML conditions not yet implemented on GPUs')
+
+  !! Tianshi Liu: for solving wavefield discontinuity problem with
+  !! non-split-node scheme
+  !nqdu if (IS_WAVEFIELD_DISCONTINUITY) then
+  if (IS_WAVEFIELD_DISCONTINUITY .and. COUPLE_WITH_INJECTION_TECHNIQUE) then
+    call read_wavefield_discontinuity_file()
+    call transfer_wavefield_discontinuity_to_GPU()
+  endif
 
   ! distinguishes two runs: for elements in contact with MPI interfaces, and elements within the partitions
   do iphase = 1,2
@@ -521,29 +538,13 @@ subroutine compute_forces_viscoelastic_GPU_calling()
                                           nspec_inner_elastic, &
                                           COMPUTE_AND_STORE_STRAIN,ATTENUATION,ANISOTROPY)
 
-    ! while inner elements compute "Kernel_2", we wait for MPI to
-    ! finish and transfer the boundary terms to the device asynchronously
-    if (iphase == 2) then
-      !daniel: todo - this avoids calling the Fortran vector send from CUDA routine
-      ! wait for asynchronous copy to finish
-      call sync_copy_from_device(Mesh_pointer,iphase,buffer_send_vector_ext_mesh)
-
-      ! sends MPI buffers
-      call assemble_MPI_vector_send_cuda(NPROC, &
-                  buffer_send_vector_ext_mesh,buffer_recv_vector_ext_mesh, &
-                  num_interfaces_ext_mesh,max_nibool_interfaces_ext_mesh, &
-                  nibool_interfaces_ext_mesh, &
-                  my_neighbors_ext_mesh, &
-                  request_send_vector_ext_mesh,request_recv_vector_ext_mesh)
-
-      ! transfers MPI buffers onto GPU
-      call transfer_boundary_to_device(NPROC,Mesh_pointer,buffer_recv_vector_ext_mesh, &
-                  num_interfaces_ext_mesh,max_nibool_interfaces_ext_mesh, &
-                  request_recv_vector_ext_mesh)
-    endif ! inner elements
-
     ! computes additional contributions
     if (iphase == 1) then
+
+      if (IS_WAVEFIELD_DISCONTINUITY .and. (SIMULATION_TYPE == 1)) then
+          call add_traction_discontinuity_GPU()
+      endif
+      
       ! adds elastic absorbing boundary term to acceleration (Stacey conditions)
       if (STACEY_ABSORBING_CONDITIONS) then
         call compute_stacey_viscoelastic_GPU(iphase,num_abs_boundary_faces, &
@@ -580,8 +581,35 @@ subroutine compute_forces_viscoelastic_GPU_calling()
       ! note: we will add all source contributions in the first pass, when iphase == 1
       !       to avoid calling the same routine twice and to check if the source element is an inner/outer element
       call compute_add_sources_viscoelastic_GPU()
+    
+    endif
+  
+    if(iphase == 1) then 
+      ! while inner elements compute "Kernel_2", we wait for MPI to
+      ! finish and transfer the boundary terms to the device asynchronousl
+      !daniel: todo - this avoids calling the Fortran vector send from CUDA routine
+      ! wait for asynchronous copy to finish
+      call sync_copy_from_device(Mesh_pointer,iphase,buffer_send_vector_ext_mesh)
+
+      ! sends MPI buffers
+      call assemble_MPI_vector_send_cuda(NPROC, &
+                  buffer_send_vector_ext_mesh,buffer_recv_vector_ext_mesh, &
+                  num_interfaces_ext_mesh,max_nibool_interfaces_ext_mesh, &
+                  nibool_interfaces_ext_mesh, &
+                  my_neighbors_ext_mesh, &
+                  request_send_vector_ext_mesh,request_recv_vector_ext_mesh)
+
+      ! transfers MPI buffers onto GPU
+      call transfer_boundary_to_device(NPROC,Mesh_pointer,buffer_recv_vector_ext_mesh, &
+                  num_interfaces_ext_mesh,max_nibool_interfaces_ext_mesh, &
+                  request_recv_vector_ext_mesh)
+
+      ! ADEPML
+      if(PML_CONDITIONS .and. USE_ADE_PML .and. (nglob_CPML > 0)) then 
+      endif
 
     endif ! iphase
+
 
     ! assemble all the contributions between slices using MPI
     if (iphase == 1) then

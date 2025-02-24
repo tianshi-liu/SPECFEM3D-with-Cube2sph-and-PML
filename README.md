@@ -4,11 +4,33 @@ Accurate and flexible continental-scale seismic wave simulations based on SPECFE
 
 - mesh truncated at customized depth
 - implementation of curvilinear PML based on auxiliary differential equations
-
+- CUDA accelaration, on both forward/adjoint simulation and sensitivity kernels
+- Teleseismic wavefield injection.
 
 ## Installation
+This package and has two parts: a spectral-element solver and the cube2sph-toolkit.  
+
+To compile the first part, you can use:
+```bash 
+mkdir -p build
+cd build
+cmake .. -DCC=gcc -DMPIFC=mpif90 
+make -j8
 ```
-bash quick_installation
+If you want to build CUDA accelarated version, please use:
+```bash 
+cmake .. -DCC=gcc -DMPIFC=mpif90  -DENABLE_CUDA=ON
+```
+By default, the CUDA architecture will be chosen as `native`. If you want to use some user defined number, please open `CMakeLists.txt` and find `set_target_properties(cuda PROPERTIES CUDA_ARCHITECTURES native)`. Then set `native` to the number you want.
+
+
+For the cube2sph toolkit, please make sure you've installed [netcdf-fortran](https://docs.unidata.ucar.edu/netcdf-fortran/current/) on you machine. Then you can go to `utils/cube2sph` and try the following:
+
+```bash 
+mkdir -p build
+cd build
+cmake .. -DCC=gcc -DMPIFC=mpif90 
+make -j8
 ```
 
 ## Steps

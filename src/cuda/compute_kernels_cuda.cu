@@ -28,6 +28,7 @@
  */
 
 #include "mesh_constants_cuda.h"
+#include "utils.cuh"
 
 /* ----------------------------------------------------------------------------------------------- */
 
@@ -804,3 +805,153 @@ void FC_FUNC_(compute_kernels_hess_cuda,
 #endif
 }
 
+// nqdu added for subsample kernels
+
+__global__ void 
+kernel_compute_strain(int nspec, const int* d_irregular_element_number,const realw* d_displ,
+                      const realw* d_xix,realw_const_p d_xiy,realw_const_p d_xiz,
+                      const realw* d_etax,realw_const_p d_etay,realw_const_p d_etaz,
+                      const realw* d_gammax,realw_const_p d_gammay,realw_const_p d_gammaz,
+                      const realw xix_regular,const realw jacobian_regular,
+                      realw_const_p d_hprime_xx, const int* d_ibool,
+                      realw_p epsilondev_xx,realw_p epsilondev_yy,realw_p epsilondev_xy,
+                      realw_p epsilondev_xz,realw_p epsilondev_yz,
+                      realw_p epsilon_trace_over_3
+                    )
+
+{
+ // elastic compute kernel without attenuation for anisotropic elements, with PML
+
+  // block-id == number of local element id in phase_ispec array
+  int bx = blockIdx.y*gridDim.x+blockIdx.x;
+
+  // checks if anything to do
+  if (bx >= nspec) return;
+
+  // thread-id == GLL node id
+  // note: use only NGLL^3 = 125 active threads, plus 3 inactive/ghost threads,
+  //       because we used memory padding from NGLL^3 = 125 to 128 to get coalescent memory accesses;
+  //       to avoid execution branching and the need of registers to store an active state variable,
+  //       the thread ids are put in valid range
+  int tx = threadIdx.x;
+  if (tx >= NGLL3) tx = NGLL3-1;
+
+  int K = (tx/NGLL2);
+  int J = ((tx-K*NGLL2)/NGLLX);
+  int I = (tx-K*NGLL2-J*NGLLX);
+
+  int iglob,offset;
+  int working_element,ispec_irreg;
+
+  realw tempx1l,tempx2l,tempx3l,tempy1l,tempy2l,tempy3l,tempz1l,tempz2l,tempz3l;
+  realw xixl,xiyl,xizl,etaxl,etayl,etazl,gammaxl,gammayl,gammazl,jacobianl;
+  realw duxdxl,duxdyl,duxdzl,duydxl,duydyl,duydzl,duzdxl,duzdyl,duzdzl;
+  realw duxdxl_plus_duydyl,duxdxl_plus_duzdzl,duydyl_plus_duzdzl;
+  realw duxdyl_plus_duydxl,duzdxl_plus_duxdzl,duzdyl_plus_duydzl;
+
+
+  // shared memory
+  __shared__ realw sh_tempx[NGLL3];
+  __shared__ realw sh_tempy[NGLL3];
+  __shared__ realw sh_tempz[NGLL3];
+
+  // note: using shared memory for hprime's improves performance
+  //       (but could tradeoff with occupancy)
+  __shared__ realw sh_hprime_xx[NGLL2];
+
+  // spectral-element id
+  // iphase-1 and working_element-1 for Fortran->C array conventions
+  // iphase-1 and working_element-1 for Fortran->C array conventions
+  working_element = bx;
+  ispec_irreg = d_irregular_element_number[working_element] - 1;
+
+  // local padded index
+  offset = working_element*NGLL3_PADDED + tx;
+
+  // global index
+  iglob = d_ibool[offset] - 1 ;
+
+  // loads hprime's into shared memory
+  if (threadIdx.x < NGLL3) {
+    // copy hprime from global memory to shared memory
+    if(threadIdx.x < NGLL2) {
+      sh_hprime_xx[tx] = d_hprime_xx[tx];
+    }
+    realw ux = d_displ[iglob*NDIM];
+    realw uy = d_displ[iglob*NDIM+1];
+    realw uz = d_displ[iglob*NDIM+2];
+
+    sh_tempx[tx] = ux;
+    sh_tempy[tx] = uy;
+    sh_tempz[tx] = uz;
+  }
+  __syncthreads();
+
+  // computes the spatial derivatives duxdxl ... depending on the regularity of the element
+  get_spatial_derivatives(&xixl,&xiyl,&xizl,&etaxl,&etayl,&etazl,
+    &gammaxl,&gammayl,&gammazl,&jacobianl,I,J,K,tx,
+    &tempx1l,&tempy1l,&tempz1l,&tempx2l,&tempy2l,&tempz2l,
+    &tempx3l,&tempy3l,&tempz3l,sh_tempx,sh_tempy,sh_tempz,sh_hprime_xx,
+    &duxdxl,&duxdyl,&duxdzl,&duydxl,&duydyl,&duydzl,&duzdxl,&duzdyl,&duzdzl,
+    d_xix,d_xiy,d_xiz,d_etax,d_etay,d_etaz,d_gammax,d_gammay,d_gammaz,ispec_irreg,xix_regular,0);
+
+  
+  // precompute some sums to save CPU time
+  duxdxl_plus_duydyl = duxdxl + duydyl;
+  duxdxl_plus_duzdzl = duxdxl + duzdzl;
+  duydyl_plus_duzdzl = duydyl + duzdzl;
+  duxdyl_plus_duydxl = duxdyl + duydxl;
+  duzdxl_plus_duxdzl = duzdxl + duxdzl;
+  duzdyl_plus_duydzl = duzdyl + duydzl;
+
+  // save deviatoric strain for Runge-Kutta scheme
+  if (threadIdx.x < NGLL3) {
+    realw templ = 0.33333333333333333333f * (duxdxl + duydyl + duzdzl); // 1./3. = 0.33333
+    // local storage: stresses at this current time step
+    // fortran: epsilondev_xx(:,:,:,ispec) = epsilondev_xx_loc(:,:,:)
+    epsilondev_xx[tx + working_element*NGLL3] = duxdxl - templ; // epsilondev_xx_loc;
+    epsilondev_yy[tx + working_element*NGLL3] = duydyl - templ; // epsilondev_yy_loc;
+    epsilondev_xy[tx + working_element*NGLL3] = 0.5f * duxdyl_plus_duydxl; // epsilondev_xy_loc;
+    epsilondev_xz[tx + working_element*NGLL3] = 0.5f * duzdxl_plus_duxdzl; // epsilondev_xz_loc;
+    epsilondev_yz[tx + working_element*NGLL3] = 0.5f * duzdyl_plus_duydzl; //epsilondev_yz_loc;
+    epsilon_trace_over_3[tx + working_element*NGLL3] = templ;
+  } // threadIdx.x
+}
+
+extern "C" void
+compute_subsample_strain_(long *Mesh_pointer)
+{
+  TRACE("\tcompute_subsample_strain");
+
+  Mesh* mp = (Mesh*)(*Mesh_pointer); // get Mesh from fortran integer wrapper
+
+  // gpu resources
+  int blocksize = NGLL3_PADDED;
+  int num_blocks_x, num_blocks_y;
+  get_blocks_xy(mp->NSPEC_AB,&num_blocks_x,&num_blocks_y);
+
+  dim3 grid(num_blocks_x,num_blocks_y);
+  dim3 threads(blocksize,1,1);
+
+  // lauch kernels to compute strain for adjoint field
+  kernel_compute_strain <<<grid,threads>>> (
+    mp->NSPEC_AB,mp->d_irregular_element_number,mp->d_displ,
+    mp->d_xix,mp->d_xiy,mp->d_xiz,
+    mp->d_etax,mp->d_etay,mp->d_etaz,mp->d_gammax,mp->d_gammay,mp->d_gammaz,
+    mp->xix_regular,mp->jacobian_regular,mp->d_hprime_xx,
+    mp->d_ibool,mp->d_epsilondev_xx,mp->d_epsilondev_yy,
+    mp->d_epsilondev_xy,mp->d_epsilondev_xz,mp->d_epsilondev_yz,
+    mp->d_epsilon_trace_over_3
+  );
+
+  // strain for backward wavefield
+  kernel_compute_strain <<<grid,threads>>> (
+    mp->NSPEC_AB,mp->d_irregular_element_number,mp->d_b_displ,
+    mp->d_xix,mp->d_xiy,mp->d_xiz,
+    mp->d_etax,mp->d_etay,mp->d_etaz,mp->d_gammax,mp->d_gammay,mp->d_gammaz,
+    mp->xix_regular,mp->jacobian_regular,mp->d_hprime_xx,
+    mp->d_ibool,mp->d_b_epsilondev_xx,mp->d_b_epsilondev_yy,
+    mp->d_b_epsilondev_xy,mp->d_b_epsilondev_xz,mp->d_b_epsilondev_yz,
+    mp->d_b_epsilon_trace_over_3
+  );
+}

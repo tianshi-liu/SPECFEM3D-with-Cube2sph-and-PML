@@ -118,6 +118,58 @@ void FC_FUNC_(transfer_veloc_from_device,
 
 }
 
+extern "C"
+void sync_wavefield_(int *size_f, realw *h_field,long *Mesh_pointer,int *flag_f,int *dev2host_f)
+{
+  realw *d_field = NULL;
+  Mesh* mp = (Mesh*)(*Mesh_pointer); //get mesh pointer out of fortran integer container
+
+  int flag = *flag_f;
+  int d2h = *dev2host_f;
+  size_t size = (*size_f) * sizeof(realw); 
+
+  switch (flag)
+  {
+  case 0:
+    /* code */
+    d_field = mp->d_displ;
+    break;
+  case 1:
+    d_field = mp->d_veloc;
+    break;
+  case 2:
+    d_field = mp->d_accel;
+    break;
+  case -1:
+    d_field = mp->d_Qt_t;
+    break;
+  case -2:
+    d_field = mp->d_Qu_t;
+    break;
+  case -3:
+    d_field = mp->d_Qu;
+    break;
+  case -4:
+    d_field = mp->d_Qt;
+    break;
+  default:
+    printf("flag should be in [-1,0,1,2]\n");
+    exit(1);
+    break;
+  }
+
+  if(d2h){
+    print_CUDA_error_if_any(cudaMemcpy(h_field,d_field,size,cudaMemcpyDeviceToHost),40010);
+
+  }
+  else {
+    print_CUDA_error_if_any(cudaMemcpy(d_field,h_field,size,cudaMemcpyHostToDevice),40011);
+
+  }
+  d_field = NULL;
+
+}
+
 
 
 /* ----------------------------------------------------------------------------------------------- */
@@ -201,6 +253,18 @@ void FC_FUNC_(transfer_displ_from_device,
   Mesh* mp = (Mesh*)(*Mesh_pointer); //get mesh pointer out of fortran integer container
 
   print_CUDA_error_if_any(cudaMemcpy(displ,mp->d_displ,sizeof(realw)*(*size),cudaMemcpyDeviceToHost),40066);
+
+}
+
+extern "C"
+void FC_FUNC_(transfer_b_displ_to_device,
+              TRANSFER_B_DISPL_to_DEVICE)(int* size, const realw* b_displ,long* Mesh_pointer) {
+
+  TRACE("transfer_b_displ_to_device");
+
+  Mesh* mp = (Mesh*)(*Mesh_pointer); //get mesh pointer out of fortran integer container
+
+  print_CUDA_error_if_any(cudaMemcpy(mp->d_b_displ,b_displ,sizeof(realw)*(*size),cudaMemcpyHostToDevice),400662);
 
 }
 
@@ -550,6 +614,22 @@ void FC_FUNC_(transfer_kernels_hess_ac_tohost,
   print_CUDA_error_if_any(cudaMemcpy(h_hess_kappa_ac_kl,mp->d_hess_kappa_ac_kl,NGLL3*(*NSPEC_AB)*sizeof(realw),
                                      cudaMemcpyDeviceToHost),70214);
 
+}
+
+extern "C"
+void FC_FUNC_(transfer_wavefield_discontinuity_to_device,
+              TRANSFER_WAVEFIELD_DISCONTINUITY_TO_DEVICE)(
+                         int* size_point, int* size_face,
+                         realw* displ_wd, realw* accel_wd,
+                         realw* traction_wd, long* Mesh_pointer) {
+
+  TRACE("transfer_wavefield_discontinuity_to_device");
+
+  Mesh* mp = (Mesh*)(*Mesh_pointer); //get mesh pointer out of fortran integer container
+
+  cudaMemcpy(mp->d_displ_wd,displ_wd,(*size_point)*sizeof(realw),cudaMemcpyHostToDevice);
+  cudaMemcpy(mp->d_accel_wd,accel_wd,(*size_point)*sizeof(realw),cudaMemcpyHostToDevice);
+  cudaMemcpy(mp->d_traction_wd,traction_wd,(*size_face)*sizeof(realw),cudaMemcpyHostToDevice);
 }
 
 // unused...

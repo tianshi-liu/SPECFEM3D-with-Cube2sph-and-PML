@@ -808,3 +808,119 @@ void FC_FUNC_(compute_seismograms_cuda,
                                         int* ACOUSTIC_SIMULATION,
                                         int* USE_TRICK_FOR_BETTER_PRESSURE) {}
 
+
+// nqdu added
+void FC_FUNC_(transfer_b_displ_to_device,
+              TRANSFER_B_DISPL_to_DEVICE)(int* size, const realw* b_displ,long* Mesh_pointer){}
+
+void FC_FUNC_(transfer_wavefield_discontinuity_to_device,
+              TRANSFER_WAVEFIELD_DISCONTINUITY_TO_DEVICE)(
+                         int* size_point, int* size_face,
+                         realw* displ_wd, realw* accel_wd,
+                         realw* traction_wd, long* Mesh_pointer) {}
+
+void FC_FUNC_(prepare_wavefield_discontinuity_device,
+               PREPARE_WAVEFIELD_DISCONTINUITY_DEVICE)(
+                  long* Mesh_pointer,
+                  int* ispec_to_elem_wd,
+                  int* nglob_wd,
+                  int* nspec_wd,
+                  int* ibool_wd,
+                  int* boundary_to_iglob_wd,
+                  realw* mass_in_wd,
+                  int* nfaces_wd,
+                  int* face_ijk_wd,
+                  int* face_ispec_wd,
+                  realw* face_normal_wd,
+                  realw* face_jacobian2Dw_wd) {}
+
+void FC_FUNC_(wavefield_discontinuity_add_traction_cuda,
+              WAVEFIELD_DISCONTINUITY_ADD_TRACTION_CUDA)(int* size_points,
+                                                         int* size_faces,
+                                                         long* Mesh_pointer){}
+   
+void 
+update_qt_conv_device_(long *Mesh_pointer){}
+
+void include_adepml_accel_aux_device_(long *Mesh_pointer){}
+
+void
+transfer_ade_boundary_from_device_(long* Mesh_pointer,const int* nspec_outer_elastic){}
+
+void FC_FUNC_(kernel_3_c_cuda,
+   KERNEL_3_C_CUDA)(long* Mesh_pointer,
+                    realw* deltatover2_F,
+                    realw* b_deltatover2_F,
+                    int* APPROXIMATE_OCEAN_LOAD){}
+   
+void sync_copy_qt_t_from_device_(long* Mesh_pointer,
+                                     int* iphase,
+                                     realw* send_buffer){}
+void apply_dirichlet_condition_(long *Mesh_pointer){}
+
+void prepare_ade_pml_device_(
+   long* Mesh_pointer,
+    int *nspec_pml,
+    int *num_pml_phy,
+    int *num_intf_pml,
+    int *max_nibool_interfaces_PML,
+    int *d_nglob_CPML,int *d_nglob_pml_in,
+    int *d_nglob_dirichlet,
+    int *is_pml_int, int *d_spec_to_CPML,
+    realw *d_pml_d,realw *d_pml_kappa,realw *d_pml_beta,
+    realw *d_coeff_exp1,realw *d_coeff_exp2,
+    realw *d_coeff_glob_exp1,realw *d_coeff_glob_exp2,
+    int *d_pml_spec_physical,
+    int *d_pml_physical_ijk,
+    realw *d_pml_physical_normal,
+    realw *d_pml_physical_jacobian2Dw,
+    int *d_ibool_CPML,
+    int *d_CPML_to_glob,
+    realw *d_iglob_dirichlet,
+    realw *d_r_trans,realw *d_r_trans_inv,
+    realw *d_rvolume,
+    int *d_nibool_interfaces_PML,
+    int *d_ibool_interfaces_PML,
+    realw *d_buffer_recv_matrix_PML, 
+    realw *d_buffer_send_matrix_PML,
+    realw *d_Qu,realw *d_Qu_t,
+    realw *d_Qt,realw *d_Qt_t
+){}
+
+void transfer_ade_boundary_to_device_a_(long* Mesh_pointer,
+   realw* buffer_recv_vector_ext_mesh,
+   const int* num_interfaces_ext_mesh,
+   const int* max_nibool_interfaces_ext_mesh)
+{}
+
+void transfer_ade_asmbl_accel_to_device_(long* Mesh_pointer) {}
+
+void update_qu_conv_device_(long *Mesh_pointer){}
+
+void
+compute_subsample_strain_(long *Mesh_pointer){}
+
+
+void update_displacement_cuda_ade_(long* Mesh_pointer,
+                                    realw* deltat_F,
+                                    realw* deltatsqover2_F,
+                                    realw* deltatover2_F){}
+
+void compute_forces_viscoelastic_cuda_ade_(
+   long* Mesh_pointer,
+   int* iphase,
+   realw* deltat,
+   int* nspec_outer_elastic,
+   int* nspec_inner_elastic,
+   int* COMPUTE_AND_STORE_STRAIN,
+   int* ATTENUATION,
+   int* ANISOTROPY) {}
+
+void sync_accel_bdry_buffers_(long *Mesh_pointer,const int *iphase,const realw* buffer){}
+void sync_ade_bdry_buffers_(long *Mesh_pointer,int *iphase,realw* buffer){}
+
+void apply_massmat_device_(long* Mesh_pointer){}
+
+void update_velocity_device_(long* Mesh_pointer,realw *delta2ov2_f){}
+
+void sync_wavefield_(int *size_f, realw *h_field,long *Mesh_pointer,int *flag_f,int *dev2host_f){}

@@ -20,7 +20,7 @@ add_library(scotch ${SOURCE1})
 
 INCLUDE_DIRECTORIES(${SCOTCHDIR}/include )
 INCLUDE_DIRECTORIES(${SCOTCHDIR}/src/libscotch )
-target_compile_options(scotch PRIVATE -DCOMMON_FILE_COMPRESS_GZ -DCOMMON_PTHREAD -DCOMMON_RANDOM_FIXED_SEED -DSCOTCH_RENAME -DSCOTCH_RENAME_PARSER -DSCOTCH_PTHREAD -DSCOTCH_COMMON_RENAME  -pthread)
+target_compile_options(scotch PRIVATE -DCOMMON_FILE_COMPRESS_GZ -DCOMMON_PTHREAD -DCOMMON_RANDOM_FIXED_SEED -DSCOTCH_RENAME -DSCOTCH_RENAME_PARSER -DSCOTCH_PTHREAD -DSCOTCH_COMMON_RENAME -Drestrict=__restrict -pthread)
 
 add_executable(xdecompose_mesh program_decompose_mesh.f90)
 target_link_libraries(xdecompose_mesh decompose scotch  mesh shared)

@@ -3,12 +3,17 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "/usr/local/cuda/include",
+                "/home/nqdu/software/eigen-3.4.0",
+                "/home/nqdu/code/c_fortran/SPECFEM3D-with-Cube2sph-and-PML/setup"
             ],
-            "defines": [],
-            "compilerPath": "/scinet/niagara/software/2019b/opt/base/gcc/8.3.0/bin/gcc",
+            
+            "defines": ["-D","USE_CUDA","-D","WITH_MPI"],
+            "compilerPath": "/usr/bin/gcc",
             "cStandard": "c17",
-            "cppStandard": "gnu++14",
+            "compilerArgs": ["-Wall"],
+            "cppStandard": "gnu++17",
             "intelliSenseMode": "linux-gcc-x64"
         }
     ],

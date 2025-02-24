@@ -32,7 +32,8 @@ subroutine close_forward_wavefield()
 end subroutine close_forward_wavefield
 
 subroutine write_subsampled_forward_wavefield(it)
-  use specfem_par, only: IFILE_FORWARD_WAVEFIELD, NSTEP_PER_FORWARD_OUTPUT
+  use specfem_par, only: IFILE_FORWARD_WAVEFIELD, NSTEP_PER_FORWARD_OUTPUT,&
+                          Mesh_pointer,GPU_MODE,NDIM,NGLOB_AB
   use specfem_par_elastic, only: displ
 
   implicit none
@@ -40,12 +41,14 @@ subroutine write_subsampled_forward_wavefield(it)
 
   i_save = int(it / NSTEP_PER_FORWARD_OUTPUT)
 
+  if(GPU_MODE) call  transfer_displ_from_device(NDIM*NGLOB_AB,displ, Mesh_pointer)
   write(IFILE_FORWARD_WAVEFIELD, rec=i_save) displ
                          
 end subroutine write_subsampled_forward_wavefield
 
 subroutine read_subsampled_forward_wavefield(b_it)
-  use specfem_par, only: IFILE_FORWARD_WAVEFIELD, NSTEP_PER_FORWARD_OUTPUT
+  use specfem_par, only: IFILE_FORWARD_WAVEFIELD, NSTEP_PER_FORWARD_OUTPUT,&
+                          GPU_MODE,Mesh_pointer,NDIM,NGLOB_AB
   use specfem_par_elastic, only: b_displ
   implicit none
   integer :: i_save, b_it
@@ -53,6 +56,7 @@ subroutine read_subsampled_forward_wavefield(b_it)
   i_save = int(b_it / NSTEP_PER_FORWARD_OUTPUT)
 
   read(IFILE_FORWARD_WAVEFIELD, rec=i_save) b_displ
+  if(GPU_MODE) call transfer_b_displ_to_device(NDIM*NGLOB_AB,b_displ, Mesh_pointer)
   
 end subroutine read_subsampled_forward_wavefield
 
@@ -70,6 +74,21 @@ subroutine compute_kernels_from_subsampled_wavefield()
     epsilondev_xy_elem, epsilondev_xz_elem, epsilondev_yz_elem, &
     b_epsilon_trace_over_3_elem,b_epsilondev_xx_elem, b_epsilondev_yy_elem, &
     b_epsilondev_xy_elem, b_epsilondev_xz_elem, b_epsilondev_yz_elem
+  real(kind=CUSTOM_REAL) :: dt_kl
+
+  !nqdu added
+  ! GPU MODE
+  if(GPU_MODE) then 
+    dt_kl = deltat*NSTEP_PER_FORWARD_OUTPUT
+    call compute_subsample_strain(Mesh_pointer,dt_kl)
+    call compute_kernels_elastic_cuda(Mesh_pointer,dt_kl)
+    if(APPROXIMATE_HESS_KL) then 
+      call compute_kernels_hess_cuda(Mesh_pointer,dt_kl, &
+                                    ELASTIC_SIMULATION,.false.)
+    endif
+    return;
+  endif
+
   !! cannot do GPU_MODE or ANISOTROPIC_VELOCITY_KL yet
   do ispec = 1, NSPEC_AB
     ! compute strain in each element for forward and adjoint field
@@ -118,6 +137,8 @@ subroutine compute_kernels_from_subsampled_wavefield()
     enddo;enddo;enddo
   enddo ! ispec = 1, NSPEC_AB
 end subroutine compute_kernels_from_subsampled_wavefield
+
+
 
 subroutine compute_epsilon_element(u,ispec,e,exx,eyy,exy,exz,eyz)
   use constants, only: CUSTOM_REAL,NGLLX,NGLLY,NGLLZ,NDIM,ONE_THIRD,FOUR_THIRDS

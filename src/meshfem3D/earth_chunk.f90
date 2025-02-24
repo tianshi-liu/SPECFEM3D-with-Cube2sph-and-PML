@@ -2730,13 +2730,19 @@ end subroutine StorePointZ
  subroutine CalGridProf(ProfForGemini,Niveau_elm,zlayer,nlayer,NEX_GAMMA,Z_DEPTH_BLOCK)
 
   implicit none
-  integer NEX_GAMMA,nlayer,nbbloc(100000),Niveau_elm(0:NEX_GAMMA-1)
+  integer NEX_GAMMA,nlayer,Niveau_elm(0:NEX_GAMMA-1)
   double precision ProfForGemini(0:NEX_GAMMA-1,3),zlayer(nlayer)
-  double precision Z_DEPTH_BLOCK,zpoint(100000),zz(100000)
+  double precision Z_DEPTH_BLOCK !!,zpoint(100000),zz(100000)
   double precision epsillon
   integer nb, n, i,j,k,ilayer,ilay,nd,niveau
   double precision p, pas, longeur
   logical test
+
+  ! local
+  integer,allocatable :: nbbloc(:)
+  double precision,allocatable :: zpoint(:),zz(:)
+
+  allocate(zpoint(100000),zz(100000),nbbloc(100000))
 
   epsillon=1d-3
    nbbloc(:)=0
@@ -2836,6 +2842,8 @@ end subroutine StorePointZ
       Niveau_elm(ilay-1)=niveau
       write(*,'(i5,2f15.3,i10)') ilay,zz(ilay),zz(ilay+1),niveau
    enddo
+
+   deallocate(zpoint,zz,nbbloc)
 
  end subroutine CalGridProf
 
@@ -3055,7 +3063,7 @@ end subroutine find_layer_in_axisem_model
    endif
    i=l
    j=l+l
-  200    continue
+  200    continue 
    if (J <= IR) then
       if (J < IR) then
          if (A(IND(j)) < A(IND(j+1))) j=j+1

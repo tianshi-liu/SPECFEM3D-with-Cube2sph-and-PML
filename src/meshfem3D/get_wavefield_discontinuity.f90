@@ -37,7 +37,8 @@ subroutine find_wavefield_discontinuity_elements()
   use meshfem3d_par, only: xstore,ystore,zstore,nspec
   use wavefield_discontinuity_par
   implicit none
-  integer :: boundary_to_ispec_wd_temp(6*nspec), side_wd_temp(6*nspec)
+  integer,dimension(:), allocatable:: boundary_to_ispec_wd_temp, side_wd_temp
+  !integer :: boundary_to_ispec_wd_temp(6*nspec), side_wd_temp(6*nspec)
   integer :: ispec, iside
   logical :: is_boundary_wd
   logical :: covered(26)
@@ -60,6 +61,9 @@ subroutine find_wavefield_discontinuity_elements()
   ! read(IFILE_WAVEFIELD_DISCONTINUITY, *) z_min
   ! read(IFILE_WAVEFIELD_DISCONTINUITY, *) z_max
   ! close(IFILE_WAVEFIELD_DISCONTINUITY)
+
+  ! nqdu add
+  allocate(boundary_to_ispec_wd_temp(6*nspec), side_wd_temp(6*nspec))
 
   !nqdu read from par_file
   call world_rank(myrank)
@@ -436,6 +440,9 @@ subroutine find_wavefield_discontinuity_elements()
   allocate(boundary_to_ispec_wd(nb_wd), side_wd(nb_wd))
   boundary_to_ispec_wd(1:nb_wd) = boundary_to_ispec_wd_temp(1:nb_wd)
   side_wd(1:nb_wd) = side_wd_temp(1:nb_wd)
+
+  ! nqdu release 
+  deallocate(boundary_to_ispec_wd_temp,side_wd_temp)
 end subroutine find_wavefield_discontinuity_elements
 
 subroutine hex8_to_hex27(xstore, ystore, zstore, xelm, yelm, zelm)

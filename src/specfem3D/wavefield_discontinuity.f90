@@ -135,3 +135,36 @@ subroutine add_traction_discontinuity()
     enddo
   enddo
 end subroutine add_traction_discontinuity
+
+subroutine transfer_wavefield_discontinuity_to_GPU()
+  use specfem_par, only: Mesh_pointer, NDIM, NGLLSQUARE
+  use wavefield_discontinuity_solver
+  implicit none
+  call transfer_wavefield_discontinuity_to_device(nglob_wd*NDIM, &
+                                                  nfaces_wd*NDIM*NGLLSQUARE, &
+                                                  displ_wd, accel_wd, &
+                                                  traction_wd, Mesh_pointer)
+end subroutine transfer_wavefield_discontinuity_to_GPU
+
+subroutine prepare_wavefield_discontinuity_GPU()
+  use specfem_par, only: Mesh_pointer
+  use wavefield_discontinuity_solver
+  implicit none
+  call prepare_wavefield_discontinuity_device(Mesh_pointer, ispec_to_elem_wd, &
+                                                nglob_wd, nspec_wd, ibool_wd, &
+                                                boundary_to_iglob_wd, &
+                                                mass_in_wd, &
+                                                nfaces_wd, face_ijk_wd, &
+                                                face_ispec_wd, face_normal_wd, &
+                                                face_jacobian2dw_wd)
+end subroutine prepare_wavefield_discontinuity_GPU
+
+
+
+subroutine add_traction_discontinuity_GPU()
+  use wavefield_discontinuity_solver
+  use specfem_par, only: Mesh_pointer
+  implicit none
+  call wavefield_discontinuity_add_traction_cuda(nglob_wd, nfaces_wd, &
+                                                 Mesh_pointer)
+end subroutine add_traction_discontinuity_GPU

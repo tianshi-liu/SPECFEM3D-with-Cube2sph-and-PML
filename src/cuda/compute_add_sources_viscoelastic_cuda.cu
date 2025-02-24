@@ -117,7 +117,6 @@ void FC_FUNC_(compute_add_sources_el_cuda,
                                                                     mp->d_islice_selected_source,mp->d_ispec_selected_source,
                                                                     mp->d_ispec_is_elastic,
                                                                     NSOURCES);
-
 #ifdef ENABLE_VERY_SLOW_ERROR_CHECKING
   exit_on_cuda_error("compute_add_sources_el_cuda");
 #endif

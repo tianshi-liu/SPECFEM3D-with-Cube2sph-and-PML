@@ -138,7 +138,11 @@ void FC_FUNC_(prepare_constants_device,
                                         int* islice_selected_rec,
                                         int* NTSTEP_BETWEEN_OUTPUT_SEISMOS,
                                         int* SAVE_SEISMOGRAMS_DISPLACEMENT,int* SAVE_SEISMOGRAMS_VELOCITY,
-                                        int* SAVE_SEISMOGRAMS_ACCELERATION,int* SAVE_SEISMOGRAMS_PRESSURE) {
+                                        int* SAVE_SEISMOGRAMS_ACCELERATION,int* SAVE_SEISMOGRAMS_PRESSURE,
+                                        int *IS_WAVEFIELD_DISCONTINUITY,
+                                        int *PML_CONDITION,
+                                        int *USE_ADE_PML,int *SUBSAMPLE_FORWARD_WAVEFIELD
+                                        ) {
 
   TRACE("prepare_constants_device");
 
@@ -366,7 +370,7 @@ void FC_FUNC_(prepare_constants_device,
     int *ispec_selected_rec_loc;
     ispec_selected_rec_loc = (int*)malloc(mp->nrec_local * sizeof(int));
     irec_loc = 0;
-    for(int i=0;i<*nrec;i++) {
+    for(int i=0;i<(*nrec);i++) {
       if ( mp->myrank == islice_selected_rec[i]){
         ispec_selected_rec_loc[irec_loc] = h_ispec_selected_rec[i];
         irec_loc = irec_loc+1;
@@ -396,6 +400,14 @@ void FC_FUNC_(prepare_constants_device,
   // Kelvin_voigt initialization
   mp->Kelvin_Voigt_damping = 0;
   // JC JC here we will need to add GPU support for the new C-PML routines
+
+  // ADEPML 
+  mp->is_wavefield_discontinuity = *IS_WAVEFIELD_DISCONTINUITY;
+  mp-> is_ADE_PML = *USE_ADE_PML;
+  mp-> PML_CONDITION = *PML_CONDITION;
+
+  // SUBSAMPLE
+  mp->SUBSAMPLE_FWD_WAVEFIELD = *SUBSAMPLE_FORWARD_WAVEFIELD;
 
 #ifdef ENABLE_VERY_SLOW_ERROR_CHECKING
   exit_on_cuda_error("prepare_constants_device");
@@ -669,18 +681,18 @@ void FC_FUNC_(prepare_fields_elastic_device,
   int size;
 
   // debug
-  //printf("prepare_fields_elastic_device: rank %d - wavefield setup\n",mp->myrank);
-  //synchronize_mpi();
+  // printf("prepare_fields_elastic_device: rank %d - wavefield setup\n",mp->myrank);
+  // synchronize_mpi();
 
   // elastic wavefields
   size = NDIM * mp->NGLOB_AB;
   print_CUDA_error_if_any(cudaMalloc((void**)&(mp->d_displ),sizeof(realw)*size),4001);
   print_CUDA_error_if_any(cudaMalloc((void**)&(mp->d_veloc),sizeof(realw)*size),4002);
   print_CUDA_error_if_any(cudaMalloc((void**)&(mp->d_accel),sizeof(realw)*size),4003);
-  // initializes values to zero
-  //print_CUDA_error_if_any(cudaMemset(mp->d_displ,0,sizeof(realw)*size),4007);
-  //print_CUDA_error_if_any(cudaMemset(mp->d_veloc,0,sizeof(realw)*size),4007);
-  //print_CUDA_error_if_any(cudaMemset(mp->d_accel,0,sizeof(realw)*size),4007);
+  //initializes values to zero
+  print_CUDA_error_if_any(cudaMemset(mp->d_displ,0,sizeof(realw)*size),4007);
+  print_CUDA_error_if_any(cudaMemset(mp->d_veloc,0,sizeof(realw)*size),4007);
+  print_CUDA_error_if_any(cudaMemset(mp->d_accel,0,sizeof(realw)*size),4007);
 
   #ifdef USE_TEXTURES_FIELDS
   {
@@ -711,6 +723,7 @@ void FC_FUNC_(prepare_fields_elastic_device,
 
   // MPI buffer
   mp->size_mpi_buffer = NDIM * (mp->num_interfaces_ext_mesh) * (mp->max_nibool_interfaces_ext_mesh);
+
   if (mp->size_mpi_buffer > 0){
     // note: Allocate pinned mpi-buffers.
     //       MPI buffers use pinned memory allocated by cudaMallocHost, which
@@ -734,8 +747,8 @@ void FC_FUNC_(prepare_fields_elastic_device,
   }
 
   // debug
-  //printf("prepare_fields_elastic_device: rank %d - mass matrix\n",mp->myrank);
-  //synchronize_mpi();
+  // printf("prepare_fields_elastic_device: rank %d - mass matrix\n",mp->myrank);
+  // synchronize_mpi();
 
   // mass matrix
   copy_todevice_realw((void**)&mp->d_rmassx,rmassx,mp->NGLOB_AB);
@@ -1174,6 +1187,26 @@ void FC_FUNC_(prepare_fields_elastic_adj_dev,
     print_CUDA_error_if_any(cudaMemset(mp->d_hess_mu_el_kl,0,size*sizeof(realw)),5457);
   }
 
+  // nqdu added for kernel computation 
+  // NOTE SUBSAMPLE_FWD_WAVEFIELD AND COMPUTE_STRAIN cannot be both true
+  // see line 160 in initialize_simulation.F90
+  if(mp->SUBSAMPLE_FWD_WAVEFIELD && mp->simulation_type == 3) {
+
+    size = NGLL3 * mp->NSPEC_AB; // note: non-aligned; if align, check memcpy below and indexing
+    #define ALLOC(n,a) cudaMalloc((void**)&a,n*sizeof(int)); \
+                       cudaMemset(a,0,n*sizeof(n))
+
+    // solid pressure
+    ALLOC(size,mp->d_epsilon_trace_over_3); ALLOC(size,mp->d_b_epsilon_trace_over_3);
+    ALLOC(size,mp->d_epsilondev_xx); ALLOC(size,mp->d_b_epsilondev_xx);
+    ALLOC(size,mp->d_epsilondev_yy); ALLOC(size,mp->d_b_epsilondev_yy);
+    ALLOC(size,mp->d_epsilondev_xy); ALLOC(size,mp->d_b_epsilondev_xy);
+    ALLOC(size,mp->d_epsilondev_xz); ALLOC(size,mp->d_b_epsilondev_xz);
+    ALLOC(size,mp->d_epsilondev_yz); ALLOC(size,mp->d_b_epsilondev_yz);
+
+    #undef ALLOC
+  }
+
   // debug
   //printf("prepare_fields_elastic_adj_dev: rank %d - done\n",mp->myrank);
   //synchronize_mpi();
@@ -1391,6 +1424,35 @@ void FC_FUNC_(prepare_fault_device,
 }
 
 
+#if __cplusplus < 201703L
+void inline dealloc(){};
+#endif
+
+
+/**
+ * @brief dealloc GPU/CPU data
+ * 
+ * @tparam T 
+ * @tparam Args 
+ * @param x_gpu first gpu pointer
+ * @param args other gpu pointers
+ */
+template<typename T,typename ...Args>
+void dealloc(T* x_gpu,Args* ...args)
+{
+    static_assert(std::is_arithmetic<T>::value,"input type is not arithmetic!");
+    cudaFree(x_gpu);
+    
+
+#if __cplusplus < 201703L
+    dealloc(args...);
+#else 
+    if constexpr(sizeof...(args) > 0){
+        dealloc(args...);
+    }
+#endif
+}
+
 /* ----------------------------------------------------------------------------------------------- */
 
 // cleanup
@@ -1567,6 +1629,17 @@ TRACE("prepare_cleanup_device");
       }
     }
 
+    // nqdu add
+    if(mp->SUBSAMPLE_FWD_WAVEFIELD && mp->simulation_type == 3) {
+      dealloc(mp->d_epsilon_trace_over_3,mp->d_b_epsilon_trace_over_3,
+              mp->d_epsilondev_xx,mp->d_b_epsilondev_xx,
+              mp->d_epsilondev_yy,mp->d_b_epsilondev_yy,
+              mp->d_epsilondev_xy,mp->d_b_epsilondev_xy,
+              mp->d_epsilondev_xz,mp->d_b_epsilondev_xz,
+              mp->d_epsilondev_yz,mp->d_b_epsilondev_yz
+      );
+    }
+
     if (*ATTENUATION ){
       cudaFree(mp->d_factor_common);
       cudaFree(mp->d_alphaval);
@@ -1649,8 +1722,168 @@ TRACE("prepare_cleanup_device");
     if (*NOISE_TOMOGRAPHY == 3) cudaFree(mp->d_sigma_kl);
   }
 
+  if(mp->is_wavefield_discontinuity) {
+      cudaFree(mp->d_displ_wd);
+      cudaFree(mp->d_accel_wd);
+      cudaFree(mp->d_accel_wd);
+      cudaFree(mp->d_traction_wd);
+      cudaFree(mp->d_ispec_to_elem_wd);
+      cudaFree(mp->d_boundary_to_iglob_wd);
+      cudaFree(mp->d_mass_in_wd);
+      cudaFree(mp->d_face_ispec_wd);
+      cudaFree(mp->d_face_ijk_wd);
+      cudaFree(mp->d_face_normal_wd);
+      cudaFree(mp->d_face_jacobian2Dw_wd);
+      cudaFree(mp->d_ibool_wd);
+  }
+
+  if(mp->PML_CONDITION && mp->is_ADE_PML) {
+    dealloc(mp->d_pml_d,mp->d_pml_kappa,mp->d_pml_beta,mp->d_coeff_exp1,mp->d_coeff_exp2);
+    dealloc(mp->d_coeff_glob_exp1,mp->d_coeff_glob_exp2,mp->d_is_pml);
+    dealloc(mp->d_pml_spec_physical,mp->d_pml_physical_ijk);
+    dealloc(mp->d_pml_physical_jacobian2Dw,mp->d_pml_physical_normal,mp->d_ibool_CPML,
+            mp->d_CPML_to_glob,mp->d_r_trans,
+            mp->d_r_trans_inv,mp->d_rvolume,mp->d_nibool_interfaces_PML,
+            mp->d_ibool_interfaces_PML,mp->d_spec_to_CPML);
+    dealloc(mp->d_buffer_send_matrix_PML,mp->d_Qu);
+    dealloc(mp->d_Qu_t,mp->d_Qt,mp->d_Qt_t);
+  }
+
+
   // mesh pointer - not needed anymore
   free(mp);
+}
+
+extern "C"
+void FC_FUNC_(prepare_wavefield_discontinuity_device,
+              PREPARE_WAVEFIELD_DISCONTINUITY_DEVICE)(
+                             long* Mesh_pointer,
+                             int* ispec_to_elem_wd,
+                             int* nglob_wd,
+                             int* nspec_wd,
+                             int* ibool_wd,
+                             int* boundary_to_iglob_wd,
+                             realw* mass_in_wd,
+                             int* nfaces_wd,
+                             int* face_ijk_wd,
+                             int* face_ispec_wd,
+                             realw* face_normal_wd,
+                             realw* face_jacobian2Dw_wd) {
+  TRACE("prepare_wavefield_discontinuity_device");
+  Mesh* mp = (Mesh*)(*Mesh_pointer);
+
+    // arrays
+  #define gpuCreateCopy_todevice_int(dev,host,n) cudaMalloc((void**)&dev,sizeof(int)*n); \
+    cudaMemcpy(dev,host,n*sizeof(int),cudaMemcpyHostToDevice)
+  #define gpuCreateCopy_todevice_realw(dev,host,n) gpuCreateCopy_todevice_int(dev,host,n)
+  MPI_Barrier(MPI_COMM_WORLD);
+  gpuCreateCopy_todevice_int(mp->d_ispec_to_elem_wd, ispec_to_elem_wd, mp->NSPEC_AB);
+  gpuCreateCopy_todevice_int(mp->d_boundary_to_iglob_wd, boundary_to_iglob_wd, (*nglob_wd));
+  gpuCreateCopy_todevice_realw(mp->d_mass_in_wd, mass_in_wd, (*nglob_wd));
+  gpuCreateCopy_todevice_int(mp->d_face_ispec_wd, face_ispec_wd, (*nfaces_wd));
+  gpuCreateCopy_todevice_int(mp->d_face_ijk_wd, face_ijk_wd, 3*NGLL2*(*nfaces_wd));
+  gpuCreateCopy_todevice_realw(mp->d_face_normal_wd, face_normal_wd, NDIM*NGLL2*(*nfaces_wd));
+  gpuCreateCopy_todevice_realw(mp->d_face_jacobian2Dw_wd, face_jacobian2Dw_wd, NGLL2*(*nfaces_wd));
+  // global indexing for wavefield discontinuity points (padded)
+  int size_padded = NGLL3_PADDED * (*nspec_wd);
+  cudaMalloc((void**) &mp->d_ibool_wd, size_padded*sizeof(int));
+  cudaMemcpy2D(mp->d_ibool_wd,NGLL3_PADDED*sizeof(int),ibool_wd,
+              NGLL3*sizeof(int),NGLL3*sizeof(int),(*nspec_wd),
+              cudaMemcpyHostToDevice);
+  // gpuMemcpy2D_todevice_int(mp->d_ibool_wd, NGLL3_PADDED, ibool_wd, NGLL3, NGLL3, (*nspec_wd));
+
+  // allocate discontinuity field
+  int size = NDIM * (*nglob_wd);
+  cudaMalloc((void**)&(mp->d_displ_wd),size*sizeof(realw));
+  cudaMalloc((void**)&(mp->d_accel_wd),size*sizeof(realw));
+  size = NDIM * NGLL2 * (*nfaces_wd);
+  cudaMalloc((void**)&(mp->d_traction_wd),size*sizeof(realw));
+
+  #undef gpuCreateCopy_todevice_int
+  #undef gpuCreateCopy_todevice_realw
+}
+
+
+
+extern "C"
+void prepare_ade_pml_device_(
+                             long* Mesh_pointer,
+                              int *nspec_pml,
+                              const int *num_pml_phy,
+                              const int *num_intf_pml,
+                              const int *max_nibool_interfaces_PML,
+                              const int *d_nglob_CPML,int *d_nglob_pml_in,
+                              int *is_pml_int, int *d_spec_to_CPML,
+                              realw *d_pml_d,realw *d_pml_kappa,realw *d_pml_beta,
+                              realw *d_coeff_exp1,realw *d_coeff_exp2,
+                              realw *d_coeff_glob_exp1,realw *d_coeff_glob_exp2,
+                              int *d_pml_spec_physical,
+                              int *d_pml_physical_ijk,
+                              realw *d_pml_physical_normal,
+                              realw *d_pml_physical_jacobian2Dw,
+                              int *d_ibool_CPML,
+                              int *d_CPML_to_glob,
+                              realw *d_r_trans,realw *d_r_trans_inv,
+                              realw *d_rvolume,
+                              int *d_nibool_interfaces_PML,
+                              int *d_ibool_interfaces_PML,
+                              realw *d_buffer_send_matrix_PML,
+                              realw *d_Qu,realw *d_Qu_t,
+                              realw *d_Qt,realw *d_Qt_t
+                               ) 
+{
+  // copy constants
+  Mesh *mp = (Mesh*) (*Mesh_pointer);
+  mp->num_pml_physical = *num_pml_phy;
+  mp->num_interfaces_PML = *num_intf_pml;
+  mp->nglob_CPML = *d_nglob_CPML;
+  mp->nspec_pml = *nspec_pml;
+  mp->max_nibool_interfaces_PML = *max_nibool_interfaces_PML;
+
+  // macros for allocate space and copy
+  #define DCOPY(dev,host,n) print_CUDA_error_if_any(cudaMalloc((void**)&dev,sizeof(int)*n),32423); \
+                            print_CUDA_error_if_any(cudaMemcpy(dev,host,n*sizeof(int),cudaMemcpyHostToDevice),32424);
+  #define DCOPY1(dev,n) DCOPY(mp->dev,dev,n)
+
+  size_t size = (*nspec_pml) * NGLL3 * NDIM;
+  DCOPY(mp->d_pml_d,d_pml_d,size);; 
+  DCOPY(mp->d_pml_kappa,d_pml_kappa,size);
+  DCOPY(mp->d_pml_beta,d_pml_beta,size);
+  DCOPY(mp->d_ibool_CPML,d_ibool_CPML,(*nspec_pml) * NGLL3);
+  DCOPY1(d_spec_to_CPML,mp->NSPEC_AB);
+
+  size = *nspec_pml;
+  DCOPY(mp->d_is_pml,is_pml_int,mp->NSPEC_AB);;
+  DCOPY1(d_pml_spec_physical,(*nspec_pml)*2*NDIM);
+  DCOPY1(d_nibool_interfaces_PML,*num_intf_pml);
+  DCOPY1(d_ibool_interfaces_PML,(*max_nibool_interfaces_PML)*(*num_intf_pml));
+  DCOPY1(d_pml_physical_jacobian2Dw,NGLL2*(*num_pml_phy));
+  DCOPY1(d_pml_physical_normal,NDIM*NGLL2*(*num_pml_phy));
+  DCOPY1(d_pml_physical_ijk,NDIM*NGLL2*(*num_pml_phy));
+  DCOPY1(d_r_trans,NDIM*NDIM*NGLL3*(*nspec_pml));
+  DCOPY1(d_r_trans_inv,NDIM*NDIM*NGLL3*(*nspec_pml));
+  DCOPY1(d_rvolume,(*d_nglob_CPML));
+  DCOPY1(d_spec_to_CPML,2*NDIM*(*nspec_pml));
+  DCOPY1(d_CPML_to_glob,mp->nglob_CPML);
+
+  size = NDIM*NDIM*(*num_intf_pml)*(*max_nibool_interfaces_PML);
+  DCOPY1(d_buffer_send_matrix_PML,size);
+  mp->size_mpi_buffer_pml = size;
+
+  size = NDIM*NDIM*NGLL3*(*nspec_pml);
+  DCOPY1(d_Qu,size); DCOPY1(d_Qu_t,size); 
+
+  size = NDIM*NGLL3*(*nspec_pml);
+  DCOPY1(d_coeff_exp1,size); DCOPY1(d_coeff_exp2,size);
+  size = NDIM*NDIM*(*d_nglob_CPML);
+  DCOPY1(d_Qt,size); DCOPY1(d_Qt_t,size);
+
+  size = NDIM*(*d_nglob_CPML);
+  DCOPY1(d_coeff_glob_exp1,size);
+  DCOPY1(d_coeff_glob_exp2,size);
+
+  #undef DCOPY1
+  #undef DCOPY
 }
 
 

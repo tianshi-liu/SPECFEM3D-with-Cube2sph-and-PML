@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "CUDA C++: Launch",
+            "type":"cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bin/xfwd_el",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/EXAMPLES/simple_model",
+        }
+    ]
+}

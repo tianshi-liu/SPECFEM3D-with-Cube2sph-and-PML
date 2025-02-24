@@ -8,4 +8,4 @@ add_library(solver ${SOURCE})
 add_dependencies(solver cuda database)
 
 add_executable(xspecfem3D specfem3D.F90)
-target_link_libraries(xspecfem3D solver cuda database cube2sph_rot mesh shared)
+target_link_libraries(xspecfem3D solver cuda database cube2sph_rot mesh shared ${GPULIBS})

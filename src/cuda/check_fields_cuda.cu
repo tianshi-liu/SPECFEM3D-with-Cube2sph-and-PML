@@ -184,14 +184,15 @@ void print_CUDA_error_if_any(cudaError_t err, int num) {
 
 // CUDA synchronization
 
-/* ----------------------------------------------------------------------------------------------- */
+/* -------------------------------------------------- --------------------------------------------- */
 
 void synchronize_cuda(){
-#if CUDA_VERSION >= 4000
-    cudaDeviceSynchronize();
-#else
-    cudaThreadSynchronize();
-#endif
+// #if CUDA_VERSION >= 4000
+//     cudaDeviceSynchronize();
+// #else
+//     cudaThreadSynchronize();
+// #endif
+cudaDeviceSynchronize();
 }
 
 /* ----------------------------------------------------------------------------------------------- */

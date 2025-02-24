@@ -28,6 +28,7 @@
  */
 
 #include "mesh_constants_cuda.h"
+#include <cublas_v2.h>
 
 /* ----------------------------------------------------------------------------------------------- */
 
@@ -46,10 +47,11 @@ __global__ void UpdateDispVeloc_kernel(realw* displ,
 
   // two dimensional array of blocks on grid where each block has one dimensional array of threads
   int id = threadIdx.x + blockIdx.x*blockDim.x + blockIdx.y*gridDim.x*blockDim.x;
-  realw acc = accel[id];
+  
   // because of block and grid sizing problems, there is a small
   // amount of buffer at the end of the calculation
   if (id < size) {
+    realw acc = accel[id];
     displ[id] = displ[id] + deltat*veloc[id] + deltatsqover2*acc;
     veloc[id] = veloc[id] + deltatover2*acc;
     accel[id] = 0.0f; // can do this using memset...not sure if faster,probably not
@@ -139,6 +141,38 @@ void FC_FUNC_(update_displacement_cuda,
   exit_on_cuda_error("update_displacement_cuda");
 #endif
 }
+
+
+extern "C"
+void update_displacement_cuda_ade_(long* Mesh_pointer,
+                                          realw* deltat_F,
+                                          realw* deltatsqover2_F,
+                                          realw* deltatover2_F) 
+{
+
+  TRACE("\tupdate_displacement_cuda_ade");
+
+  Mesh* mp = (Mesh*)(*Mesh_pointer); // get Mesh from fortran integer wrapper
+
+  realw deltat = *deltat_F;
+  realw deltatsqover2 = *deltatsqover2_F;
+  realw deltatover2 = *deltatover2_F;
+
+  int size = NDIM * mp->NGLOB_AB;
+
+  int blocksize = BLOCKSIZE_KERNEL1;
+  int size_padded = ((int)ceil(((double)size)/((double)blocksize)))*blocksize;
+
+  int num_blocks_x, num_blocks_y;
+  get_blocks_xy(size_padded/blocksize,&num_blocks_x,&num_blocks_y);
+
+  dim3 grid(num_blocks_x,num_blocks_y);
+  dim3 threads(blocksize,1,1);
+
+  UpdateDispVeloc_kernel<<<grid,threads,0,mp->compute_stream>>>(mp->d_displ,mp->d_veloc,mp->d_accel,
+                                                                size,deltat,deltatsqover2,deltatover2);
+}
+
 
 /* ----------------------------------------------------------------------------------------------- */
 
@@ -432,6 +466,114 @@ void FC_FUNC_(kernel_3_a_cuda,
 #endif
 }
 
+
+
+extern "C"
+void FC_FUNC_(kernel_3_c_cuda,
+              KERNEL_3_C_CUDA)(long* Mesh_pointer,
+                               realw* deltatover2_F,
+                               realw* b_deltatover2_F,
+                               int* APPROXIMATE_OCEAN_LOAD) {
+
+  TRACE("\tkernel_3_c_cuda");
+
+  Mesh* mp = (Mesh*)(*Mesh_pointer); // get Mesh from fortran integer wrapper
+
+  int size = mp->NGLOB_AB;
+
+  int blocksize = BLOCKSIZE_KERNEL3;
+  int size_padded = ((int)ceil(((double)size)/((double)blocksize)))*blocksize;
+
+  int num_blocks_x, num_blocks_y;
+  get_blocks_xy(size_padded/blocksize,&num_blocks_x,&num_blocks_y);
+
+  dim3 grid(num_blocks_x,num_blocks_y);
+  dim3 threads(blocksize,1,1);
+
+  // check whether we can update accel and veloc, or only accel at this point
+  if (*APPROXIMATE_OCEAN_LOAD == 0){
+   realw deltatover2 = *deltatover2_F;
+   realw b_deltatover2 = *b_deltatover2_F;
+   // updates both, accel and veloc
+   kernel_3_cuda_device<<< grid, threads,0,mp->compute_stream>>>(mp->d_veloc,
+                                                                 mp->d_accel,
+                                                                 mp->d_b_veloc,
+                                                                 mp->d_b_accel,
+                                                                 size,1,deltatover2,b_deltatover2,
+                                                                 mp->d_rmassx,mp->d_rmassy,mp->d_rmassz);
+  }else{
+   // updates only accel
+   kernel_3_accel_cuda_device<<< grid, threads,0,mp->compute_stream>>>(mp->d_accel,
+                                                                       mp->d_b_accel,
+                                                                       size,
+                                                                       1,
+                                                                       mp->d_rmassx,
+                                                                       mp->d_rmassy,
+                                                                       mp->d_rmassz);
+  }
+
+#ifdef ENABLE_VERY_SLOW_ERROR_CHECKING
+  //printf("checking updatedispl_kernel launch...with %dx%d blocks\n",num_blocks_x,num_blocks_y);
+  exit_on_cuda_error("after kernel 3 a");
+#endif
+}
+
+__global__ void kernel_apply_mass(realw_p accel, realw_const_p rmassx,
+                                  realw_const_p rmassy,realw_const_p rmassz,
+                                  int nglob)
+{
+  int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  if(idx < nglob) {
+    accel[idx*NDIM + 0] *= rmassx[idx];
+    accel[idx*NDIM + 1] *= rmassy[idx];
+    accel[idx*NDIM + 2] *= rmassz[idx];
+  }
+}
+
+extern "C"
+void apply_massmat_device_(long* Mesh_pointer)
+{
+  TRACE("\tapply_massmat_device");
+
+  Mesh* mp = (Mesh*)(*Mesh_pointer); // get Mesh from fortran integer wrapper
+
+  int size = mp->NGLOB_AB;
+
+  int blocksize = BLOCKSIZE_KERNEL3;
+  int nb = (size + blocksize - 1) / blocksize;
+
+  kernel_apply_mass <<<nb,blocksize,0,mp->compute_stream>>> (
+    mp->d_accel,mp->d_rmassx,mp->d_rmassy,mp->d_rmassz,mp->NGLOB_AB
+  );
+}
+
+__global__ void kernel_UpdateVeloc(realw_p veloc, const realw *accel,
+                                   realw dtover2,int npts)
+{
+  int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  if(idx < npts) {
+    veloc[idx] += accel[idx] * dtover2;
+  }
+}
+
+extern "C"
+void update_velocity_device_(long* Mesh_pointer,realw *delta2ov2_f)
+{
+  TRACE("\tupdate_velocity_newmark");
+
+  Mesh* mp = (Mesh*)(*Mesh_pointer); // get Mesh from fortran integer wrapper
+
+  int size = mp->NGLOB_AB*NDIM;
+
+  int blocksize = BLOCKSIZE_KERNEL3;
+  int nb = (size + blocksize - 1) / blocksize;
+  realw dtover2 = *delta2ov2_f;
+  kernel_UpdateVeloc<<<nb,blocksize,0,mp->compute_stream >>> (
+    mp->d_veloc,mp->d_accel,dtover2,size
+  );
+}
+
+
 /* ----------------------------------------------------------------------------------------------- */
 
 extern "C"
@@ -553,4 +695,3 @@ TRACE("kernel_3_acoustic_cuda");
   exit_on_cuda_error("after kernel 3 ");
 #endif
 }
-

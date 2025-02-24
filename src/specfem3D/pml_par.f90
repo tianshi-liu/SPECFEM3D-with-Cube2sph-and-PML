@@ -153,12 +153,9 @@ module pml_par
   real(kind=CUSTOM_REAL), dimension(:,:), allocatable :: b_PML_field,b_PML_potential
 
   !! TL: add these variables for ADE-PML
-  real(kind=CUSTOM_REAL), dimension(:,:,:,:,:), allocatable :: pml_d,&
-          pml_kappa,pml_beta
-  real(kind=CUSTOM_REAL), dimension(:,:,:,:,:), allocatable :: coeff_exp1,&
-          coeff_exp2
-  real(kind=CUSTOM_REAL), dimension(:,:), allocatable :: coeff_glob_exp1,&
-          coeff_glob_exp2
+  real(kind=CUSTOM_REAL), dimension(:,:,:,:,:), allocatable :: pml_d,pml_kappa,pml_beta
+  real(kind=CUSTOM_REAL), dimension(:,:,:,:,:), allocatable :: coeff_exp1,coeff_exp2
+  real(kind=CUSTOM_REAL), dimension(:,:), allocatable :: coeff_glob_exp1,coeff_glob_exp2
   integer :: num_pml_physical
   integer, dimension(:,:), allocatable :: pml_spec_physical
   integer, dimension(:), allocatable :: pml_physical_ispec
@@ -166,8 +163,7 @@ module pml_par
   real, dimension(:,:,:), allocatable :: pml_physical_normal
   real, dimension(:,:), allocatable :: pml_physical_jacobian2Dw
   integer, dimension(:,:,:,:), allocatable :: ibool_CPML
-  integer, dimension(:), allocatable :: CPML_to_glob,pml_in_iglob,&
-                                        iglob_dirichlet
+  integer, dimension(:), allocatable :: CPML_to_glob,pml_in_iglob,iglob_dirichlet
   integer :: nglob_CPML,nglob_pml_in,nglob_dirichlet
   real, dimension(:,:,:,:,:,:), allocatable :: r_trans,r_trans_inv
   real, dimension(:), allocatable :: rvolume

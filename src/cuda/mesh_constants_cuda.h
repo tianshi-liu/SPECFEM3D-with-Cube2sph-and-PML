@@ -59,7 +59,7 @@
 #endif
 
 #include <cuda.h>
-#include <cuda_runtime.h>
+//#include <cuda_runtime.h>
 
 
 /* ----------------------------------------------------------------------------------------------- */
@@ -227,7 +227,7 @@
 // in Kernel_2_impl (not very much..)
 typedef float realw;
 // textures
-typedef texture<float, cudaTextureType1D, cudaReadModeElementType> realw_texture;
+// typedef texture<float, cudaTextureType1D, cudaReadModeElementType> realw_texture;
 
 // pointer declarations
 // restricted pointers: can improve performance on Kepler ~ 10%
@@ -246,13 +246,8 @@ typedef realw* __restrict__ realw_p;
 
 // wrapper for global memory load function
 // usage:  val = get_global_cr( &A[index] );
-#if __CUDA_ARCH__ >= 350
-// Device has ldg
-__device__ __forceinline__ realw get_global_cr(realw_const_p ptr) { return __ldg(ptr); }
-#else
 //Device does not, fall back.
 __device__ __forceinline__ realw get_global_cr(realw_const_p ptr) { return (*ptr); }
-#endif
 
 
 /* ----------------------------------------------------------------------------------------------- */
@@ -352,7 +347,6 @@ void stop_timing_cuda(cudaEvent_t* start,cudaEvent_t* stop, const char* info_str
 void stop_timing_cuda(cudaEvent_t* start,cudaEvent_t* stop, const char* info_str,realw* t);
 void get_blocks_xy(int num_blocks,int* num_blocks_x,int* num_blocks_y);
 realw get_device_array_maximum_value(realw* array,int size);
-
 
 /* ----------------------------------------------------------------------------------------------- */
 
@@ -654,6 +648,48 @@ typedef struct mesh_ {
   // FAULT
   int Kelvin_Voigt_damping;
   realw* d_Kelvin_Voigt_eta;
+
+  // nqdu
+  // wavefield discontinuity
+  int is_wavefield_discontinuity;
+  int* d_ispec_to_elem_wd;
+  int* d_ibool_wd;
+  int* d_boundary_to_iglob_wd;
+  realw* d_mass_in_wd;
+  int* d_face_ijk_wd;
+  int* d_face_ispec_wd;
+  realw* d_face_normal_wd;
+  realw* d_face_jacobian2Dw_wd;
+  realw* d_displ_wd;
+  realw* d_accel_wd;
+  realw* d_traction_wd;
+
+  // nqdu
+  // ADEPML
+  int SUBSAMPLE_FWD_WAVEFIELD;
+  int nspec_pml;
+  int size_mpi_buffer_pml;
+  int is_ADE_PML,PML_CONDITION;
+  realw *d_pml_d,*d_pml_kappa,*d_pml_beta;
+  realw *d_coeff_exp1,*d_coeff_exp2;
+  realw *d_coeff_glob_exp1,*d_coeff_glob_exp2;
+  int *d_is_pml, *d_spec_to_CPML;
+  int num_pml_physical;
+  int *d_pml_spec_physical;
+  int *d_pml_physical_ijk;
+  realw *d_pml_physical_normal;
+  realw *d_pml_physical_jacobian2Dw;
+  int *d_ibool_CPML;
+  int *d_CPML_to_glob;
+  int nglob_CPML;
+  realw *d_r_trans,*d_r_trans_inv;
+  realw *d_rvolume;
+  int num_interfaces_PML,max_nibool_interfaces_PML;
+  int *d_nibool_interfaces_PML;
+  int *d_ibool_interfaces_PML;
+  realw *d_Qu,*d_Qu_t;
+  realw *d_Qt,*d_Qt_t;
+  realw *d_buffer_send_matrix_PML;
 
   // for option NB_RUNS_FOR_ACOUSTIC_GPU
   int* run_number_of_the_source;

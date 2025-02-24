@@ -1,8 +1,9 @@
 source module_load
+
 rm -rf build bin/ obj/
 mkdir build bin/ obj/
 cd build
-cmake .. -DFC=mpif90 -DCC=mpicc 
+cmake .. -DMPIFC=mpif90 -DCC=gcc
 make -j8
 cd ..
 cd utils/cube2sph
@@ -10,7 +11,7 @@ source module_load
 rm -rf build bin/ obj/
 mkdir build bin/ obj/
 cd build
-cmake .. -DFC=mpif90 -DCC=mpicc 
+cmake .. -DMPIFC=mpif90 -DCC=gcc
 make -j8 
 
 # ./configure FC=ifort CC=icc MPIFC=mpif90 --with-mpi -enable-vectorization

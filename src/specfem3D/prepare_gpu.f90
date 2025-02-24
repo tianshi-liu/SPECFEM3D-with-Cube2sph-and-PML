@@ -36,6 +36,7 @@
   use specfem_par_poroelastic
   use specfem_par_movie
   use fault_solver_dynamic
+  use wavefield_discontinuity_par,only: IS_WAVEFIELD_DISCONTINUITY
 
   implicit none
 
@@ -80,10 +81,21 @@
                                 nspec_acoustic,nspec_elastic, &
                                 myrank,SAVE_FORWARD, &
                                 hxir_store,hetar_store,hgammar_store,nu, &
-                                islice_selected_rec,NSTEP, &
+                                islice_selected_rec,NTSTEP_BETWEEN_OUTPUT_SEISMOS, &
                                 SAVE_SEISMOGRAMS_DISPLACEMENT,SAVE_SEISMOGRAMS_VELOCITY, &
-                                SAVE_SEISMOGRAMS_ACCELERATION,SAVE_SEISMOGRAMS_PRESSURE)
+                                SAVE_SEISMOGRAMS_ACCELERATION,SAVE_SEISMOGRAMS_PRESSURE, &
+                                (IS_WAVEFIELD_DISCONTINUITY .and. COUPLE_WITH_INJECTION_TECHNIQUE),&
+                                PML_CONDITIONS,USE_ADE_PML,SUBSAMPLE_FORWARD_WAVEFIELD)
 
+    ! prepares wavefield discontinuity
+    if (IS_WAVEFIELD_DISCONTINUITY .and. COUPLE_WITH_INJECTION_TECHNIQUE) then
+      ! user output
+      if (myrank == 0) then
+        write(IMAIN,*) "  loading wavefield discontinuity"
+        call flush_IMAIN()
+      endif
+      call prepare_wavefield_discontinuity_GPU()
+    endif
 
   ! prepares fields on GPU for acoustic simulations
   if (ACOUSTIC_SIMULATION) then
@@ -235,6 +247,14 @@
         print *, "Warning: Coupled elastic/fluid simulation has only valid pressure seismograms &
                  &in fluid domain for GPU simulation"
     endif
+  endif
+
+  if(USE_ADE_PML .and. PML_CONDITIONS) then 
+    if(myrank == 0) then 
+      write(IMAIN,*)'  preparing ADE PML arrays '
+      call flush_IMAIN()
+    endif
+    call prepare_ADE_PML_GPU()
   endif
 
   ! synchronizes processes
@@ -425,3 +445,63 @@
     end subroutine memory_eval_gpu
 
   end subroutine prepare_GPU
+
+subroutine prepare_ADE_PML_GPU()
+  use pml_par
+  use specfem_par,only: Mesh_pointer
+  implicit none
+
+  call prepare_ADE_PML_device( &
+    Mesh_pointer,NSPEC_CPML,num_pml_physical,num_interfaces_PML,max_nibool_interfaces_PML,&
+    nglob_CPML,nglob_pml_in,is_CPML,spec_to_CPML,&
+    pml_d,pml_kappa,pml_beta, coeff_exp1,coeff_exp2,coeff_glob_exp1,&
+    coeff_glob_exp2,pml_spec_physical,pml_physical_ijk,&
+    pml_physical_normal,pml_physical_jacobian2Dw,ibool_CPML,CPML_to_glob,&
+    r_trans,r_trans_inv,rvolume,nibool_interfaces_PML,&
+    ibool_interfaces_PML,buffer_send_matrix_PML,&
+    Qu,Qu_t,Qt,Qt_t)
+
+end subroutine prepare_ADE_PML_GPU
+
+
+subroutine sync_wavefields_gpu(n,a,tag,dev2host)
+  !!! synchronize wavefield between cpu and gpu
+  !!! a, shape(n)
+  
+  use constants,only: CUSTOM_REAL,MAX_STRING_LEN
+  use specfem_par,only : Mesh_pointer
+  use pml_par
+  implicit none
+
+  integer n 
+  real(kind=CUSTOM_REAL) :: a(n)
+  character(len=*) :: tag 
+  integer :: dev2host 
+
+  integer :: flag 
+  select case (trim(tag))
+    case('displ')
+      flag = 0 
+    case ('veloc')
+      flag = 1
+    case ('accel')
+      flag = 2
+    case ('Qt_t')
+      flag = -1 
+    case ('Qu_t')
+      flag = -2
+    case ('Qu')
+      flag = -3
+    case ('Qt')
+      flag = -4
+    case default 
+      flag = -5
+      print*, 'tag  ',trim(tag),'  should be displ/accel/veloc/accel'
+      print*,trim(tag)
+      stop
+  end select 
+
+  call sync_wavefield(n,a,Mesh_pointer,flag,dev2host)
+
+  
+end subroutine sync_wavefields_gpu

@@ -658,43 +658,43 @@
 
           endif
 
-            if (.not. is_CPML(ispec)) then
+          if (.not. is_CPML(ispec)) then
 
-              ! define symmetric components of sigma
-              sigma_yx = sigma_xy
-              sigma_zx = sigma_xz
-              sigma_zy = sigma_yz
-              if (ispec_irreg /= 0) then ! irregular element
+            ! define symmetric components of sigma
+            sigma_yx = sigma_xy
+            sigma_zx = sigma_xz
+            sigma_zy = sigma_yz
+            if (ispec_irreg /= 0) then ! irregular element
 
-                ! form dot product with test vector, non-symmetric form (which is useful in the case of PML)
-                tempx1(i,j,k) = jacobianl * (sigma_xx * xixl + sigma_yx * xiyl + sigma_zx * xizl) ! this goes to accel_x
-                tempy1(i,j,k) = jacobianl * (sigma_xy * xixl + sigma_yy * xiyl + sigma_zy * xizl) ! this goes to accel_y
-                tempz1(i,j,k) = jacobianl * (sigma_xz * xixl + sigma_yz * xiyl + sigma_zz * xizl) ! this goes to accel_z
+              ! form dot product with test vector, non-symmetric form (which is useful in the case of PML)
+              tempx1(i,j,k) = jacobianl * (sigma_xx * xixl + sigma_yx * xiyl + sigma_zx * xizl) ! this goes to accel_x
+              tempy1(i,j,k) = jacobianl * (sigma_xy * xixl + sigma_yy * xiyl + sigma_zy * xizl) ! this goes to accel_y
+              tempz1(i,j,k) = jacobianl * (sigma_xz * xixl + sigma_yz * xiyl + sigma_zz * xizl) ! this goes to accel_z
 
-                tempx2(i,j,k) = jacobianl * (sigma_xx * etaxl + sigma_yx * etayl + sigma_zx * etazl) ! this goes to accel_x
-                tempy2(i,j,k) = jacobianl * (sigma_xy * etaxl + sigma_yy * etayl + sigma_zy * etazl) ! this goes to accel_y
-                tempz2(i,j,k) = jacobianl * (sigma_xz * etaxl + sigma_yz * etayl + sigma_zz * etazl) ! this goes to accel_z
+              tempx2(i,j,k) = jacobianl * (sigma_xx * etaxl + sigma_yx * etayl + sigma_zx * etazl) ! this goes to accel_x
+              tempy2(i,j,k) = jacobianl * (sigma_xy * etaxl + sigma_yy * etayl + sigma_zy * etazl) ! this goes to accel_y
+              tempz2(i,j,k) = jacobianl * (sigma_xz * etaxl + sigma_yz * etayl + sigma_zz * etazl) ! this goes to accel_z
 
-                tempx3(i,j,k) = jacobianl * (sigma_xx * gammaxl + sigma_yx * gammayl + sigma_zx * gammazl) ! this goes to accel_x
-                tempy3(i,j,k) = jacobianl * (sigma_xy * gammaxl + sigma_yy * gammayl + sigma_zy * gammazl) ! this goes to accel_y
-                tempz3(i,j,k) = jacobianl * (sigma_xz * gammaxl + sigma_yz * gammayl + sigma_zz * gammazl) ! this goes to accel_z
-              else !regular element
-             ! form dot product with test vector, non-symmetric form (which is useful in the case of PML)
-                tempx1(i,j,k) = jacobianl * sigma_xx * xix_regular ! this goes to accel_x
-                tempy1(i,j,k) = jacobianl * sigma_xy * xix_regular ! this goes to accel_y
-                tempz1(i,j,k) = jacobianl * sigma_xz * xix_regular ! this goes to accel_z
+              tempx3(i,j,k) = jacobianl * (sigma_xx * gammaxl + sigma_yx * gammayl + sigma_zx * gammazl) ! this goes to accel_x
+              tempy3(i,j,k) = jacobianl * (sigma_xy * gammaxl + sigma_yy * gammayl + sigma_zy * gammazl) ! this goes to accel_y
+              tempz3(i,j,k) = jacobianl * (sigma_xz * gammaxl + sigma_yz * gammayl + sigma_zz * gammazl) ! this goes to accel_z
+            else !regular element
+            ! form dot product with test vector, non-symmetric form (which is useful in the case of PML)
+              tempx1(i,j,k) = jacobianl * sigma_xx * xix_regular ! this goes to accel_x
+              tempy1(i,j,k) = jacobianl * sigma_xy * xix_regular ! this goes to accel_y
+              tempz1(i,j,k) = jacobianl * sigma_xz * xix_regular ! this goes to accel_z
 
-                tempx2(i,j,k) = jacobianl * sigma_yx * xix_regular ! this goes to accel_x
-                tempy2(i,j,k) = jacobianl * sigma_yy * xix_regular ! this goes to accel_y
-                tempz2(i,j,k) = jacobianl * sigma_yz * xix_regular ! this goes to accel_z
+              tempx2(i,j,k) = jacobianl * sigma_yx * xix_regular ! this goes to accel_x
+              tempy2(i,j,k) = jacobianl * sigma_yy * xix_regular ! this goes to accel_y
+              tempz2(i,j,k) = jacobianl * sigma_yz * xix_regular ! this goes to accel_z
 
-                tempx3(i,j,k) = jacobianl * sigma_zx * xix_regular ! this goes to accel_x
-                tempy3(i,j,k) = jacobianl * sigma_zy * xix_regular ! this goes to accel_y
-                tempz3(i,j,k) = jacobianl * sigma_zz * xix_regular ! this goes to accel_z
-
-              endif
+              tempx3(i,j,k) = jacobianl * sigma_zx * xix_regular ! this goes to accel_x
+              tempy3(i,j,k) = jacobianl * sigma_zy * xix_regular ! this goes to accel_y
+              tempz3(i,j,k) = jacobianl * sigma_zz * xix_regular ! this goes to accel_z
 
             endif
+
+          endif
 
         enddo ! of the triple loop on i,j,k
       enddo
@@ -728,37 +728,6 @@
     do k=1,NGLLZ
       do j=1,NGLLY
         do i=1,NGLLX
-          ! nqdu 
-          ! newtempx1(i,j,k) = 0._CUSTOM_REAL
-          ! newtempy1(i,j,k) = 0._CUSTOM_REAL
-          ! newtempz1(i,j,k) = 0._CUSTOM_REAL
-
-          ! newtempx2(i,j,k) = 0._CUSTOM_REAL
-          ! newtempy2(i,j,k) = 0._CUSTOM_REAL
-          ! newtempz2(i,j,k) = 0._CUSTOM_REAL
-
-          ! newtempx3(i,j,k) = 0._CUSTOM_REAL
-          ! newtempy3(i,j,k) = 0._CUSTOM_REAL
-          ! newtempz3(i,j,k) = 0._CUSTOM_REAL
-
-          ! ! we can merge these loops because NGLLX = NGLLY = NGLLZ
-          ! do l=1,NGLLX
-          !   fac1 = hprimewgll_xx(l,i)
-          !   newtempx1(i,j,k) = newtempx1(i,j,k) + tempx1(l,j,k) * fac1
-          !   newtempy1(i,j,k) = newtempy1(i,j,k) + tempy1(l,j,k) * fac1
-          !   newtempz1(i,j,k) = newtempz1(i,j,k) + tempz1(l,j,k) * fac1
-
-          !   fac2 = hprimewgll_yy(l,j)
-          !   newtempx2(i,j,k) = newtempx2(i,j,k) + tempx2(i,l,k) * fac2
-          !   newtempy2(i,j,k) = newtempy2(i,j,k) + tempy2(i,l,k) * fac2
-          !   newtempz2(i,j,k) = newtempz2(i,j,k) + tempz2(i,l,k) * fac2
-
-          !   fac3 = hprimewgll_zz(l,k)
-          !   newtempx3(i,j,k) = newtempx3(i,j,k) + tempx3(i,j,l) * fac3
-          !   newtempy3(i,j,k) = newtempy3(i,j,k) + tempy3(i,j,l) * fac3
-          !   newtempz3(i,j,k) = newtempz3(i,j,k) + tempz3(i,j,l) * fac3
-          ! enddo
-
           fac1 = wgllwgll_yz(j,k)
           fac2 = wgllwgll_xz(i,k)
           fac3 = wgllwgll_xy(i,j)

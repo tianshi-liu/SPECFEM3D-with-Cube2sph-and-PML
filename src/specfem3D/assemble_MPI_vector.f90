@@ -368,6 +368,55 @@
 
   end subroutine assemble_MPI_matrix_async_send
 
+
+
+  !!nqdu: add this modified subroutine for ADE-PML
+subroutine assemble_MPI_matrix_send_cuda(NPROC,&
+                                    buffer_send_matrix,buffer_recv_matrix, &
+                                    num_interfaces,max_nibool_interfaces, &
+                                    nibool_interfaces,my_neighbors, &
+                                    request_send_matrix,request_recv_matrix)
+
+    ! sends data
+
+  use constants
+
+  implicit none
+
+  integer :: NPROC
+  integer,intent(in) :: num_interfaces,max_nibool_interfaces
+
+  real(kind=CUSTOM_REAL), dimension(NDIM,NDIM,max_nibool_interfaces,num_interfaces),  &
+       intent(inout) ::buffer_send_matrix,buffer_recv_matrix
+
+  integer, dimension(num_interfaces),intent(in) :: nibool_interfaces,my_neighbors
+  integer, dimension(num_interfaces),intent(inout):: request_send_matrix,request_recv_matrix
+
+  integer iinterface,mytag 
+
+  ! here we have to assemble all the contributions between partitions using MPI
+  mytag = 14232
+
+  ! assemble only if more than one partition
+  if (NPROC > 1) then
+
+    ! send messages
+    do iinterface = 1, num_interfaces
+      call isend_cr(buffer_send_matrix(1,1,1,iinterface), &
+                    NDIM*NDIM*nibool_interfaces(iinterface), &
+                    my_neighbors(iinterface), &
+                    mytag, &
+                    request_send_matrix(iinterface))
+      call irecv_cr(buffer_recv_matrix(1,1,1,iinterface), &
+                    NDIM*NDIM*nibool_interfaces(iinterface), &
+                    my_neighbors(iinterface), &
+                    mytag, &
+                    request_recv_matrix(iinterface))
+    enddo
+  endif
+
+end subroutine assemble_MPI_matrix_send_cuda
+
 !
 !-------------------------------------------------------------------------------------------------
 !
@@ -733,7 +782,6 @@
                                             request_recv_vector_ext_mesh)
 
   use constants
-
   implicit none
 
   integer :: NPROC
@@ -775,6 +823,63 @@
   ! enddo
 
   end subroutine transfer_boundary_to_device
+
+! ! with cuda functions...
+
+! subroutine transfer_ade_boundary_to_device(NPROC, Mesh_pointer, &
+!                                             buffer_recv, &
+!                                             num_interfaces,max_nibool_interfaces, &
+!                                             request_recv,request_send)
+
+!   use constants
+
+!   implicit none
+
+!   integer :: NPROC
+!   integer(kind=8) :: Mesh_pointer
+
+!   ! array to assemble
+!   integer,intent(in) :: num_interfaces,max_nibool_interfaces
+
+!   real(kind=CUSTOM_REAL), dimension(NDIM,NDIM,max_nibool_interfaces,num_interfaces) :: &
+!        buffer_recv
+       
+
+!   integer, dimension(num_interfaces) :: request_recv,request_send
+
+!   ! local parameters
+!   integer :: iinterface
+
+!   ! here we have to assemble all the contributions between partitions using MPI
+
+!   ! assemble only if more than one partition
+!   if (NPROC > 1) then
+
+!     ! wait for communications completion (recv)
+!     !write(IMAIN,*) "sending MPI_wait"
+!     do iinterface = 1, num_interfaces
+!       call wait_req(request_recv(iinterface))
+!     enddo
+
+!     ! send contributions to GPU
+!     call transfer_ade_boundary_to_device_a(Mesh_pointer, buffer_recv, &
+!                                       num_interfaces, max_nibool_interfaces)
+                        
+!     do iinterface = 1, num_interfaces
+!       call wait_req(request_send(iinterface))
+!     enddo
+!   endif
+
+!   ! This step is done via previous function transfer_and_assemble...
+!   ! do iinterface = 1, num_interfaces_ext_mesh
+!   !   do ipoin = 1, nibool_interfaces_ext_mesh(iinterface)
+!   !     array_val(:,ibool_interfaces_ext_mesh(ipoin,iinterface)) = &
+!   !          array_val(:,ibool_interfaces_ext_mesh(ipoin,iinterface)) + buffer_recv_vector_ext_mesh(:,ipoin,iinterface)
+!   !   enddo
+!   ! enddo
+
+! end subroutine transfer_ade_boundary_to_device
+
 
 !
 !-------------------------------------------------------------------------------------------------
@@ -828,10 +933,10 @@
                      request_recv_vector_ext_mesh(iinterface))
     enddo
 
+
   endif
 
   end subroutine assemble_MPI_vector_send_cuda
-
 
 !
 !-------------------------------------------------------------------------------------------------
@@ -903,6 +1008,52 @@
   endif
 
   end subroutine assemble_MPI_vector_write_cuda
+
+
+! subroutine assemble_MPI_matrix_write_cuda(NPROC,Mesh_pointer, &
+!                                             num_interfaces_PML, &
+!                                             request_send_PML,&
+!                                             request_recv_PML)
+
+!   ! waits for data to receive and assembles
+
+!   use constants
+
+!   implicit none
+
+!   integer,intent(in) :: NPROC
+!   integer(kind=8),intent(inout) :: Mesh_pointer
+
+!   ! array to assemble
+
+!   integer,intent(in) :: num_interfaces_PML
+!   integer, dimension(num_interfaces_PML), intent(inout) :: request_send_PML,request_recv_PML
+
+
+!   ! local parameters
+!   integer :: iinterface
+
+!   ! here we have to assemble all the contributions between partitions using MPI
+
+!   ! assemble only if more than one partition
+!   if (NPROC > 1) then
+
+!     ! wait for communications completion (send)
+!     do iinterface = 1, num_interfaces_PML
+!       call wait_req(request_recv_PML(iinterface))
+!     enddo
+
+!     ! adding contributions of neighbors
+!     call transfer_ade_asmbl_accel_to_device(Mesh_pointer)
+
+
+!     do iinterface = 1, num_interfaces_PML
+!       call wait_req(request_send_PML(iinterface))
+!     enddo
+
+!   endif
+
+! end subroutine  assemble_MPI_matrix_write_cuda
 
 
 !
@@ -1110,3 +1261,102 @@
 
   end subroutine assemble_MPI_scalar_write_cuda
 
+
+subroutine assemble_MPI_accel_update(NPROC,Mesh_pointer, &
+                                      num_interfaces, &
+                                      max_nibool_interfaces,&
+                                      buffer_recv, &
+                                      request_send,&
+                                      request_recv)
+
+  ! waits for data to receive and assembles
+
+  use constants
+
+  implicit none
+
+  integer,intent(in) :: NPROC,max_nibool_interfaces
+  integer(kind=8),intent(inout) :: Mesh_pointer
+
+  ! array to assemble
+
+  integer,intent(in) :: num_interfaces
+  real(kind=CUSTOM_REAL),dimension(NDIM,max_nibool_interfaces,num_interfaces), &
+                          intent(in) :: buffer_recv
+  integer, dimension(num_interfaces), intent(inout) :: request_send,request_recv
+
+
+  ! local parameters
+  integer :: iinterface
+
+  ! here we have to assemble all the contributions between partitions using MPI
+
+  ! assemble only if more than one partition
+  if (NPROC > 1) then
+
+    ! wait for communications completion (send)
+    do iinterface = 1, num_interfaces
+      call wait_req(request_recv(iinterface))
+    enddo
+
+    ! adding contributions of neighbors
+    call sync_accel_bdry_buffers(Mesh_pointer,2,buffer_recv)
+
+
+    do iinterface = 1, num_interfaces
+      call wait_req(request_send(iinterface))
+    enddo
+
+  endif
+
+end subroutine  assemble_MPI_accel_update
+
+
+subroutine assemble_MPI_ADE_update(NPROC,Mesh_pointer, &
+                                      num_interfaces, &
+                                      max_nibool_interfaces,&
+                                      buffer_recv, &
+                                      request_send,&
+                                      request_recv)
+
+  ! waits for data to receive and assembles
+
+  use constants
+
+  implicit none
+
+  integer,intent(in) :: NPROC,max_nibool_interfaces
+  integer(kind=8),intent(inout) :: Mesh_pointer
+
+  ! array to assemble
+
+  integer,intent(in) :: num_interfaces
+  real(kind=CUSTOM_REAL),dimension(NDIM*NDIM,max_nibool_interfaces,num_interfaces), &
+                          intent(in) :: buffer_recv
+  integer, dimension(num_interfaces), intent(inout) :: request_send,request_recv
+
+
+  ! local parameters
+  integer :: iinterface
+
+  ! here we have to assemble all the contributions between partitions using MPI
+
+  ! assemble only if more than one partition
+  if (NPROC > 1) then
+
+    ! wait for communications completion (send)
+    do iinterface = 1, num_interfaces
+      call wait_req(request_recv(iinterface))
+    enddo
+
+    ! adding contributions of neighbors
+    call sync_ade_bdry_buffers(Mesh_pointer,2,buffer_recv)
+
+
+    do iinterface = 1, num_interfaces
+      call wait_req(request_send(iinterface))
+    enddo
+
+  endif
+
+end subroutine  assemble_MPI_ADE_update

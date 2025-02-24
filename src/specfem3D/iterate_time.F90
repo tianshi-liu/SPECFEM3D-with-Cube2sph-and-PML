@@ -286,7 +286,13 @@
       if (ACOUSTIC_SIMULATION) call compute_forces_acoustic_GPU_calling()
       ! elastic solver
       ! (needs to be done first, before poroelastic one)
-      if (ELASTIC_SIMULATION) call compute_forces_viscoelastic_GPU_calling()
+      if (ELASTIC_SIMULATION) then 
+        if(PML_CONDITIONS .and. USE_ADE_PML) then 
+          call compute_forces_viscoelastic_ADE_GPU_calling()
+        else 
+          call compute_forces_viscoelastic_GPU_calling()
+        endif
+      endif
     endif
 
     ! restores last time snapshot saved for backward/reconstruction of wavefields

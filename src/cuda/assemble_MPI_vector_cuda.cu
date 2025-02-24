@@ -73,7 +73,7 @@ void FC_FUNC_(transfer_boun_accel_from_device,
                                                realw* accel,
                                                realw* send_accel_buffer,
                                                const int* FORWARD_OR_ADJOINT){
-TRACE("\ttransfer_boun_accel_from_device");
+  TRACE("\ttransfer_boun_accel_from_device");
 
   Mesh* mp = (Mesh*)(*Mesh_pointer); //get mesh pointer out of fortran integer container
 
@@ -147,9 +147,10 @@ void FC_FUNC_(transfer_boundary_from_device_a,
 // asynchronous transfer from device to host
 
   TRACE("\ttransfer_boundary_from_device_a");
+  
 
   Mesh* mp = (Mesh*)(*Mesh_pointer); // get Mesh from fortran integer wrapper
-
+  // printf("%d %d\n",mp->myrank,mp->size_mpi_buffer);
   if (mp->size_mpi_buffer > 0){
 
     int blocksize = BLOCKSIZE_TRANSFER;
@@ -175,6 +176,7 @@ void FC_FUNC_(transfer_boundary_from_device_a,
                     mp->size_mpi_buffer*sizeof(realw),cudaMemcpyDeviceToHost,mp->copy_stream);
   }
 }
+
 
 /* ----------------------------------------------------------------------------------------------- */
 
@@ -372,6 +374,133 @@ TRACE("\ttransfer_asmbl_accel_to_device");
 #endif
 }
 
+
+
+// __global__ void 
+// prepare_boundary_matrix (realw* array_val,int ndim,int num_interfaces,
+//                          int max_nibool_interfaces, const int *nibool_interfaces,
+//                           const int *ibool_interfaces,
+//                           realw * buffer_send_matrix,int buffer2arr)
+// {
+//   int ipoin = threadIdx.x + blockIdx.x * blockDim.x;
+  
+//   for( int iinterface=0; iinterface < num_interfaces; iinterface++) {
+//     if (ipoin < nibool_interfaces[iinterface]) {
+//       // entry in interface array
+//       int ientry = ipoin + max_nibool_interfaces*iinterface;
+//       // global index in wavefield
+//       int iglob = ibool_interfaces[ientry] - 1;
+//       if(buffer2arr == 0) {
+//         for(int i = 0; i < ndim; i ++)
+//           buffer_send_matrix[ndim*ientry + i] = array_val[ndim*iglob + i];
+//       }
+//       else {
+//         for(int i = 0; i < ndim; i ++)
+//           atomicAdd(&array_val[ndim*iglob + i],buffer_send_matrix[ndim*ientry + i]);
+//       }
+      
+//     }
+//   }
+// }
+
+// /**
+//  * @brief copy both accel/Qt_t to host buffer
+//  */
+// extern "C" void
+// transfer_ade_boundary_from_device_(long* Mesh_pointer,
+//                                     const int* nspec_outer_elastic) {
+
+// // asynchronous transfer from device to host
+
+//   TRACE("\ttransfer_ade_boundary_from_device");
+
+//   Mesh* mp = (Mesh*)(*Mesh_pointer); // get Mesh from fortran integer wrapper
+
+//   int blocksize = BLOCKSIZE_TRANSFER;
+
+//   if (mp->size_mpi_buffer_pml > 0){
+//     int size_padded = (mp->d_max_nibool_interfaces_PML + blocksize - 1) / blocksize;
+
+//     dim3 grid(size_padded,1,1);
+//     dim3 threads(blocksize,1,1);
+
+//     prepare_boundary_matrix<<<grid,threads,0,mp->compute_stream>>>(
+//       mp->d_Qt_t,NDIM*NDIM,mp->d_num_interfaces_PML,mp->d_max_nibool_interfaces_PML,
+//       mp->d_nibool_interfaces_PML,mp->d_ibool_interfaces_PML,
+//       mp->d_buffer_send_matrix_PML,0
+//     );
+//   }
+
+//   // waits until previous compute stream finishes
+//   cudaStreamSynchronize(mp->compute_stream);
+
+//   size_t size = mp->size_mpi_buffer_pml * sizeof(realw);
+//   cudaMemcpyAsync(mp->h_buffer_send_matrix_PML,mp->d_buffer_send_matrix_PML,
+//                   size,cudaMemcpyDeviceToHost,mp->copy_stream);
+//   cudaDeviceSynchronize();
+// }
+
+
+// // FORWARD_OR_ADJOINT == 1 for accel, and == 3 for b_accel
+// extern "C"
+// void transfer_ade_asmbl_accel_to_device_(long* Mesh_pointer) {
+//   TRACE("\ttransfer_ade_asmbl_accel_to_device");
+
+//   Mesh* mp = (Mesh*)(*Mesh_pointer); //get mesh pointer out of fortran integer container
+
+//   if (mp->size_mpi_buffer_pml > 0){
+//     cudaStreamSynchronize(mp->copy_stream);
+
+//     int blocksize = BLOCKSIZE_TRANSFER;
+//     int size_padded = (mp->d_max_nibool_interfaces_PML + blocksize - 1) / blocksize;
+
+//     dim3 grid(size_padded,1);
+//     dim3 threads(blocksize,1,1);
+
+//     prepare_boundary_matrix<<<grid,threads,0,mp->compute_stream>>>(
+//       mp->d_Qt_t,NDIM*NDIM,mp->d_num_interfaces_PML,mp->d_max_nibool_interfaces_PML,
+//       mp->d_nibool_interfaces_PML,mp->d_ibool_interfaces_PML,
+//       mp->d_buffer_send_matrix_PML,1
+//     );
+
+//     // cudaEventRecord( stop, 0);
+//     // cudaEventSynchronize( stop );
+//     // cudaEventElapsedTime( &time, start, stop );
+//     // cudaEventDestroy( start );
+//     // cudaEventDestroy( stop );
+//     // printf("Boundary Assemble Kernel Execution Time: %f ms\n",time);
+//   }
+
+// #ifdef ENABLE_VERY_SLOW_ERROR_CHECKING
+//   //double end_time = get_time();
+//   //printf("Elapsed time: %e\n",end_time-start_time);
+//   exit_on_cuda_error("transfer_asmbl_accel_to_device");
+// #endif
+// }
+
+
+// extern "C"
+// void transfer_ade_boundary_to_device_a_(long* Mesh_pointer,
+//                                              realw* buffer_recv_vector_ext_mesh,
+//                                              const int* num_interfaces_ext_mesh,
+//                                              const int* max_nibool_interfaces_ext_mesh) {
+
+// // asynchronous transfer from host to device
+
+//   TRACE("transfer_ade_boundary_to_device_a");
+
+//   Mesh* mp = (Mesh*)(*Mesh_pointer); //get mesh pointer out of fortran integer container
+
+//   if (mp->size_mpi_buffer_pml > 0){
+//     // copy on host memory
+//     memcpy(mp->h_buffer_recv_matrix_PML,buffer_recv_vector_ext_mesh,mp->size_mpi_buffer_pml*sizeof(realw));
+
+//     // asynchronous copy to GPU using copy_stream
+//     cudaMemcpyAsync(mp->d_buffer_send_matrix_PML, mp->h_buffer_recv_matrix_PML,
+//                     mp->size_mpi_buffer_pml*sizeof(realw),cudaMemcpyHostToDevice,mp->copy_stream);
+//   }
+// }
+
 /* ----------------------------------------------------------------------------------------------- */
 
 
@@ -534,4 +663,27 @@ void FC_FUNC_(sync_copy_from_device,
   }
   // memory copy is now finished, so non-blocking MPI send can proceed
 }
+
+// extern "C"
+// void sync_copy_qt_t_from_device_(long* Mesh_pointer,
+//                                      int* iphase,
+//                                      realw* send_buffer) {
+
+//   TRACE("sync_copy_Qt_t_from_device");
+
+//   Mesh* mp = (Mesh*)(*Mesh_pointer); // get Mesh from fortran integer wrapper
+
+//   // Wait until async-memcpy of outer elements is finished and start MPI.
+//   if (*iphase != 2){ exit_on_cuda_error("sync_copy_Qt_t_from_device must be called for iphase == 2"); }
+
+//   if (mp->size_mpi_buffer_pml > 0){
+//     // waits for asynchronous copy to finish
+//     cudaStreamSynchronize(mp->copy_stream);
+    
+//     // There have been problems using the pinned-memory with MPI, so
+//     // we copy the buffer into a non-pinned region.
+//     memcpy(send_buffer,mp->h_buffer_send_matrix_PML,mp->size_mpi_buffer_pml*sizeof(realw));
+//   }
+//   // memory copy is now finished, so non-blocking MPI send can proceed
+// }
 

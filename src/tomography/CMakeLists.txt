@@ -6,4 +6,4 @@ add_library(tomo ${SOURCE})
 add_dependencies(tomo shared)
 
 add_executable(xsmooth_sem_sph_pde ${POST_DIR}/smooth_sem_sph_pde.F90)
-target_link_libraries(xsmooth_sem_sph_pde tomo solver shared)
+target_link_libraries(xsmooth_sem_sph_pde tomo solver cuda shared)

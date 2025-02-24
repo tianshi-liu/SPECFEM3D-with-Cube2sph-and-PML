@@ -239,7 +239,7 @@
   use specfem_par_poroelastic
 
   implicit none
-  integer :: iglob
+  integer :: iglob,i
 
   ! synchronize all the processes before assembling the mass matrix
   ! to make sure all the nodes have finished to read their databases
@@ -361,6 +361,17 @@
     where(rmass_fluid_poroelastic <= 0._CUSTOM_REAL) rmass_fluid_poroelastic = 1._CUSTOM_REAL
     rmass_solid_poroelastic(:) = 1._CUSTOM_REAL / rmass_solid_poroelastic(:)
     rmass_fluid_poroelastic(:) = 1._CUSTOM_REAL / rmass_fluid_poroelastic(:)
+  endif
+
+  !nqdu add
+  ! add dirichlet boundary condition
+  if(PML_CONDITIONS .and. USE_ADE_PML) then 
+    do  i=1,nglob_dirichlet
+      iglob = iglob_dirichlet(i)
+      rmassx(iglob) = 0.0_CUSTOM_REAL
+      rmassy(iglob) = 0.0_CUSTOM_REAL
+      rmassz(iglob) = 0.0_CUSTOM_REAL
+    enddo
   endif
 
   end subroutine prepare_timerun_mass_matrices
@@ -565,7 +576,7 @@
       .and. (.not. SUBSAMPLE_FORWARD_WAVEFIELD)) &
           stop 'Error: PMLs for adjoint runs require the flag UNDO_ATTENUATION_AND_OR_PML to be set'
 
-  if (GPU_MODE) stop 'Error: PMLs only supported in CPU mode for now'
+  if (GPU_MODE .and. (.not. USE_ADE_PML)) stop 'Error: PMLs only supported in CPU mode for now'
 
   ! total number of PML elements
   call sum_all_i(NSPEC_CPML,NSPEC_CPML_GLOBAL)

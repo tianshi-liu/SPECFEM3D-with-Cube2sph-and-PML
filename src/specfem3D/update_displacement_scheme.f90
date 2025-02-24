@@ -272,7 +272,7 @@
 
     ! check
     if (SIMULATION_TYPE == 3) then
-      if (PML_CONDITIONS) then
+      if (PML_CONDITIONS .and. (.not. USE_ADE_PML)) then
         if (nglob_interface_PML_elastic > 0) then
           call exit_MPI(myrank,'elastic time marching scheme with PML_CONDITIONS on GPU not implemented yet...')
         endif
@@ -281,7 +281,11 @@
 
     ! updates elastic displacement and velocity
     ! Includes SIM_TYPE 1 & 3 (for noise tomography)
-    call update_displacement_cuda(Mesh_pointer,deltat,deltatsqover2,deltatover2,b_deltat,b_deltatsqover2,b_deltatover2)
+    if(.not. USE_ADE_PML) then 
+      call update_displacement_cuda(Mesh_pointer,deltat,deltatsqover2,deltatover2,b_deltat,b_deltatsqover2,b_deltatover2)
+    else 
+      call update_displacement_cuda_ade(Mesh_pointer,deltat,deltatsqover2,deltatover2)
+    endif
   endif ! GPU_MODE
 
   end subroutine update_displacement_elastic

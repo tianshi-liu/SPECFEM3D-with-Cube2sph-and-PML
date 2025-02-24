@@ -62,7 +62,7 @@ __global__ void compute_elastic_seismogram_kernel(int nrec_local,
 
     if (tx < NGLL3) {
       realw hlagrange = hxir[irec_local + nrec_local*I]*hetar[irec_local + nrec_local*J]*hgammar[irec_local + nrec_local*K];
-      int iglob = iglob = d_ibool[INDEX4_PADDED(NGLLX,NGLLX,NGLLX,I,J,K,ispec)]-1;
+      int iglob =  d_ibool[INDEX4_PADDED(NGLLX,NGLLX,NGLLX,I,J,K,ispec)]-1;
 
       sh_dxd[tx] = hlagrange * field[0 + 3*iglob];
       sh_dyd[tx] = hlagrange * field[1 + 3*iglob];
@@ -84,13 +84,19 @@ __global__ void compute_elastic_seismogram_kernel(int nrec_local,
     int idx = INDEX3(NDIM,nrec_local,0,irec_local,it);
 
     if (tx == 0) {
-      seismograms[0+idx] = nu[0+3*(0+3*irec_local)]*sh_dxd[0] + nu[0+3*(1+3*irec_local)]*sh_dyd[0] + nu[0+3*(2+3*irec_local)]*sh_dzd[0];
+      seismograms[0+idx] = nu[0+3*(0+3*irec_local)]*sh_dxd[0] 
+                         + nu[0+3*(1+3*irec_local)]*sh_dyd[0] 
+                         + nu[0+3*(2+3*irec_local)]*sh_dzd[0];
     }
     if (tx == 1) {
-      seismograms[1+idx] = nu[1+3*(0+3*irec_local)]*sh_dxd[0] + nu[1+3*(1+3*irec_local)]*sh_dyd[0] + nu[1+3*(2+3*irec_local)]*sh_dzd[0];
+      seismograms[1+idx] = nu[1+3*(0+3*irec_local)]*sh_dxd[0]
+                         + nu[1+3*(1+3*irec_local)]*sh_dyd[0] 
+                         + nu[1+3*(2+3*irec_local)]*sh_dzd[0];
     }
     if (tx == 2) {
-      seismograms[2+idx] = nu[2+3*(0+3*irec_local)]*sh_dxd[0] + nu[2+3*(1+3*irec_local)]*sh_dyd[0] + nu[2+3*(2+3*irec_local)]*sh_dzd[0];
+      seismograms[2+idx] = nu[2+3*(0+3*irec_local)]*sh_dxd[0] 
+                         + nu[2+3*(1+3*irec_local)]*sh_dyd[0] 
+                         + nu[2+3*(2+3*irec_local)]*sh_dzd[0];
     }
   }
 }
@@ -432,7 +438,7 @@ void FC_FUNC_(compute_seismograms_cuda,
         }
     }
 
-// VM VM add computation of vectorial field in fluids ----------------------------------------------------------------
+    // VM VM add computation of vectorial field in fluids ----------------------------------------------------------------
     if (mp->save_seismograms_d)
       compute_acoustic_vectorial_seismogram_kernel<<<grid,threads,0,mp->compute_stream>>>(mp->nrec_local,
                                                                                           mp->d_ispec_is_acoustic,
@@ -490,7 +496,7 @@ void FC_FUNC_(compute_seismograms_cuda,
                                                                                           seismo_current);
   } // ACOUSTIC_SIMULATION
 
-  if (seismo_current == NTSTEP_BETWEEN_OUTPUT_SEISMOS || *it == *it_end ){
+  if (seismo_current == NTSTEP_BETWEEN_OUTPUT_SEISMOS -1 || *it == *it_end ){
     int size = mp->nrec_local * NTSTEP_BETWEEN_OUTPUT_SEISMOS * sizeof(realw);
 
     // (cudaMemcpy implicitly synchronizes all other cuda operations)

@@ -207,9 +207,10 @@
 !! Subsampling in kernel calculation
 !!
 !!-----------------------------------------------------------
-  logical, parameter :: SUBSAMPLE_FORWARD_WAVEFIELD = .false.
-  integer, parameter :: NSTEP_PER_FORWARD_OUTPUT = 32
-  integer, parameter :: IFILE_FORWARD_WAVEFIELD = 82
+! nqdu comment it 
+!  logical, parameter :: SUBSAMPLE_FORWARD_WAVEFIELD = .true.
+!  integer, parameter :: NSTEP_PER_FORWARD_OUTPUT = 0
+!  integer, parameter :: IFILE_FORWARD_WAVEFIELD = 82
 
 !!TL: cube2sph mesh for anisotropic model
   logical, parameter :: CUBE2SPH_MESH = .true.
@@ -271,6 +272,8 @@
   integer, parameter :: INJECTION_TECHNIQUE_IS_DSM    = 1
   integer, parameter :: INJECTION_TECHNIQUE_IS_AXISEM = 2
   integer, parameter :: INJECTION_TECHNIQUE_IS_FK     = 3
+  !nqdu for wavefield_discontinuity
+  integer, parameter :: INJECTION_TECHNIQUE_IS_WAVEDISCON = 4
 
 ! Big storage version of coupling with DSM (will always set to .false. after the light storage version will be validated)
   logical, parameter :: old_DSM_coupling_from_Vadim = .true.

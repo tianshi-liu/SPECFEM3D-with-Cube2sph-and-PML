@@ -12,9 +12,9 @@ program smooth_sem_sph_pde
   use wavefield_discontinuity_par,only: IS_WAVEFIELD_DISCONTINUITY
 
   implicit none 
-  integer, parameter :: NARGS = 6
+  integer ::  NARGS
   integer, parameter :: PRINT_INFO_PER_STEP = 1000
-  real(kind=CUSTOM_REAL), dimension(:,:,:,:),allocatable :: dat
+  real(kind=CUSTOM_REAL), dimension(:,:,:,:),allocatable :: dat,dat_bak
   real(kind=CUSTOM_REAL), dimension(:,:,:,:,:),allocatable :: rotate_r
   real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: &
     dx_elem,dy_elem,dz_elem, stemp1,stemp2,stemp3, snewtemp1,snewtemp2,snewtemp3
@@ -23,7 +23,7 @@ program smooth_sem_sph_pde
   real(kind=CUSTOM_REAL), dimension(:,:,:,:),allocatable :: rvol_local
   integer :: i,j,k,l,iglob,ier,ispec,ispec_p,iphase,ispec_irreg
 
-  character(len=MAX_STRING_LEN) :: arg(6)
+  character(len=MAX_STRING_LEN) :: arg(7)
   character(len=MAX_STRING_LEN) :: input_dir, output_dir
   !character(len=MAX_STRING_LEN) :: prname_lp
   character(len=MAX_STRING_LEN*2) :: ks_file
@@ -54,7 +54,7 @@ program smooth_sem_sph_pde
   !real(kind=CUSTOM_REAL), dimension(MAX_KERNEL_NAMES) :: min_old,min_new,min_old_all,min_new_all
   real(kind=CUSTOM_REAL), dimension(:,:), allocatable :: buffer_send_vector_ext_mesh_smooth
   real(kind=CUSTOM_REAL), dimension(:,:), allocatable :: buffer_recv_vector_ext_mesh_smooth
-  logical :: BROADCAST_AFTER_READ, USE_GPU
+  logical :: BROADCAST_AFTER_READ, USE_GPU,ZERO_CPML
  
   call init_mpi()
   call world_size(sizeprocs)
@@ -65,12 +65,13 @@ program smooth_sem_sph_pde
   call cpu_time(t1)
 
   ! parse command line arguments
-  if (command_argument_count() /= NARGS) then
+  if (command_argument_count() /= 6 .and. command_argument_count() /= 7) then
     if (myrank == 0) then
-        print *,'USAGE:  mpirun -np NPROC bin/xsmooth_sem SIGMA_H SIGMA_V KERNEL_NAME INPUT_DIR OUPUT_DIR GPU_MODE'
+        print *,'USAGE:  mpirun -np NPROC bin/xsmooth_sem SIGMA_H SIGMA_V KERNEL_NAME INPUT_DIR OUPUT_DIR GPU_MODE (ZEROPML=true)'
       stop 'Please check command line arguments'
     endif
   endif
+  NARGS = command_argument_count()
   call synchronize_all()
 
   do i = 1, NARGS
@@ -83,6 +84,8 @@ program smooth_sem_sph_pde
   input_dir= arg(4)
   output_dir = arg(5)
   read(arg(6),*) USE_GPU
+  ZERO_CPML = .true.
+  if(command_argument_count() == 7) read(arg(7),*) ZERO_CPML
 
   !call parse_kernel_names(kernel_names_comma_delimited,kernel_names,nker) 
   call synchronize_all()
@@ -93,6 +96,7 @@ program smooth_sem_sph_pde
     print *,'  input dir : ',trim(input_dir)
     print *,'  output dir: ',trim(output_dir)
     print *,"  GPU_MODE: ", USE_GPU
+    print*, "zero out PML: ", ZERO_CPML
     print *
   endif
   
@@ -283,7 +287,7 @@ program smooth_sem_sph_pde
     enddo
   enddo
 
-  allocate(dat(NGLLX,NGLLY,NGLLZ,NSPEC_AB))
+  allocate(dat(NGLLX,NGLLY,NGLLZ,NSPEC_AB),dat_bak(NGLLX,NGLLY,NGLLZ,NSPEC_AB))
   allocate(dat_glob(NGLOB_AB))
   allocate(ddat_glob(NGLOB_AB))
   allocate(buffer_send_vector_ext_mesh_smooth( &
@@ -324,6 +328,13 @@ program smooth_sem_sph_pde
 
   read(IIN) dat
   close(IIN)
+
+  ! back up original
+  dat_bak(:,:,:,:) = dat(:,:,:,:) 
+  if(ZERO_CPML) then 
+    dat_bak(:,:,:,:) = 0.
+  endif
+
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    ! project
   dat_glob(:) = 0.0
@@ -479,7 +490,7 @@ program smooth_sem_sph_pde
       do k=1,NGLLZ;do j=1,NGLLY;do i=1,NGLLX
         iglob = ibool(i,j,k,ispec)
         if ( is_CPML(ispec) ) then 
-          dat_glob(iglob) = 0. !dat_glob(iglob) * 1.
+          dat_glob(iglob) = dat_bak(i,j,k,ispec)
         end if
         dat(i,j,k,ispec) = dat_glob(iglob)
       enddo;enddo;enddo
