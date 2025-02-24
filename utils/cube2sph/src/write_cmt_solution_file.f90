@@ -42,7 +42,7 @@ program write_cmt_file
   call MPI_Init(ier)
   call MPI_Comm_rank(MPI_COMM_WORLD, myrank, ier)
   USE_FORCE_POINT_SOURCE = .false.
-  NOISE_TOMOGRAPHY = .false.
+  NOISE_TOMOGRAPHY = 0
   !NSOURCES = 1
   ONE_CRUST = .true.
   DT = 0.0

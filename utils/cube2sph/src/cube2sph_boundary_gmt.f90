@@ -31,7 +31,7 @@ program cube2sph_boundary_gmt
   call get_command_argument(7,line)
   read(line,*) y2
   call get_command_argument(8,line)
-  read(line,*),margin
+  read(line,*) margin
   print*, 'cen_lat cen_lon rotangl = ',center_lat,center_lon,rotation_azi
   print*,'study region in deg = ', x1,x2,y1,y2
   print*,'margin in deg = ', margin

@@ -197,7 +197,10 @@ program write_stations_file
     if (TOPOGRAPHY) then
        call get_topo_bathy(lat,lon,elevation,ibathy_topo)
        r0 = r0 + elevation/R_EARTH
+    else 
+       r0 = r0 + stele(irec) / R_EARTH
     endif
+    
     ! ellipticity
     if (ELLIPTICITY) then
       cost=cos(theta)

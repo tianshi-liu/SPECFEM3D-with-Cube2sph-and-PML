@@ -1,7 +1,8 @@
 program cube2sph_force
   !! ./cube2sph_force infn outfn center_lat center_lon rotation_azi
+  implicit none
   character(len=300) :: string, infn, outfn, dummy
-  integer :: dummyval, IFILE
+  integer :: dummyval, IFILE,ier
   double precision :: t_shift, hdur, factor_force_source,&
        comp_dir_vect_source_E,comp_dir_vect_source_N,comp_dir_vect_source_Z_UP
   double precision, dimension(3,1) :: nodes_coords, nodes_coords_new, &
