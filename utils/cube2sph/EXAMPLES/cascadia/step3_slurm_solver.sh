@@ -41,7 +41,7 @@ NPROC=`grep ^NPROC DATA/Par_file | grep -v -E '^[[:space:]]*#' | cut -d = -f 2`
 BASEMPIDIR=`grep ^LOCAL_PATH DATA/Par_file | cut -d = -f 2 `
 
 change_parfile GPU_MODE .true.
-change_parfile COUPLE_WITH_INJECTION_TECHNIQUE .false.
+change_parfile COUPLE_WITH_INJECTION_TECHNIQUE .true.
 change_parfile NSTEP 1200
 
 
