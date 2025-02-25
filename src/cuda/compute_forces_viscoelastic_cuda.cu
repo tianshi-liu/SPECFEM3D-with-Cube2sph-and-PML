@@ -3496,7 +3496,7 @@ add_displ_discontinuity(int ispec,int tx,realw_const_p displ_wd,const int* ibool
 {
   int ispec_wd = ispec_to_elem_wd[ispec] - 1;
   if(ispec_wd > -1) {
-    int iglob_wd = ibool_wd[ispec_wd * NGLL3 + tx] - 1;
+    int iglob_wd = ibool_wd[ispec_wd * NGLL3_PADDED + tx] - 1;
     if(iglob_wd > -1) {
       *ux += displ_wd[iglob_wd*NDIM + 0];
       *uy += displ_wd[iglob_wd*NDIM + 1];

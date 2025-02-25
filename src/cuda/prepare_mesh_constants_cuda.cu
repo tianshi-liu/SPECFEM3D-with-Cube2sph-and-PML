@@ -1863,7 +1863,7 @@ void prepare_ade_pml_device_(
   DCOPY1(d_r_trans,NDIM*NDIM*NGLL3*(*nspec_pml));
   DCOPY1(d_r_trans_inv,NDIM*NDIM*NGLL3*(*nspec_pml));
   DCOPY1(d_rvolume,(*d_nglob_CPML));
-  DCOPY1(d_spec_to_CPML,2*NDIM*(*nspec_pml));
+  //DCOPY1(d_spec_to_CPML,2*NDIM*(*nspec_pml));
   DCOPY1(d_CPML_to_glob,mp->nglob_CPML);
 
   size = NDIM*NDIM*(*num_intf_pml)*(*max_nibool_interfaces_PML);
