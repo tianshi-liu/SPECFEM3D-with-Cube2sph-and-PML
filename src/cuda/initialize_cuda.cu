@@ -51,6 +51,12 @@
 #pragma message ("\n\nCompiling for CUDA version < 4.0\n")
 #endif
 
+#ifdef USE_CUDA_AWARE_MPI
+#if (defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT)
+#pragma message ("\n\n Enable CUDA-Aware MPI\n")
+#endif
+#endif
+
 #endif
 
 /* ----------------------------------------------------------------------------------------------- */

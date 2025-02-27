@@ -17,11 +17,12 @@ set(ENABLE_GPU              ${ENABLE_GPU})
 # set default values
 macro(setDefault var val)
 if(NOT DEFINED ${var})
-set(${var} ${val})
+  set(${var} ${val})
 endif()
 endmacro()
 
 option(ENABLE_CUDA "Enable CUDA" OFF)
+option(ENABLE_CUDA_AWARE  "Enable CUDA AWARE MPI" OFF)
 
 # project
 if(ENABLE_CUDA)
@@ -32,6 +33,7 @@ endif()
 
 # build type 
 set(CMAKE_BUILD_TYPE RELEASE)
+#set(CMAKE_BUILD_TYPE DEBUG)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED True)
 set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/obj)
@@ -45,8 +47,8 @@ elseif (CMAKE_C_COMPILER_ID MATCHES "Intel")
   set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -g -xHost")
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -std08 -xHost -fpe0 -ftz -assume buffered_io -assume byterecl -align sequence  -diag-disable 6477,8889 -implicitnone -gen-interfaces -warn all -traceback -O3 -check nobounds")
 else()
-set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -g -march=native")
-set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -std=gnu -g -march=native -fimplicit-none -frange-check -fmax-errors=10 -pedantic -pedantic-errors -Waliasing -Wampersand -Wcharacter-truncation -Wline-truncation -Wsurprising -Wno-tabs -Wunderflow -ffpe-trap=invalid,zero,overflow -Wunused")
+  set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -g -march=native")
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -std=gnu -g -march=native -fimplicit-none -frange-check -fmax-errors=10 -pedantic -pedantic-errors -Waliasing -Wampersand -Wcharacter-truncation -Wline-truncation -Wsurprising -Wno-tabs -Wunderflow -ffpe-trap=invalid,zero,overflow -Wunused")
 endif()
 
 set(CMAKE_VERBOSE_MAKEFILE off)
@@ -66,8 +68,12 @@ if(ENABLE_CUDA)
   find_package(CUDAToolkit REQUIRED)
   add_definitions(-DUSE_CUDA)
   include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
-  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo")
+  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}")
   set(GPULIBS CUDA::cudart)
+  if(ENABLE_CUDA_AWARE) 
+    message(STATUS "Enable CUDA-Aware MPI")
+    add_definitions(-DUSE_CUDA_AWARE_MPI)
+  endif()
 endif()
 
 ################# include paths #################

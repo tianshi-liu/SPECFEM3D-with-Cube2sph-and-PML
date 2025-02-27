@@ -409,6 +409,14 @@ void FC_FUNC_(prepare_constants_device,
   // SUBSAMPLE
   mp->SUBSAMPLE_FWD_WAVEFIELD = *SUBSAMPLE_FORWARD_WAVEFIELD;
 
+#ifdef USE_CUDA_AWARE_MPI
+  size_t size = mp->num_interfaces_ext_mesh*sizeof(MPI_Request);
+  mp->req_recv_ext = (MPI_Request *) malloc(size);
+  mp->req_send_ext = (MPI_Request *) malloc(size);
+  size = (*max_nibool_interfaces_ext_mesh) * NDIM * (*num_interfaces_ext_mesh);
+  print_CUDA_error_if_any(cudaMalloc((void**)&(mp->d_recv_accel_buffer),size*sizeof(realw)),4005);
+#endif
+
 #ifdef ENABLE_VERY_SLOW_ERROR_CHECKING
   exit_on_cuda_error("prepare_constants_device");
 #endif
@@ -740,6 +748,7 @@ void FC_FUNC_(prepare_fields_elastic_device,
 
     // non-pinned buffer
     print_CUDA_error_if_any(cudaMalloc((void**)&(mp->d_send_accel_buffer),mp->size_mpi_buffer*sizeof(realw)),4004);
+
     // adjoint
     if (mp->simulation_type == 3){
       print_CUDA_error_if_any(cudaMalloc((void**)&(mp->d_b_send_accel_buffer),mp->size_mpi_buffer*sizeof(realw)),4004);
@@ -1573,6 +1582,8 @@ TRACE("prepare_cleanup_device");
     cudaFree(mp->d_accel);
 
     cudaFree(mp->d_send_accel_buffer);
+    cudaFreeHost(mp->h_send_accel_buffer);
+    cudaFreeHost(mp->h_recv_accel_buffer);
     if (mp->simulation_type == 3) cudaFree(mp->d_b_send_accel_buffer);
 
     cudaFree(mp->d_rmassx);
@@ -1749,6 +1760,12 @@ TRACE("prepare_cleanup_device");
     dealloc(mp->d_Qu_t,mp->d_Qt,mp->d_Qt_t);
   }
 
+#ifdef USE_CUDA_AWARE_MPI
+  free(mp->req_recv_ext); free(mp->req_send_ext);
+  free(mp->req_recv_PML); free(mp->req_send_PML);
+  dealloc(mp->d_recv_accel_buffer,mp->d_buffer_recv_matrix_PML);
+#endif
+
 
   // mesh pointer - not needed anymore
   free(mp);
@@ -1776,7 +1793,6 @@ void FC_FUNC_(prepare_wavefield_discontinuity_device,
   #define gpuCreateCopy_todevice_int(dev,host,n) cudaMalloc((void**)&dev,sizeof(int)*n); \
     cudaMemcpy(dev,host,n*sizeof(int),cudaMemcpyHostToDevice)
   #define gpuCreateCopy_todevice_realw(dev,host,n) gpuCreateCopy_todevice_int(dev,host,n)
-  MPI_Barrier(MPI_COMM_WORLD);
   gpuCreateCopy_todevice_int(mp->d_ispec_to_elem_wd, ispec_to_elem_wd, mp->NSPEC_AB);
   gpuCreateCopy_todevice_int(mp->d_boundary_to_iglob_wd, boundary_to_iglob_wd, (*nglob_wd));
   gpuCreateCopy_todevice_realw(mp->d_mass_in_wd, mass_in_wd, (*nglob_wd));
@@ -1882,8 +1898,17 @@ void prepare_ade_pml_device_(
   DCOPY1(d_coeff_glob_exp1,size);
   DCOPY1(d_coeff_glob_exp2,size);
 
+#ifdef USE_CUDA_AWARE_MPI
+  size = mp->num_interfaces_PML*sizeof(MPI_Request);
+  mp->req_recv_PML = (MPI_Request *) malloc(size);
+  mp->req_send_PML = (MPI_Request *) malloc(size);
+  print_CUDA_error_if_any(cudaMalloc((void**)&(mp->d_buffer_recv_matrix_PML),mp->size_mpi_buffer_pml*sizeof(realw)),4005);
+#endif
+
   #undef DCOPY1
   #undef DCOPY
+
+
 }
 
 

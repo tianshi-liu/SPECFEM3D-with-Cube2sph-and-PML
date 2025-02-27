@@ -6,10 +6,12 @@
                 "${workspaceFolder}/**",
                 "/usr/local/cuda/include",
                 "/home/nqdu/software/eigen-3.4.0",
-                "/home/nqdu/code/c_fortran/SPECFEM3D-with-Cube2sph-and-PML/setup"
+                "/home/nqdu/code/c_fortran/SPECFEM3D-with-Cube2sph-and-PML/setup",
+                "/opt/openmpi-5.0.6/include"
             ],
             
-            "defines": ["-D","USE_CUDA","-D","WITH_MPI"],
+            "defines": ["-D","USE_CUDA","-D","WITH_MPI",
+                        "-D","USE_CUDA_AWARE_MPI"],
             "compilerPath": "/usr/bin/gcc",
             "cStandard": "c17",
             "compilerArgs": ["-Wall"],

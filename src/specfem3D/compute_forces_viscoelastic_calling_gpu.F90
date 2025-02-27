@@ -82,6 +82,7 @@ subroutine compute_forces_viscoelastic_ADE_GPU_calling()
     endif 
 
     ! communication
+#ifndef USE_CUDA_AWARE_MPI
     if(iphase == 1) then  
       ! copy accel boundary to accel->d_send_buffer -> (async) h_send_buf
       call sync_accel_bdry_buffers(Mesh_pointer,iphase,buffer_send_vector_ext_mesh)
@@ -106,7 +107,7 @@ subroutine compute_forces_viscoelastic_ADE_GPU_calling()
                                      max_nibool_interfaces_ext_mesh,&
                                      buffer_recv_vector_ext_mesh,&
                                      request_send_vector_ext_mesh,&
-                                     request_send_vector_ext_mesh)
+                                     request_recv_vector_ext_mesh)
 
       !ADE Qt_t
       if(ADE_CONTRIB)  then
@@ -117,6 +118,15 @@ subroutine compute_forces_viscoelastic_ADE_GPU_calling()
                                   request_recv_matrix_PML)
       endif
     endif
+#else  
+    ! copy accel boundary to accel->d_send_buffer -> (async) h_send_buf
+    call sync_accel_bdry_buffers(Mesh_pointer,iphase,my_neighbors_ext_mesh,&
+                                 nibool_interfaces_ext_mesh)
+    if(ADE_CONTRIB) then 
+      call sync_ade_bdry_buffers(Mesh_pointer,iphase,my_neighbors_PML,&
+                                nibool_interfaces_PML)
+    endif
+#endif
   enddo      
 
   ! corrector to update PML auxiliary variables

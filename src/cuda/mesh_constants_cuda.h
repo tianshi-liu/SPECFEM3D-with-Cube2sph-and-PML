@@ -56,6 +56,7 @@
 
 #ifdef WITH_MPI
 #include <mpi.h>
+#include <mpi-ext.h>
 #endif
 
 #include <cuda.h>
@@ -690,6 +691,16 @@ typedef struct mesh_ {
   realw *d_Qu,*d_Qu_t;
   realw *d_Qt,*d_Qt_t;
   realw *d_buffer_send_matrix_PML;
+
+#ifdef USE_CUDA_AWARE_MPI
+  #if !(defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT)
+  #error "CUDA AWARE MPI is not enabled!"
+  #endif
+  MPI_Request *req_send_ext, *req_recv_ext;
+  MPI_Request *req_send_PML, *req_recv_PML;
+  realw *d_buffer_recv_matrix_PML;
+  realw *d_recv_accel_buffer;
+#endif
 
   // for option NB_RUNS_FOR_ACOUSTIC_GPU
   int* run_number_of_the_source;
