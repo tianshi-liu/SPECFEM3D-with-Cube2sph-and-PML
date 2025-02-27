@@ -409,13 +409,12 @@ void FC_FUNC_(prepare_constants_device,
   // SUBSAMPLE
   mp->SUBSAMPLE_FWD_WAVEFIELD = *SUBSAMPLE_FORWARD_WAVEFIELD;
 
-#ifdef USE_CUDA_AWARE_MPI
   size_t size = mp->num_interfaces_ext_mesh*sizeof(MPI_Request);
   mp->req_recv_ext = (MPI_Request *) malloc(size);
   mp->req_send_ext = (MPI_Request *) malloc(size);
+
   size = (*max_nibool_interfaces_ext_mesh) * NDIM * (*num_interfaces_ext_mesh);
   print_CUDA_error_if_any(cudaMalloc((void**)&(mp->d_recv_accel_buffer),size*sizeof(realw)),4005);
-#endif
 
 #ifdef ENABLE_VERY_SLOW_ERROR_CHECKING
   exit_on_cuda_error("prepare_constants_device");
@@ -1756,16 +1755,22 @@ TRACE("prepare_cleanup_device");
             mp->d_CPML_to_glob,mp->d_r_trans,
             mp->d_r_trans_inv,mp->d_rvolume,mp->d_nibool_interfaces_PML,
             mp->d_ibool_interfaces_PML,mp->d_spec_to_CPML);
-    dealloc(mp->d_buffer_send_matrix_PML,mp->d_Qu);
+    dealloc(mp->d_buffer_send_matrix_PML,mp->d_Qu,mp->d_buffer_recv_matrix_PML);
     dealloc(mp->d_Qu_t,mp->d_Qt,mp->d_Qt_t);
+
+    // free space
+    free(mp->req_recv_PML); free(mp->req_send_PML);
+
+
+#ifndef USE_CUDA_AWARE_MPI
+    cudaFreeHost(mp->h_buffer_recv_matrix_PML);
+    cudaFreeHost(mp->h_buffer_send_matrix_PML);
+#endif
+    
   }
 
-#ifdef USE_CUDA_AWARE_MPI
+  // free space
   free(mp->req_recv_ext); free(mp->req_send_ext);
-  free(mp->req_recv_PML); free(mp->req_send_PML);
-  dealloc(mp->d_recv_accel_buffer,mp->d_buffer_recv_matrix_PML);
-#endif
-
 
   // mesh pointer - not needed anymore
   free(mp);
@@ -1898,11 +1903,14 @@ void prepare_ade_pml_device_(
   DCOPY1(d_coeff_glob_exp1,size);
   DCOPY1(d_coeff_glob_exp2,size);
 
-#ifdef USE_CUDA_AWARE_MPI
   size = mp->num_interfaces_PML*sizeof(MPI_Request);
   mp->req_recv_PML = (MPI_Request *) malloc(size);
   mp->req_send_PML = (MPI_Request *) malloc(size);
   print_CUDA_error_if_any(cudaMalloc((void**)&(mp->d_buffer_recv_matrix_PML),mp->size_mpi_buffer_pml*sizeof(realw)),4005);
+
+#ifndef USE_CUDA_AWARE_MPI
+  print_CUDA_error_if_any(cudaMallocHost((void**)&(mp->h_buffer_recv_matrix_PML),mp->size_mpi_buffer_pml*sizeof(realw)),4018);
+  print_CUDA_error_if_any(cudaMallocHost((void**)&(mp->h_buffer_send_matrix_PML),mp->size_mpi_buffer_pml*sizeof(realw)),4019);
 #endif
 
   #undef DCOPY1

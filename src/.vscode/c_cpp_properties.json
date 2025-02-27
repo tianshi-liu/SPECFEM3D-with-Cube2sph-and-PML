@@ -11,7 +11,7 @@
             ],
             
             "defines": ["-D","USE_CUDA","-D","WITH_MPI",
-                        "-D","USE_CUDA_AWARE_MPI"],
+                        "-D","aUSE_CUDA_AWARE_MPI"],
             "compilerPath": "/usr/bin/gcc",
             "cStandard": "c17",
             "compilerArgs": ["-Wall"],
