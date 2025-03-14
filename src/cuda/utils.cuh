@@ -299,7 +299,7 @@ __device__  __forceinline__ void sum_hprime_xi(int I, int J, int K,
   realw sumz = 0.f;
 
   // 1. cut-plane along xi-direction
-  #pragma unroll
+  #pragma unroll 
   for (int l=0;l<NGLLX;l++) {
     fac = sh_hprime[l*NGLLX+I];
 

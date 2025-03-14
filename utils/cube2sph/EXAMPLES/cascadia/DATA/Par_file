@@ -23,10 +23,10 @@ UTM_PROJECTION_ZONE             = 11
 SUPPRESS_UTM_PROJECTION         = .true.
 
 # number of MPI processors
-NPROC                           = 4
+NPROC                           = 2
 
 # time step parameters
-NSTEP     =       1200
+NSTEP                           = 6400
 DT                              = 0.12
 #-----------------------------------------------------------
 #
@@ -316,7 +316,7 @@ KERNEL_T0                       = 5.0
 # Coupling with an injection technique (DSM, AxiSEM, or FK)
 #
 #-----------------------------------------------------------
-COUPLE_WITH_INJECTION_TECHNIQUE     =       .true.
+COUPLE_WITH_INJECTION_TECHNIQUE = .true.
 INJECTION_TECHNIQUE_TYPE        = 4   # 1 = DSM, 2 = AxiSEM, 3 = FK
 MESH_A_CHUNK_OF_THE_EARTH       = .false.
 TRACTION_PATH                   = ./DATA/AxiSEM_tractions/3/
@@ -387,7 +387,7 @@ BROADCAST_SAME_MESH_AND_MODEL   = .false.
 #-----------------------------------------------------------
 
 # set to true to use GPUs
-GPU_MODE     =       .true.
+GPU_MODE                        = .false.
 
 # ADIOS Options for I/Os
 ADIOS_ENABLED                   = .false.

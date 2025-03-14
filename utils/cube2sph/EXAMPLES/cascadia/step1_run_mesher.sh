@@ -7,7 +7,7 @@
 set -e 
 
 # set param here 
-myprocs=4
+myprocs=2
 specfem_dir=${HOME}/specfem3d-cube2sph/
 specfem_dir=${HOME}/code/c_fortran/SPECFEM3D-with-Cube2sph-and-PML/
 

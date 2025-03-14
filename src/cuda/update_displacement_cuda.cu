@@ -523,10 +523,17 @@ __global__ void kernel_apply_mass(realw_p accel, realw_const_p rmassx,
                                   int nglob)
 {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
-  if(idx < nglob) {
-    accel[idx*NDIM + 0] *= rmassx[idx];
-    accel[idx*NDIM + 1] *= rmassy[idx];
-    accel[idx*NDIM + 2] *= rmassz[idx];
+  if (idx < nglob) {
+    // Using registers instead of repeated memory access
+    realw rx = rmassx[idx];
+    realw ry = rmassy[idx];
+    realw rz = rmassz[idx];
+
+    int base_idx = idx * NDIM;
+    
+    accel[base_idx]     *= rx;
+    accel[base_idx + 1] *= ry;
+    accel[base_idx + 2] *= rz;
   }
 }
 

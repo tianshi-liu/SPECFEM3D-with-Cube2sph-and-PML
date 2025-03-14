@@ -924,3 +924,21 @@ void apply_massmat_device_(long* Mesh_pointer){}
 void update_velocity_device_(long* Mesh_pointer,realw *delta2ov2_f){}
 
 void sync_wavefield_(int *size_f, realw *h_field,long *Mesh_pointer,int *flag_f,int *dev2host_f){}
+
+
+void 
+smooth_sph_pde_cuda_(int *h_nspec, int *h_nglob,int *nprocs,
+   int *h_nstep,int *nspec_max,int *phase_ispec_inner_elastic,
+   int *h_nspec_outer,int *h_nspec_inner,
+   const realw* xix,const realw* xiy,const realw* xiz,
+   const realw* etax,const realw* etay,const realw* etaz,
+   const realw* gamx,const realw* gamy,const realw* gamz,
+   const realw *jaco, const realw* rotate0, 
+   const realw* wgllwgll_xy,const realw* wgllwgll_xz,
+   const realw* wgllwgll_yz,const realw* hprimeT,
+   const realw* hprime_wgll,const int *ibool,
+   const int *is_CPML,const realw *h_cv,const realw *h_ch,
+   int *h_num_intfs,int *h_max_nibool,const int *my_neighbors,
+   const int *nibool_intf,const int* ibool_intf,
+   const realw* dat_bak, realw* dat,const realw *rvol,
+   realw* dat_glob,realw* ddat_glob) {}

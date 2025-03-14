@@ -42,7 +42,8 @@ __global__ void add_acceleration_discontinuity_kernel(
     int iglob = boundary_to_iglob_wd[id] - 1;
     realw mass_in = mass_in_wd[id];
     for(int i = 0; i < NDIM; i ++) {
-      atomicAdd(&accel[iglob*NDIM+i],-accel_wd[id*NDIM+i]*mass_in);
+      accel[iglob*NDIM + i] -= accel_wd[id*NDIM+i]*mass_in;
+      //atomicAdd(&accel[iglob*NDIM+i],-accel_wd[id*NDIM+i]*mass_in);
     }
     // accel[iglob*3] = accel[iglob*3] - accel_wd[id*3] * mass_in;
     // accel[iglob*3 + 1] = accel[iglob*3 + 1] - accel_wd[id*3 + 1] * mass_in;

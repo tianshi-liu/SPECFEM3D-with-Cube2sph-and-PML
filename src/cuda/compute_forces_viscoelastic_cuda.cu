@@ -3489,6 +3489,8 @@ void FC_FUNC_(compute_forces_viscoelastic_cuda,
   }
 }
 
+#ifdef TEST
+
 __device__ __forceinline__ void 
 add_displ_discontinuity(int ispec,int tx,realw_const_p displ_wd,const int* ibool_wd,
                        const int *ispec_to_elem_wd,realw *ux,realw *uy,
@@ -4489,3 +4491,5 @@ void compute_forces_viscoelastic_cuda_ade_(long* Mesh_pointer,
   );
 
 }
+
+#endif

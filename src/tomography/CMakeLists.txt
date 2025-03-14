@@ -1,6 +1,12 @@
 set(POST_DIR "postprocess_sensitivity_kernels")
 file(GLOB SOURCE CONFIGURE_DEPENDS LIST_DIRECTORIES FALSE "${POST_DIR}/postprocess_par.f90" )
 
+if(ENABLE_CUDA) 
+    set(SOURCE 
+        ${SOURCE} 
+        ${CMAKE_CURRENT_SOURCE_DIR}/${POST_DIR}/smooth_sem_sph_pde.cu)
+endif()
+
 # library
 add_library(tomo ${SOURCE})
 add_dependencies(tomo shared)

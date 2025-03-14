@@ -41,7 +41,7 @@ NPROC=`grep ^NPROC DATA/Par_file | grep -v -E '^[[:space:]]*#' | cut -d = -f 2`
 BASEMPIDIR=`grep ^LOCAL_PATH DATA/Par_file | cut -d = -f 2 `
 
 change_parfile GPU_MODE .true.
-change_parfile COUPLE_WITH_INJECTION_TECHNIQUE .true.
+change_parfile COUPLE_WITH_INJECTION_TECHNIQUE .false.
 change_parfile NSTEP 1200
 
 
@@ -54,12 +54,15 @@ if [ "$NPROC" -eq 1 ]; then
   echo "  running solver..."
   echo
    $specfem_dir/bin/xspecfem3D
+   #ncu --launch-skip=10 --launch-count=100 -o profile_output1 -f  $specfem_dir/bin/xspecfem3D
+   #ncu --set full -o profile_full  $specfem_dir/bin/xspecfem3D
 else
   # This is a MPI simulation
   echo
   echo "  running solver on $NPROC processors..."
   echo
-  mpirun -np $NPROC $specfem_dir/bin/xspecfem3D
+  #mpirun -np $NPROC $specfem_dir/bin/xspecfem3D
+  #nsys profile -o my_report ../../../../bin/xspecfem3D
   #mpirun -np $NPROC vtune -collect hotspots -trace-mpi -r out.dir  ./bin/xspecfem3D
 fi
 
