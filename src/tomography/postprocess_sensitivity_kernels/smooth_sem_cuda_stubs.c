@@ -63,3 +63,6 @@ void FC_FUNC_(compute_smooth,
 
 void FC_FUNC_(get_smooth,
               GET_SMOOTH)(long * smooth_pointer,realw * data_smooth){}
+
+
+              

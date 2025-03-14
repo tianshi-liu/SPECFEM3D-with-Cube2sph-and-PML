@@ -381,142 +381,123 @@ program smooth_sem_sph_pde
   enddo
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  if(.not. USE_GPU) then 
-    do istep = 1, ntstep
-      ddat_glob(:) = 0.0
-      do iphase = 1,2
-        if (iphase == 1) then
-          num_elements = nspec_outer_elastic
-        else
-          num_elements = nspec_inner_elastic
-        endif
-        do ispec_p = 1,num_elements
-          ispec = phase_ispec_inner_elastic(ispec_p,iphase)
-          call get_gradient_element(dat(:,:,:,ispec), &
-            dx_elem,dy_elem,dz_elem,&
-            xix(:,:,:,ispec),xiy(:,:,:,ispec),xiz(:,:,:,ispec),&
-            etax(:,:,:,ispec),etay(:,:,:,ispec),etaz(:,:,:,ispec),&
-            gammax(:,:,:,ispec),gammay(:,:,:,ispec),gammaz(:,:,:,ispec))
-          ispec_irreg = irregular_element_number(ispec)
-          do k=1,NGLLZ;do j=1,NGLLY;do i=1,NGLLX
-            rxl = rotate_r(1,i,j,k,ispec)
-            ryl = rotate_r(2,i,j,k,ispec)
-            rzl = rotate_r(3,i,j,k,ispec)
-            xixl = xix(i,j,k,ispec_irreg)
-            xiyl = xiy(i,j,k,ispec_irreg)
-            xizl = xiz(i,j,k,ispec_irreg)
-            etaxl = etax(i,j,k,ispec_irreg)
-            etayl = etay(i,j,k,ispec_irreg)
-            etazl = etaz(i,j,k,ispec_irreg)
-            gammaxl = gammax(i,j,k,ispec_irreg)
-            gammayl = gammay(i,j,k,ispec_irreg)
-            gammazl = gammaz(i,j,k,ispec_irreg)
-            jacobianl = jacobian(i,j,k,ispec_irreg)
-            stemp1(i,j,k) = ((cv-ch) * (rxl*xixl+ryl*xiyl+rzl*xizl) * &
-              (rxl*dx_elem(i,j,k)+ryl*dy_elem(i,j,k)+rzl*dz_elem(i,j,k)) +&
-              ch * (xixl*dx_elem(i,j,k)+xiyl*dy_elem(i,j,k)&
-                  +xizl*dz_elem(i,j,k))) * jacobianl
-            stemp2(i,j,k) = ((cv-ch) * (rxl*etaxl+ryl*etayl+rzl*etazl) * &
-              (rxl*dx_elem(i,j,k)+ryl*dy_elem(i,j,k)+rzl*dz_elem(i,j,k)) +&
-              ch * (etaxl*dx_elem(i,j,k)+etayl*dy_elem(i,j,k)&
-                  +etazl*dz_elem(i,j,k))) * jacobianl
-            stemp3(i,j,k) = ((cv-ch) * (rxl*gammaxl+ryl*gammayl+rzl*gammazl) * &
-              (rxl*dx_elem(i,j,k)+ryl*dy_elem(i,j,k)+rzl*dz_elem(i,j,k)) +&
-              ch * (gammaxl*dx_elem(i,j,k)+gammayl*dy_elem(i,j,k)&
-                  +gammazl*dz_elem(i,j,k))) * jacobianl
-          enddo;enddo;enddo
-          do k=1,NGLLZ;do j=1,NGLLY;do i=1,NGLLX
-            snewtemp1(i,j,k) = 0.0
-            snewtemp2(i,j,k) = 0.0
-            snewtemp3(i,j,k) = 0.0
-            do l = 1, NGLLX
-              fac1 = hprimewgll_xx(l,i)
-              snewtemp1(i,j,k) = snewtemp1(i,j,k) + stemp1(l,j,k) * fac1
-              fac2 = hprimewgll_yy(l,j)
-              snewtemp2(i,j,k) = snewtemp2(i,j,k) + stemp2(i,l,k) * fac2
-              fac3 = hprimewgll_zz(l,k)
-              snewtemp3(i,j,k) = snewtemp3(i,j,k) + stemp3(i,j,l) * fac3
-            enddo
-            fac1 = wgllwgll_yz(j,k)
-            fac2 = wgllwgll_xz(i,k)
-            fac3 = wgllwgll_xy(i,j)
-            iglob = ibool(i,j,k,ispec)
-            ddat_glob(iglob) = ddat_glob(iglob) - (fac1*snewtemp1(i,j,k)+&
-                            fac2 * snewtemp2(i,j,k) + fac3 * snewtemp3(i,j,k))
-          enddo;enddo;enddo 
-        enddo  ! ispec_p = 1, num_elements 
-        !! assemble MPI
-        if (iphase == 1) then
-          call assemble_MPI_send_smooth(NPROC,NGLOB_AB,&
-            ddat_glob,buffer_send_vector_ext_mesh_smooth,&
-            buffer_recv_vector_ext_mesh_smooth,&
-            num_interfaces_ext_mesh,max_nibool_interfaces_ext_mesh, &
-            nibool_interfaces_ext_mesh,ibool_interfaces_ext_mesh, &
-            my_neighbors_ext_mesh, &
-            request_send_vector_ext_mesh,request_recv_vector_ext_mesh)
-        else
-          call assemble_MPI_w_ord_smooth(NPROC,NGLOB_AB,&
-            ddat_glob,buffer_recv_vector_ext_mesh_smooth,num_interfaces_ext_mesh,&
-            max_nibool_interfaces_ext_mesh, &
-            nibool_interfaces_ext_mesh,ibool_interfaces_ext_mesh, &
-            request_send_vector_ext_mesh,request_recv_vector_ext_mesh, &
-            my_neighbors_ext_mesh,myrank)
-        endif
-        !!!!!!!!!!!!!!!!!
-      enddo !iphase = 1,2
 
-      ddat_glob(:) = ddat_glob(:) * rvol(:)
-      !! update
-      dat_glob(:) = dat_glob(:) + ddat_glob(:)
-      !! info
-      if (mod(istep, PRINT_INFO_PER_STEP) == 0) then
-        if (myrank == 0) print *, 'Step:', istep
-        min_val = minval(dat_glob)
-        max_val = maxval(dat_glob)
-        call min_all_cr(min_val, min_val_glob)
-        call max_all_cr(max_val, max_val_glob)
-        if (myrank == 0) then
-          print *, '  '//trim(kernel_name)
-          print *, '    minval:', min_val_glob
-          print *, '    maxval:', max_val_glob
-          call cpu_time(tnow)
-          print *, 'time since last message:', tnow-tlast
-          call cpu_time(tlast)
-        endif
+  do istep = 1, ntstep
+    ddat_glob(:) = 0.0
+    do iphase = 1,2
+      if (iphase == 1) then
+        num_elements = nspec_outer_elastic
+      else
+        num_elements = nspec_inner_elastic
       endif
-      !!!!!!!!!!!!!
-      !! broadcast glob array back to local array
-      do ispec = 1, NSPEC_AB
+      do ispec_p = 1,num_elements
+        ispec = phase_ispec_inner_elastic(ispec_p,iphase)
+        call get_gradient_element(dat(:,:,:,ispec), &
+          dx_elem,dy_elem,dz_elem,&
+          xix(:,:,:,ispec),xiy(:,:,:,ispec),xiz(:,:,:,ispec),&
+          etax(:,:,:,ispec),etay(:,:,:,ispec),etaz(:,:,:,ispec),&
+          gammax(:,:,:,ispec),gammay(:,:,:,ispec),gammaz(:,:,:,ispec))
+        ispec_irreg = irregular_element_number(ispec)
         do k=1,NGLLZ;do j=1,NGLLY;do i=1,NGLLX
-          iglob = ibool(i,j,k,ispec)
-          if ( is_CPML(ispec) ) then 
-            dat_glob(iglob) = dat_bak(i,j,k,ispec)
-          end if
+          rxl = rotate_r(1,i,j,k,ispec)
+          ryl = rotate_r(2,i,j,k,ispec)
+          rzl = rotate_r(3,i,j,k,ispec)
+          xixl = xix(i,j,k,ispec_irreg)
+          xiyl = xiy(i,j,k,ispec_irreg)
+          xizl = xiz(i,j,k,ispec_irreg)
+          etaxl = etax(i,j,k,ispec_irreg)
+          etayl = etay(i,j,k,ispec_irreg)
+          etazl = etaz(i,j,k,ispec_irreg)
+          gammaxl = gammax(i,j,k,ispec_irreg)
+          gammayl = gammay(i,j,k,ispec_irreg)
+          gammazl = gammaz(i,j,k,ispec_irreg)
+          jacobianl = jacobian(i,j,k,ispec_irreg)
+          stemp1(i,j,k) = ((cv-ch) * (rxl*xixl+ryl*xiyl+rzl*xizl) * &
+            (rxl*dx_elem(i,j,k)+ryl*dy_elem(i,j,k)+rzl*dz_elem(i,j,k)) +&
+            ch * (xixl*dx_elem(i,j,k)+xiyl*dy_elem(i,j,k)&
+                 +xizl*dz_elem(i,j,k))) * jacobianl
+          stemp2(i,j,k) = ((cv-ch) * (rxl*etaxl+ryl*etayl+rzl*etazl) * &
+            (rxl*dx_elem(i,j,k)+ryl*dy_elem(i,j,k)+rzl*dz_elem(i,j,k)) +&
+            ch * (etaxl*dx_elem(i,j,k)+etayl*dy_elem(i,j,k)&
+                 +etazl*dz_elem(i,j,k))) * jacobianl
+          stemp3(i,j,k) = ((cv-ch) * (rxl*gammaxl+ryl*gammayl+rzl*gammazl) * &
+            (rxl*dx_elem(i,j,k)+ryl*dy_elem(i,j,k)+rzl*dz_elem(i,j,k)) +&
+            ch * (gammaxl*dx_elem(i,j,k)+gammayl*dy_elem(i,j,k)&
+                 +gammazl*dz_elem(i,j,k))) * jacobianl
         enddo;enddo;enddo
-      enddo
+        do k=1,NGLLZ;do j=1,NGLLY;do i=1,NGLLX
+          snewtemp1(i,j,k) = 0.0
+          snewtemp2(i,j,k) = 0.0
+          snewtemp3(i,j,k) = 0.0
+          do l = 1, NGLLX
+            fac1 = hprimewgll_xx(l,i)
+            snewtemp1(i,j,k) = snewtemp1(i,j,k) + stemp1(l,j,k) * fac1
+            fac2 = hprimewgll_yy(l,j)
+            snewtemp2(i,j,k) = snewtemp2(i,j,k) + stemp2(i,l,k) * fac2
+            fac3 = hprimewgll_zz(l,k)
+            snewtemp3(i,j,k) = snewtemp3(i,j,k) + stemp3(i,j,l) * fac3
+          enddo
+          fac1 = wgllwgll_yz(j,k)
+          fac2 = wgllwgll_xz(i,k)
+          fac3 = wgllwgll_xy(i,j)
+          iglob = ibool(i,j,k,ispec)
+          ddat_glob(iglob) = ddat_glob(iglob) - (fac1*snewtemp1(i,j,k)+&
+                          fac2 * snewtemp2(i,j,k) + fac3 * snewtemp3(i,j,k))
+        enddo;enddo;enddo 
+      enddo  ! ispec_p = 1, num_elements
+      !! assemble MPI
+      if (iphase == 1) then
+        call assemble_MPI_send_smooth(NPROC,NGLOB_AB,&
+          ddat_glob,buffer_send_vector_ext_mesh_smooth,&
+          buffer_recv_vector_ext_mesh_smooth,&
+          num_interfaces_ext_mesh,max_nibool_interfaces_ext_mesh, &
+          nibool_interfaces_ext_mesh,ibool_interfaces_ext_mesh, &
+          my_neighbors_ext_mesh, &
+          request_send_vector_ext_mesh,request_recv_vector_ext_mesh)
+      else
+        call assemble_MPI_w_ord_smooth(NPROC,NGLOB_AB,&
+          ddat_glob,buffer_recv_vector_ext_mesh_smooth,num_interfaces_ext_mesh,&
+          max_nibool_interfaces_ext_mesh, &
+          nibool_interfaces_ext_mesh,ibool_interfaces_ext_mesh, &
+          request_send_vector_ext_mesh,request_recv_vector_ext_mesh, &
+          my_neighbors_ext_mesh,myrank)
+      endif
+      !!!!!!!!!!!!!!!!!
+    enddo !iphase = 1,2
 
-      !dat = reshape(dat_glob(reshape(ibool,[5*5*5*NSPEC_AB])), [5,5,5,NSPEC_AB])
-      do ispec = 1, NSPEC_AB
-        do k=1,NGLLZ;do j=1,NGLLY;do i=1,NGLLX
-          iglob = ibool(i,j,k,ispec)
-          dat(i,j,k,ispec) = dat_glob(iglob)
-        enddo;enddo;enddo
-      enddo
-      
-      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      call synchronize_all()
+    ddat_glob(:) = ddat_glob(:) * rvol(:)
+    !! update
+    dat_glob(:) = dat_glob(:) + ddat_glob(:)
+    !! info
+    if (mod(istep, PRINT_INFO_PER_STEP) == 0) then
+      if (myrank == 0) print *, 'Step:', istep
+      min_val = minval(dat_glob)
+      max_val = maxval(dat_glob)
+      call min_all_cr(min_val, min_val_glob)
+      call max_all_cr(max_val, max_val_glob)
+      if (myrank == 0) then
+        print *, '  '//trim(kernel_name)
+        print *, '    minval:', min_val_glob
+        print *, '    maxval:', max_val_glob
+        call cpu_time(tnow)
+        print *, 'time since last message:', tnow-tlast
+        call cpu_time(tlast)
+      endif
+    endif
+    !!!!!!!!!!!!!
+    !! broadcast glob array back to local array
+    do ispec = 1, NSPEC_AB
+      do k=1,NGLLZ;do j=1,NGLLY;do i=1,NGLLX
+        iglob = ibool(i,j,k,ispec)
+        if ( is_CPML(ispec) ) then 
+          dat_glob(iglob) = dat_bak(i,j,k,ispec)
+        end if
+        dat(i,j,k,ispec) = dat_glob(iglob)
+      enddo;enddo;enddo
     enddo
-  else 
-    call smooth_sph_pde_cuda(NSPEC_AB,NGLOB_AB,NPROC,ntstep,&
-                             size(phase_ispec_inner_elastic,1),phase_ispec_inner_elastic,&
-                             nspec_outer_elastic,nspec_inner_elastic,xix,&
-                             xiy,xiz,etax,etay,etaz,gammax,gammay,gammaz,&
-                             jacobian,rotate_r,wgllwgll_xy,wgllwgll_xz,&
-                             wgllwgll_yz,hprime_xxT,hprimewgll_xx,ibool,&
-                             is_CPML,cv,ch,num_interfaces_ext_mesh,max_nibool_interfaces_ext_mesh,&
-                             my_neighbors_ext_mesh,nibool_interfaces_ext_mesh,&
-                             ibool_interfaces_ext_mesh,dat_bak,dat,rvol,dat_glob,ddat_glob)
-  endif
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    call synchronize_all()
+  enddo
   call synchronize_all()
   call cpu_time(t2)
   if (myrank == 0) & 
