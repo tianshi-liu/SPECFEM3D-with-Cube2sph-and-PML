@@ -1,0 +1,374 @@
+
+Lmod is automatically replacing "gcc/8.3.0" with "intel/2019u4".
+
+ NGNOD=          27
+ Total number of points =        30300
+ xmin=  -2441641.     , xmax=  -2337220.    
+ ymin=  -3896930.     , ymax=  -3783167.    
+ zmin=   4400454.     , zmax=   4499822.    
+ found         3202  in rank            0
+ found         4893  in rank            5
+ found            0  in rank           38
+ found            0  in rank            4
+ found         2847  in rank           17
+ found            0  in rank           25
+ found         5439  in rank            6
+ found            0  in rank           33
+ found            0  in rank           37
+ found          227  in rank           16
+ found            0  in rank           28
+ found            0  in rank           35
+ found            0  in rank           26
+ found            0  in rank           36
+ found            0  in rank           11
+ found            0  in rank            1
+ found            0  in rank           27
+ found            0  in rank           29
+ found            0  in rank           30
+ found          202  in rank           19
+ found         2463  in rank            9
+ found          477  in rank            3
+ found            0  in rank           34
+ found            0  in rank           24
+ found         3940  in rank           15
+ found            0  in rank           23
+ found         3969  in rank           18
+ found            0  in rank           10
+ found            0  in rank           32
+ found            0  in rank           39
+ found            0  in rank           12
+ found            0  in rank           22
+ found            0  in rank           21
+ found        12866  in rank            8
+ found            0  in rank           58
+ found         1335  in rank           70
+ found            0  in rank          140
+ found            5  in rank           80
+ found            0  in rank           76
+ found            0  in rank          127
+ found          742  in rank           90
+ found          314  in rank           43
+ found          846  in rank           42
+ found           28  in rank           44
+ found            0  in rank           78
+ found            0  in rank           75
+ found            0  in rank           50
+ found          131  in rank           13
+ found         2187  in rank           14
+ found            0  in rank           31
+ found         3208  in rank            2
+ found         1860  in rank            7
+ found            0  in rank           20
+ found            0  in rank          153
+ found            0  in rank           55
+ found            0  in rank           62
+ found            0  in rank           53
+ found          791  in rank           73
+ found            0  in rank          131
+ found          273  in rank           97
+ found            0  in rank           77
+ found         4661  in rank           66
+ found            0  in rank           64
+ found            0  in rank           49
+ found            0  in rank           47
+ found            0  in rank          121
+ found        11111  in rank           87
+ found         4107  in rank           67
+ found            0  in rank          122
+ found            0  in rank           45
+ found            0  in rank          120
+ found            0  in rank           54
+ found         1547  in rank          149
+ found            0  in rank           68
+ found            0  in rank          151
+ found            0  in rank           91
+ found            0  in rank           52
+ found            0  in rank          130
+ found         3640  in rank           81
+ found          320  in rank           65
+ found            0  in rank          139
+ found         3375  in rank           83
+ found            0  in rank           60
+ found            0  in rank          134
+ found          244  in rank           85
+ found            0  in rank           79
+ found            0  in rank          142
+ found            0  in rank          101
+ found            0  in rank           46
+ found            0  in rank          141
+ found            0  in rank          111
+ found            0  in rank           59
+ found            0  in rank          147
+ found         3652  in rank           99
+ found            0  in rank           48
+ found            0  in rank          135
+ found            0  in rank          117
+ found            0  in rank           51
+ found            0  in rank          154
+ found         3876  in rank           89
+ found            0  in rank           71
+ found         2563  in rank          145
+ found            0  in rank          109
+ found            0  in rank           69
+ found            0  in rank          124
+ found            0  in rank          118
+ found            0  in rank           41
+ found            0  in rank          155
+ found            0  in rank          104
+ found            0  in rank           57
+ found         3750  in rank          137
+ found          188  in rank           84
+ found            0  in rank           61
+ found            0  in rank          125
+ found            0  in rank          114
+ found            0  in rank           72
+ found          151  in rank          144
+ found            0  in rank           86
+ found            0  in rank           56
+ found            0  in rank          159
+ found            0  in rank           94
+ found            0  in rank           63
+ found            0  in rank          129
+ found            0  in rank          102
+ found            0  in rank           40
+ found            0  in rank          157
+ found            0  in rank           82
+ found          878  in rank           74
+ found            0  in rank          146
+ found            0  in rank           93
+ found            0  in rank          158
+ found            0  in rank          119
+ found            0  in rank          123
+ found            0  in rank           95
+ found         2531  in rank          138
+ found            0  in rank           92
+ found            0  in rank          126
+ found            0  in rank           96
+ found            0  in rank          128
+ found            0  in rank          107
+ found            0  in rank          150
+ found            0  in rank          115
+ found            0  in rank          156
+ found            0  in rank          105
+ found            0  in rank          133
+ found            0  in rank          116
+ found         1012  in rank          148
+ found            0  in rank          100
+ found          746  in rank          143
+ found         9648  in rank           88
+ found            0  in rank          132
+ found            0  in rank          112
+ found         1737  in rank          136
+ found            0  in rank          113
+ found            0  in rank          152
+ found            0  in rank          108
+ found         1239  in rank           98
+ found            0  in rank          110
+ found            0  in rank          103
+ found            0  in rank          106
+ write to 
+ temp.txt.loc                                                                   
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                       
+ in total         4784  times in rank            0
+ in total            0  times in rank            1
+ in total         5417  times in rank            2
+ in total            0  times in rank            3
+ in total            0  times in rank            4
+ in total         7481  times in rank            5
+ in total         7485  times in rank            6
+ in total            0  times in rank            7
+ in total        24837  times in rank            8
+ in total            0  times in rank            9
+ in total            0  times in rank           10
+ in total            0  times in rank           11
+ in total            0  times in rank           12
+ in total            0  times in rank           13
+ in total         3600  times in rank           14
+ in total          801  times in rank           15
+ in total            0  times in rank           16
+ in total         3760  times in rank           17
+ in total         5175  times in rank           18
+ in total            0  times in rank           19
+ in total            0  times in rank           20
+ in total            0  times in rank           21
+ in total            0  times in rank           22
+ in total            0  times in rank           23
+ in total            0  times in rank           24
+ in total            0  times in rank           25
+ in total            0  times in rank           26
+ in total            0  times in rank           27
+ in total            0  times in rank           28
+ in total            0  times in rank           29
+ in total            0  times in rank           30
+ in total            0  times in rank           31
+ in total            0  times in rank           32
+ in total            0  times in rank           33
+ in total            0  times in rank           34
+ in total            0  times in rank           35
+ in total            0  times in rank           36
+ in total            0  times in rank           37
+ in total            0  times in rank           38
+ in total            0  times in rank           39
+ in total            0  times in rank           40
+ in total            0  times in rank           41
+ in total            0  times in rank           42
+ in total            0  times in rank           43
+ in total            0  times in rank           44
+ in total            0  times in rank           45
+ in total            0  times in rank           46
+ in total            0  times in rank           47
+ in total            0  times in rank           48
+ in total            0  times in rank           49
+ in total            0  times in rank           50
+ in total            0  times in rank           51
+ in total            0  times in rank           52
+ in total            0  times in rank           53
+ in total            0  times in rank           54
+ in total            0  times in rank           55
+ in total            0  times in rank           56
+ in total            0  times in rank           57
+ in total            0  times in rank           58
+ in total            0  times in rank           59
+ in total            0  times in rank           60
+ in total            0  times in rank           61
+ in total            0  times in rank           62
+ in total            0  times in rank           63
+ in total            0  times in rank           64
+ in total            0  times in rank           65
+ in total            0  times in rank           66
+ in total            0  times in rank           67
+ in total            0  times in rank           68
+ in total            0  times in rank           69
+ in total            8  times in rank           70
+ in total            0  times in rank           71
+ in total            0  times in rank           72
+ in total            0  times in rank           73
+ in total            0  times in rank           74
+ in total            0  times in rank           80
+ in total            0  times in rank           75
+ in total            0  times in rank           76
+ in total            0  times in rank           77
+ in total            0  times in rank           78
+ in total            0  times in rank           79
+ in total         5687  times in rank           81
+ in total            0  times in rank           82
+ in total         6063  times in rank           83
+ in total            0  times in rank           84
+ in total           10  times in rank           85
+ in total            0  times in rank           86
+ in total        17996  times in rank           87
+ in total        20188  times in rank           88
+ in total            0  times in rank           89
+ in total         1101  times in rank           90
+ in total            0  times in rank           91
+ in total            0  times in rank           92
+ in total            0  times in rank           93
+ in total            0  times in rank           94
+ in total            0  times in rank           95
+ in total            0  times in rank           96
+ in total            0  times in rank           97
+ in total         1898  times in rank           98
+ in total         4979  times in rank           99
+ in total            0  times in rank          100
+ in total            0  times in rank          101
+ in total            0  times in rank          102
+ in total            0  times in rank          103
+ in total            0  times in rank          104
+ in total            0  times in rank          105
+ in total            0  times in rank          106
+ in total            0  times in rank          107
+ in total            0  times in rank          108
+ in total            0  times in rank          109
+ in total            0  times in rank          110
+ in total            0  times in rank          111
+ in total            0  times in rank          112
+ in total            0  times in rank          113
+ in total            0  times in rank          114
+ in total            0  times in rank          115
+ in total            0  times in rank          120
+ in total            0  times in rank          116
+ in total            0  times in rank          121
+ in total            0  times in rank          117
+ in total            0  times in rank          122
+ in total            0  times in rank          118
+ in total            0  times in rank          123
+ in total            0  times in rank          119
+ in total            0  times in rank          124
+ in total            0  times in rank          125
+ in total            0  times in rank          126
+ in total            0  times in rank          127
+ in total            0  times in rank          128
+ in total            0  times in rank          129
+ in total            0  times in rank          130
+ in total            0  times in rank          131
+ in total            0  times in rank          132
+ in total            0  times in rank          133
+ in total            0  times in rank          134
+ in total            0  times in rank          135
+ in total            0  times in rank          136
+ in total            0  times in rank          137
+ in total            0  times in rank          138
+ in total            0  times in rank          139
+ in total            0  times in rank          140
+ in total            0  times in rank          141
+ in total            0  times in rank          142
+ in total          383  times in rank          143
+ in total            4  times in rank          144
+ in total            0  times in rank          145
+ in total            0  times in rank          146
+ in total            0  times in rank          147
+ in total            0  times in rank          148
+ in total            0  times in rank          149
+ in total            0  times in rank          150
+ in total            0  times in rank          151
+ in total            0  times in rank          152
+ in total            0  times in rank          153
+ in total            0  times in rank          154
+ in total            0  times in rank          155
+ in total            0  times in rank          156
+ in total            0  times in rank          157
+ in total            0  times in rank          158
+ in total            0  times in rank          159
+
+scontrol show job 14092968
+JobId=14092968 JobName=step0
+   UserId=nqdu(3114259) GroupId=liuqy(6000084) MCS_label=N/A
+   Priority=11506994 Nice=0 Account=rrg-liuqy QOS=normal
+   JobState=COMPLETING Reason=None Dependency=(null)
+   Requeue=0 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   RunTime=00:00:17 TimeLimit=00:13:00 TimeMin=N/A
+   SubmitTime=2025-01-20T20:05:28 EligibleTime=2025-01-20T20:05:28
+   AccrueTime=2025-01-20T20:05:28
+   StartTime=2025-01-20T20:05:29 EndTime=2025-01-20T20:05:46 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2025-01-20T20:05:29 Scheduler=Main
+   Partition=debug AllocNode:Sid=nia-login03:5315
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList=nia[0006,0255,0601,0840]
+   BatchHost=nia0006
+   NumNodes=4 NumCPUs=320 NumTasks=160 CPUs/Task=1 ReqB:S:C:T=0:0:*:*
+   ReqTRES=cpu=160,mem=700000M,node=4,billing=80
+   AllocTRES=cpu=320,mem=700000M,node=4,billing=160
+   Socks/Node=* NtasksPerN:B:S:C=40:0:*:* CoreSpec=*
+   MinCPUsNode=40 MinMemoryNode=175000M MinTmpDiskNode=0
+   Features=[skylake|cascade] DelayBoot=00:00:00
+   OverSubscribe=NO Contiguous=0 Licenses=(null) Network=(null)
+   Command=/gpfs/fs0/scratch/l/liuqy/nqdu/cascadia-cube2sph-mesh/plot_model/step0_get_slice_loc.sh
+   WorkDir=/gpfs/fs0/scratch/l/liuqy/nqdu/cascadia-cube2sph-mesh/plot_model
+   Comment=/opt/slurm/bin/sbatch --export=NONE step0_get_slice_loc.sh 
+   StdErr=/gpfs/fs0/scratch/l/liuqy/nqdu/cascadia-cube2sph-mesh/plot_model/step0.txt
+   StdIn=/dev/null
+   StdOut=/gpfs/fs0/scratch/l/liuqy/nqdu/cascadia-cube2sph-mesh/plot_model/step0.txt
+   
+
+sacct -j 14092968
+JobID           JobName    Account    Elapsed  MaxVMSize     MaxRSS  SystemCPU    UserCPU ExitCode 
+------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- -------- 
+14092968          step0  rrg-liuqy   00:00:17                        02:22.010  01:33.780      0:0 
+14092968.ba+      batch  rrg-liuqy   00:00:17    137124K      1.50M  00:38.786  00:26.762      0:0 
+14092968.ex+     extern  rrg-liuqy   00:00:17    136828K      1032K  00:00.002  00:00.001      0:0 
+14092968.0        orted  rrg-liuqy   00:00:17    203552K      1516K  01:43.222  01:07.017      0:0 
