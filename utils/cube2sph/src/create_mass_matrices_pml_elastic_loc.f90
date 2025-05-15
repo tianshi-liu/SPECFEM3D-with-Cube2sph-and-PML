@@ -10,7 +10,8 @@ subroutine create_volume_matrices_pml_elastic_loc(nspec,jacobian3D,&
   double precision, dimension(NGLLY) :: yigll,wygll
   double precision, dimension(NGLLZ) :: zigll,wzgll
   double precision :: weight
-  double precision, dimension(NGLLX,NGLLY,NGLLZ,nspec_cpml) :: jacobian3D
+  !nqdu double precision, dimension(NGLLX,NGLLY,NGLLZ,nspec_cpml) :: jacobian3D
+  double precision, dimension(NGLLX,NGLLY,NGLLZ,nspec) :: jacobian3D
   ! set up coordinates of the Gauss-Lobatto-Legendre points
   call zwgljd(xigll,wxgll,NGLLX,GAUSSALPHA,GAUSSBETA)
   call zwgljd(yigll,wygll,NGLLY,GAUSSALPHA,GAUSSBETA)
