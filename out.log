@@ -1,0 +1,126 @@
+filename = prname_lp(1:len_trim(prname_lp))// 'c11.bin'
+open(unit=28,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
+if (ier /= 0) stop 'error opening file c11.bin'
+read(28) c11store
+close(28)
+
+filename = prname_lp(1:len_trim(prname_lp))// 'c12.bin'
+open(unit=28,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
+if (ier /= 0) stop 'error opening file c12.bin'
+read(28) c12store
+close(28)
+
+filename = prname_lp(1:len_trim(prname_lp))// 'c13.bin'
+open(unit=28,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
+if (ier /= 0) stop 'error opening file c13.bin'
+read(28) c13store
+close(28)
+
+filename = prname_lp(1:len_trim(prname_lp))// 'c14.bin'
+open(unit=28,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
+if (ier /= 0) stop 'error opening file c14.bin'
+read(28) c14store
+close(28)
+
+filename = prname_lp(1:len_trim(prname_lp))// 'c15.bin'
+open(unit=28,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
+if (ier /= 0) stop 'error opening file c15.bin'
+read(28) c15store
+close(28)
+
+filename = prname_lp(1:len_trim(prname_lp))// 'c16.bin'
+open(unit=28,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
+if (ier /= 0) stop 'error opening file c16.bin'
+read(28) c16store
+close(28)
+
+filename = prname_lp(1:len_trim(prname_lp))// 'c22.bin'
+open(unit=28,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
+if (ier /= 0) stop 'error opening file c22.bin'
+read(28) c22store
+close(28)
+
+filename = prname_lp(1:len_trim(prname_lp))// 'c23.bin'
+open(unit=28,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
+if (ier /= 0) stop 'error opening file c23.bin'
+read(28) c23store
+close(28)
+
+filename = prname_lp(1:len_trim(prname_lp))// 'c24.bin'
+open(unit=28,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
+if (ier /= 0) stop 'error opening file c24.bin'
+read(28) c24store
+close(28)
+
+filename = prname_lp(1:len_trim(prname_lp))// 'c25.bin'
+open(unit=28,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
+if (ier /= 0) stop 'error opening file c25.bin'
+read(28) c25store
+close(28)
+
+filename = prname_lp(1:len_trim(prname_lp))// 'c26.bin'
+open(unit=28,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
+if (ier /= 0) stop 'error opening file c26.bin'
+read(28) c26store
+close(28)
+
+filename = prname_lp(1:len_trim(prname_lp))// 'c33.bin'
+open(unit=28,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
+if (ier /= 0) stop 'error opening file c33.bin'
+read(28) c33store
+close(28)
+
+filename = prname_lp(1:len_trim(prname_lp))// 'c34.bin'
+open(unit=28,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
+if (ier /= 0) stop 'error opening file c34.bin'
+read(28) c34store
+close(28)
+
+filename = prname_lp(1:len_trim(prname_lp))// 'c35.bin'
+open(unit=28,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
+if (ier /= 0) stop 'error opening file c35.bin'
+read(28) c35store
+close(28)
+
+filename = prname_lp(1:len_trim(prname_lp))// 'c36.bin'
+open(unit=28,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
+if (ier /= 0) stop 'error opening file c36.bin'
+read(28) c36store
+close(28)
+
+filename = prname_lp(1:len_trim(prname_lp))// 'c44.bin'
+open(unit=28,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
+if (ier /= 0) stop 'error opening file c44.bin'
+read(28) c44store
+close(28)
+
+filename = prname_lp(1:len_trim(prname_lp))// 'c45.bin'
+open(unit=28,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
+if (ier /= 0) stop 'error opening file c45.bin'
+read(28) c45store
+close(28)
+
+filename = prname_lp(1:len_trim(prname_lp))// 'c46.bin'
+open(unit=28,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
+if (ier /= 0) stop 'error opening file c46.bin'
+read(28) c46store
+close(28)
+
+filename = prname_lp(1:len_trim(prname_lp))// 'c55.bin'
+open(unit=28,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
+if (ier /= 0) stop 'error opening file c55.bin'
+read(28) c55store
+close(28)
+
+filename = prname_lp(1:len_trim(prname_lp))// 'c56.bin'
+open(unit=28,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
+if (ier /= 0) stop 'error opening file c56.bin'
+read(28) c56store
+close(28)
+
+filename = prname_lp(1:len_trim(prname_lp))// 'c66.bin'
+open(unit=28,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
+if (ier /= 0) stop 'error opening file c66.bin'
+read(28) c66store
+close(28)
+

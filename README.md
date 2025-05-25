@@ -63,3 +63,7 @@ Examples provided in `utils/cube2sph/cube2sph_examples` directory:
 - `stacey_prem`: Stacey boundary condition with PML-onecrust model on a 20\*20 degrees domain
 - `alaska_example`: mesh with surface and Moho topography and 3D tomographic model on a 22\*22 degrees domain
 - `northeast_china`: example for wavefield injection using Cube2sph-AxiSEM coupling (under development)
+
+## Anisotropic Model
+1. model saved in `proc*_external_mesh.bin` is in cartesian coordinates, i.e. $C_{xxxx}, C_{xyzx}$ 
+2. model in `proc*_c11-c66.bin`, `tomography.xyz` are in local coordinates.

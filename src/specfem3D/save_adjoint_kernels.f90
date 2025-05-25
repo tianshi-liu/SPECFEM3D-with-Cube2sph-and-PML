@@ -359,7 +359,7 @@ subroutine save_kernels_acoustic(adios_handle)
                          SAVE_TRANSVERSE_KL,FOUR_THIRDS, &
                          ADIOS_FOR_KERNELS,IOUT,prname,&
                          xstore, ystore, zstore, rhostore,&
-                         AZIMUTHAL_ANISOTROPY
+                         AZIMUTHAL_ANISOTROPY,MAX_STRING_LEN
   use specfem_par_elastic 
   implicit none
 
@@ -388,6 +388,8 @@ subroutine save_kernels_acoustic(adios_handle)
   real(kind=CUSTOM_REAL) :: alphav_kll, alphah_kll, betav_kll, betah_kll, &
                             rhonotprime_kll, rhop_kll, eta_kll, &
                             Gc_kll,Gs_kll,vbulk_kll
+  
+  real(kind=CUSTOM_REAL), allocatable :: tmp_kl(:,:,:,:), c66_local(:,:,:,:,:)
 
   ! local parameters
   integer:: ispec,i,j,k,iglob,ier
@@ -403,6 +405,11 @@ subroutine save_kernels_acoustic(adios_handle)
   logical, parameter :: ISOTROPIC_BULK=.true., &
                         SCALE_RHO_WITH_VS=.false.
   real(kind=CUSTOM_REAL) :: RHO_SCALE = 0.33
+  character(len=MAX_STRING_LEN) :: filename
+
+  ! allocate space
+  allocate(c66_local(21,NGLLX,NGLLY,NGLLZ,NSPEC_AB))
+
   ! finalizes calculation of rhop, beta, alpha kernels
   do ispec = 1, NSPEC_AB
 
@@ -418,6 +425,8 @@ subroutine save_kernels_acoustic(adios_handle)
         call xyz_2_rthetaphi(xp,yp,zp,r_dummy,theta,phi)
         call rotate_kernels_dble(cijkl_kl(:,i,j,k,ispec), &
               cijkl_kl_local(:), theta, phi)
+        
+
         if (SAVE_TRANSVERSE_KL) then
           rhol = rhostore(i,j,k,ispec)
           kappahl = kappastore(i,j,k,ispec)
@@ -525,7 +534,9 @@ subroutine save_kernels_acoustic(adios_handle)
             Gs_kl(i,j,k,ispec) = - Gs_kll
           endif
           
-          
+        else 
+          c66_local(:,i,j,k,ispec) =  cijkl_kl_local(:) 
+        
         endif ! SAVE_TRANSVERSE_KL
       enddo;enddo;enddo
     endif !ispec_is_elastic(ispec)
@@ -580,13 +591,41 @@ subroutine save_kernels_acoustic(adios_handle)
       close(IOUT)
     endif
   else
+    ! fully anisotropic kernels
+    ! note: the C_ij and density kernels are not for relative perturbations
+    ! (delta ln( m_i) = delta m_i / m_i),
+    !          but absolute perturbations (delta m_i = m_i - m_0).
+    
+    allocate(tmp_kl(NGLLX,NGLLY,NGLLZ,NSPEC_AB))
+    tmp_kl = -rho_kl
     open(unit=IOUT,file=trim(prname)//'rho_kernel.bin',status='unknown',form='unformatted',action='write')
-    write(IOUT)  - rho_kl
+    write(IOUT)  tmp_kl
     close(IOUT)
-    open(unit=IOUT,file=trim(prname)//'cijkl_kernel.bin',status='unknown',form='unformatted',action='write')
-    write(IOUT) - cijkl_kl
-    close(IOUT)
+
+    !nqdu
+    ! open(unit=IOUT,file=trim(prname)//'cijkl_kernel.bin',status='unknown',form='unformatted',action='write')
+    ! write(IOUT) - cijkl_kl
+    ! close(IOUT)
+    k=1
+    do i=1,6
+      do j=1,6
+        if(i > j) cycle
+        write(filename,'(a,i0,i0,a)') trim(prname) // 'c',i,j,'_kernel.bin'
+        tmp_kl(:,:,:,:) = -c66_local(k,:,:,:,:)
+        open(unit=IOUT,file=trim(filename),status='unknown',form='unformatted',iostat=ier)
+        if (ier /= 0) then 
+          print*, 'error opening file ',trim(filename)
+          stop 
+        endif
+        write(IOUT) tmp_kl
+        close(IOUT)
+        k = k + 1
+      enddo
+    enddo
+    deallocate(tmp_kl)
   endif
+
+  deallocate(c66_local)
   
   end subroutine save_kernels_elastic_cube2sph
 
@@ -792,7 +831,7 @@ subroutine save_kernels_acoustic(adios_handle)
         !          but absolute perturbations (delta m_i = m_i - m_0).
         ! Kappa and mu are for absolute perturbations, can be used to check with purely isotropic versions.
         open(unit=IOUT,file=trim(prname)//'rho_kernel.bin',status='unknown',form='unformatted',action='write')
-        write(IOUT)  - rho_kl
+        write(IOUT)  -  rho_kl
         close(IOUT)
         open(unit=IOUT,file=trim(prname)//'cijkl_kernel.bin',status='unknown',form='unformatted',action='write')
         write(IOUT) - cijkl_kl

@@ -9,9 +9,10 @@ program smooth_sem_sph_pde
   use specfem_par_acoustic, only: ispec_is_acoustic
   use specfem_par_poroelastic, only: ispec_is_poroelastic
   use pml_par, only: is_CPML
-  use wavefield_discontinuity_par,only: IS_WAVEFIELD_DISCONTINUITY
+  !use wavefield_discontinuity_par,only: IS_WAVEFIELD_DISCONTINUITY
 
   implicit none 
+
   integer ::  NARGS
   integer, parameter :: PRINT_INFO_PER_STEP = 1000
   real(kind=CUSTOM_REAL), dimension(:,:,:,:),allocatable :: dat,dat_bak
@@ -224,7 +225,7 @@ program smooth_sem_sph_pde
     print *,'  Min element size = ',elemsize_min_glob
     print *,'  Max/min ratio = ',elemsize_max_glob/elemsize_min_glob
     print *
-    print*, 'has wavefield_discon =',  IS_WAVEFIELD_DISCONTINUITY
+    !print*, 'has wavefield_discon =',  IS_WAVEFIELD_DISCONTINUITY
   endif
 
   !! broadcast distance_min_glob to other processors

@@ -3,6 +3,7 @@
 #ifdef WITH_MPI
 #include <mpi.h>
 #endif
+
 const int  NGLL =  5;
 const int  NGLLX = 5;
 const int  NGLL2 = 25;
@@ -12,7 +13,6 @@ const int NGLL3PAD = 128;
 typedef float realw;
 typedef const realw* __restrict__ realw_const_p;
 typedef realw* __restrict__ realw_p;
-
 
 
 __device__ __forceinline__ void 
