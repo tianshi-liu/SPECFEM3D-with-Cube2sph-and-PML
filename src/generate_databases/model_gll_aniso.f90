@@ -235,69 +235,69 @@ subroutine model_gll_aniso(myrank,nspec,LOCAL_PATH)
 
   eta_anistore = 1.
 
- if (CUBE2SPH_MESH) then
-  do ispec = 1, nspec
-    do k=1,NGLLZ; do j=1,NGLLY; do i=1,NGLLX
-      d11 = c11store(i,j,k,ispec)
-      d12 = c12store(i,j,k,ispec)
-      d13 = c13store(i,j,k,ispec)
-      d14 = c14store(i,j,k,ispec)
-      d15 = c15store(i,j,k,ispec)
-      d16 = c16store(i,j,k,ispec)
-      d22 = c22store(i,j,k,ispec)
-      d23 = c23store(i,j,k,ispec)
-      d24 = c24store(i,j,k,ispec)
-      d25 = c25store(i,j,k,ispec)
-      d26 = c26store(i,j,k,ispec)
-      d33 = c33store(i,j,k,ispec)
-      d34 = c34store(i,j,k,ispec)
-      d35 = c35store(i,j,k,ispec)
-      d36 = c36store(i,j,k,ispec)
-      d44 = c44store(i,j,k,ispec)
-      d45 = c45store(i,j,k,ispec)
-      d46 = c46store(i,j,k,ispec)
-      d55 = c55store(i,j,k,ispec)
-      d56 = c56store(i,j,k,ispec)
-      d66 = c66store(i,j,k,ispec)
+  if (CUBE2SPH_MESH) then
+    do ispec = 1, nspec
+      do k=1,NGLLZ; do j=1,NGLLY; do i=1,NGLLX
+        d11 = c11store(i,j,k,ispec)
+        d12 = c12store(i,j,k,ispec)
+        d13 = c13store(i,j,k,ispec)
+        d14 = c14store(i,j,k,ispec)
+        d15 = c15store(i,j,k,ispec)
+        d16 = c16store(i,j,k,ispec)
+        d22 = c22store(i,j,k,ispec)
+        d23 = c23store(i,j,k,ispec)
+        d24 = c24store(i,j,k,ispec)
+        d25 = c25store(i,j,k,ispec)
+        d26 = c26store(i,j,k,ispec)
+        d33 = c33store(i,j,k,ispec)
+        d34 = c34store(i,j,k,ispec)
+        d35 = c35store(i,j,k,ispec)
+        d36 = c36store(i,j,k,ispec)
+        d44 = c44store(i,j,k,ispec)
+        d45 = c45store(i,j,k,ispec)
+        d46 = c46store(i,j,k,ispec)
+        d55 = c55store(i,j,k,ispec)
+        d56 = c56store(i,j,k,ispec)
+        d66 = c66store(i,j,k,ispec)
 
-      iglob = ibool(i,j,k,ispec)
-      xp = xstore_dummy(iglob)
-      yp = ystore_dummy(iglob)
-      zp = zstore_dummy(iglob)
+        iglob = ibool(i,j,k,ispec)
+        xp = xstore_dummy(iglob)
+        yp = ystore_dummy(iglob)
+        zp = zstore_dummy(iglob)
 
-      ! now z axis is in r direction
-      call xyz_2_rthetaphi(xp,yp,zp,r_dummy,theta,phi)
+        ! now z axis is in r direction
+        call xyz_2_rthetaphi(xp,yp,zp,r_dummy,theta,phi)
 
-      call rotate_aniso_tensor(dble(theta),dble(phi),d11,d12,d13,d14,d15,d16, &
-                          d22,d23,d24,d25,d26, &
-                          d33,d34,d35,d36,d44,d45,d46,d55,d56,d66, &
-                          c11,c12,c13,c14,c15,c16,c22,c23,c24,c25,c26, &
-                          c33,c34,c35,c36,c44,c45,c46,c55,c56,c66)
+        call rotate_aniso_tensor(dble(theta),dble(phi),d11,d12,d13,d14,d15,d16, &
+                            d22,d23,d24,d25,d26, &
+                            d33,d34,d35,d36,d44,d45,d46,d55,d56,d66, &
+                            c11,c12,c13,c14,c15,c16,c22,c23,c24,c25,c26, &
+                            c33,c34,c35,c36,c44,c45,c46,c55,c56,c66)
 
-      c11store(i,j,k,ispec) = real(c11, kind=CUSTOM_REAL)
-      c12store(i,j,k,ispec) = real(c12, kind=CUSTOM_REAL)
-      c13store(i,j,k,ispec) = real(c13, kind=CUSTOM_REAL)
-      c14store(i,j,k,ispec) = real(c14, kind=CUSTOM_REAL)
-      c15store(i,j,k,ispec) = real(c15, kind=CUSTOM_REAL)
-      c16store(i,j,k,ispec) = real(c16, kind=CUSTOM_REAL)
-      c22store(i,j,k,ispec) = real(c22, kind=CUSTOM_REAL)
-      c23store(i,j,k,ispec) = real(c23, kind=CUSTOM_REAL)
-      c24store(i,j,k,ispec) = real(c24, kind=CUSTOM_REAL)
-      c25store(i,j,k,ispec) = real(c25, kind=CUSTOM_REAL)
-      c26store(i,j,k,ispec) = real(c26, kind=CUSTOM_REAL)
-      c33store(i,j,k,ispec) = real(c33, kind=CUSTOM_REAL)
-      c34store(i,j,k,ispec) = real(c34, kind=CUSTOM_REAL)
-      c35store(i,j,k,ispec) = real(c35, kind=CUSTOM_REAL)
-      c36store(i,j,k,ispec) = real(c36, kind=CUSTOM_REAL)
-      c44store(i,j,k,ispec) = real(c44, kind=CUSTOM_REAL)
-      c45store(i,j,k,ispec) = real(c45, kind=CUSTOM_REAL)
-      c46store(i,j,k,ispec) = real(c46, kind=CUSTOM_REAL)
-      c55store(i,j,k,ispec) = real(c55, kind=CUSTOM_REAL)
-      c56store(i,j,k,ispec) = real(c56, kind=CUSTOM_REAL)
-      c66store(i,j,k,ispec) = real(c66, kind=CUSTOM_REAL)
-    enddo;enddo;enddo;
-  enddo
-endif
+        c11store(i,j,k,ispec) = real(c11, kind=CUSTOM_REAL)
+        c12store(i,j,k,ispec) = real(c12, kind=CUSTOM_REAL)
+        c13store(i,j,k,ispec) = real(c13, kind=CUSTOM_REAL)
+        c14store(i,j,k,ispec) = real(c14, kind=CUSTOM_REAL)
+        c15store(i,j,k,ispec) = real(c15, kind=CUSTOM_REAL)
+        c16store(i,j,k,ispec) = real(c16, kind=CUSTOM_REAL)
+        c22store(i,j,k,ispec) = real(c22, kind=CUSTOM_REAL)
+        c23store(i,j,k,ispec) = real(c23, kind=CUSTOM_REAL)
+        c24store(i,j,k,ispec) = real(c24, kind=CUSTOM_REAL)
+        c25store(i,j,k,ispec) = real(c25, kind=CUSTOM_REAL)
+        c26store(i,j,k,ispec) = real(c26, kind=CUSTOM_REAL)
+        c33store(i,j,k,ispec) = real(c33, kind=CUSTOM_REAL)
+        c34store(i,j,k,ispec) = real(c34, kind=CUSTOM_REAL)
+        c35store(i,j,k,ispec) = real(c35, kind=CUSTOM_REAL)
+        c36store(i,j,k,ispec) = real(c36, kind=CUSTOM_REAL)
+        c44store(i,j,k,ispec) = real(c44, kind=CUSTOM_REAL)
+        c45store(i,j,k,ispec) = real(c45, kind=CUSTOM_REAL)
+        c46store(i,j,k,ispec) = real(c46, kind=CUSTOM_REAL)
+        c55store(i,j,k,ispec) = real(c55, kind=CUSTOM_REAL)
+        c56store(i,j,k,ispec) = real(c56, kind=CUSTOM_REAL)
+        c66store(i,j,k,ispec) = real(c66, kind=CUSTOM_REAL)
+      enddo;enddo;enddo;
+    enddo
+  endif
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !!! in cases where shear wavespeed structure is not given

@@ -553,6 +553,7 @@ end subroutine init_tomography_files
           z_tomography(imat,irecord) = z_tomo
         enddo
       endif
+      !print*,'c45_tomi min max after',minval(c_tomography(17,:,:)),maxval(c_tomography(17,:,:))
     else 
       ! user output
       if (myrank_tomo == 0) then
@@ -950,8 +951,8 @@ end subroutine init_tomography_files
     c66 = c_final(21)
 
     ! Voigt average
-    vp_model = sqrt(1./3.) * sqrt(0.5 * (c11 + c22) + 2. * c33)/sqrt(rho_model) ! a better estimate of equivalent vp is needed for anisotropic models
-    vs_model = sqrt(1./3.) * sqrt(c66 + (c44+c55))/sqrt(rho_model) ! a better estimate of equivalent vs is needed for anisotropic models
+    vp_model = sqrt(1./3.) * sqrt(0.5 * (c11 + c22) + 2. * c33)/sqrt(rho_model) 
+    vs_model = sqrt(1./3.) * sqrt(c66 + (c44+c55))/sqrt(rho_model) 
   
   else 
 

@@ -245,7 +245,6 @@
                                c22,c23,c24,c25,c26,c33, &
                                c34,c35,c36,c44,c45,c46,c55,c56,c66, &
                                ANISOTROPY)
-
           ! stores velocity model
           if (idomain_id == IDOMAIN_ACOUSTIC .or. idomain_id == IDOMAIN_ELASTIC) then
 
@@ -664,7 +663,7 @@
   end select
 
   ! adds anisotropic default model
-  if (ANISOTROPY) then
+  if (ANISOTROPY .and. (IMODEL /= IMODEL_DEFAULT) .and. (IMODEL /= IMODEL_TOMO)) then
     call model_aniso(iflag_aniso,rho,vp,vs, &
                     c11,c12,c13,c14,c15,c16, &
                     c22,c23,c24,c25,c26,c33, &
