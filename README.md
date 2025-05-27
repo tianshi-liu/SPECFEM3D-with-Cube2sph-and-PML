@@ -66,4 +66,4 @@ Examples provided in `utils/cube2sph/cube2sph_examples` directory:
 
 ## Anisotropic Model
 1. model saved in `proc*_external_mesh.bin` is in cartesian coordinates, i.e. $C_{xxxx}, C_{xyzx}$ 
-2. model in `proc*_c11-c66.bin`, `tomography.xyz` are in local coordinates.
+2. model in `proc*_c11-c66.bin`, `tomography.xyz` are in radial coordinates.

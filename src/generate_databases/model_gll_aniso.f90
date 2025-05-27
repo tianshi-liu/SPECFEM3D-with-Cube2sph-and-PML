@@ -105,7 +105,7 @@ subroutine model_gll_aniso(myrank,nspec,LOCAL_PATH)
   close(28)
 
   ! C21
-  if (myrank == 0) write(IMAIN,*) '     reading in: cijkl.bin'
+  if (myrank == 0) write(IMAIN,*) '     reading in: radial cijkl.bin'
 
   filename = prname_lp(1:len_trim(prname_lp))// 'c11.bin'
   open(unit=28,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
@@ -267,12 +267,21 @@ subroutine model_gll_aniso(myrank,nspec,LOCAL_PATH)
 
         ! now z axis is in r direction
         call xyz_2_rthetaphi(xp,yp,zp,r_dummy,theta,phi)
+        
+        ! nqdu add
+        call rotate_tensor_radial_to_global(&
+            dble(theta),dble(phi),d11,d12,d13,d14,d15,d16, &
+            d22,d23,d24,d25,d26, &
+            d33,d34,d35,d36,d44,d45,d46,d55,d56,d66, &
+            c11,c12,c13,c14,c15,c16,c22,c23,c24,c25,c26, &
+            c33,c34,c35,c36,c44,c45,c46,c55,c56,c66 &
+        )
 
-        call rotate_aniso_tensor(dble(theta),dble(phi),d11,d12,d13,d14,d15,d16, &
-                            d22,d23,d24,d25,d26, &
-                            d33,d34,d35,d36,d44,d45,d46,d55,d56,d66, &
-                            c11,c12,c13,c14,c15,c16,c22,c23,c24,c25,c26, &
-                            c33,c34,c35,c36,c44,c45,c46,c55,c56,c66)
+        ! call rotate_aniso_tensor(dble(theta),dble(phi),d11,d12,d13,d14,d15,d16, &
+        !                     d22,d23,d24,d25,d26, &
+        !                     d33,d34,d35,d36,d44,d45,d46,d55,d56,d66, &
+        !                     c11,c12,c13,c14,c15,c16,c22,c23,c24,c25,c26, &
+        !                     c33,c34,c35,c36,c44,c45,c46,c55,c56,c66)
 
         c11store(i,j,k,ispec) = real(c11, kind=CUSTOM_REAL)
         c12store(i,j,k,ispec) = real(c12, kind=CUSTOM_REAL)

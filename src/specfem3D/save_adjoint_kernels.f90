@@ -398,9 +398,10 @@ subroutine save_kernels_acoustic(adios_handle)
 
   ! Transverse isotropic paramters
   real(kind=CUSTOM_REAL) :: A,N,C,L,F
-  real(kind=CUSTOM_REAL), dimension(21) :: cijkl_kl_local
+  !real(kind=CUSTOM_REAL), dimension(21) :: cijkl_kl_local
+  double precision :: cijkl_kl_local(21), c_temp(21)
   real(kind=CUSTOM_REAL), dimension(5) :: an_kl
-  real(kind=CUSTOM_REAL) :: xp, yp, zp, r_dummy, theta, phi
+  real(kind=CUSTOM_REAL) :: xp, yp, zp, r_dummy, theta, phi 
 
   logical, parameter :: ISOTROPIC_BULK=.true., &
                         SCALE_RHO_WITH_VS=.false.
@@ -423,9 +424,25 @@ subroutine save_kernels_acoustic(adios_handle)
         yp = ystore(iglob)
         zp = zstore(iglob)
         call xyz_2_rthetaphi(xp,yp,zp,r_dummy,theta,phi)
-        call rotate_kernels_dble(cijkl_kl(:,i,j,k,ispec), &
-              cijkl_kl_local(:), theta, phi)
+        ! call rotate_kernels_dble(cijkl_kl(:,i,j,k,ispec), &
+        !       cijkl_kl_local(:), theta, phi)
         
+        !nqdu add
+        c_temp(:) = cijkl_kl(:,i,j,k,ispec)
+        call rotate_tensor_global_to_radial(dble(theta),dble(phi), &  
+          cijkl_kl_local(1), cijkl_kl_local(2), cijkl_kl_local(3), &
+          cijkl_kl_local(4), cijkl_kl_local(5), cijkl_kl_local(6), &
+          cijkl_kl_local(7), cijkl_kl_local(8), cijkl_kl_local(9), &
+          cijkl_kl_local(10), cijkl_kl_local(11), cijkl_kl_local(12), &
+          cijkl_kl_local(13), cijkl_kl_local(14), cijkl_kl_local(15), &
+          cijkl_kl_local(16), cijkl_kl_local(17), cijkl_kl_local(18), &
+          cijkl_kl_local(19), cijkl_kl_local(20), cijkl_kl_local(21), &
+          c_temp(1), c_temp(2), c_temp(3), c_temp(4), c_temp(5), &
+          c_temp(6), c_temp(7), c_temp(8), c_temp(9), c_temp(10), &
+          c_temp(11), c_temp(12), c_temp(13), c_temp(14), c_temp(15), &
+          c_temp(16), c_temp(17), c_temp(18), c_temp(19), c_temp(20), &
+          c_temp(21) &
+        )
 
         if (SAVE_TRANSVERSE_KL) then
           rhol = rhostore(i,j,k,ispec)
@@ -535,7 +552,7 @@ subroutine save_kernels_acoustic(adios_handle)
           endif
           
         else 
-          c66_local(:,i,j,k,ispec) =  cijkl_kl_local(:) 
+          c66_local(:,i,j,k,ispec) =  real(cijkl_kl_local(:),kind=CUSTOM_REAL)
         
         endif ! SAVE_TRANSVERSE_KL
       enddo;enddo;enddo

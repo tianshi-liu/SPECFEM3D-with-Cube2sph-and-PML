@@ -163,7 +163,7 @@
   ! checks if we over-impose a tomography model by Par_file setting: MODEL = tomo
   if (nundefMat_ext_mesh == 0 .and. IMODEL == IMODEL_TOMO) then
     nmaterials = 1
-  endif
+  endif 
 
   ! data format flag
   allocate(materials_with_q(nmaterials),stat=ier)
@@ -726,6 +726,9 @@ end subroutine init_tomography_files
 
   use generate_databases_par, only: ANISOTROPY
 
+  ! nqdu
+  use constants,only : CUBE2SPH_MESH
+
   implicit none
 
   double precision, intent(in) :: xmesh,ymesh,zmesh
@@ -762,6 +765,11 @@ end subroutine init_tomography_files
   real(kind=CUSTOM_REAL) :: qs1,qs2,qs3,qs4,qs5,qs6,qs7,qs8
   real(kind=CUSTOM_REAL) :: qp_final,qs_final
   real(kind=CUSTOM_REAL) :: L_val
+
+  ! nqdu add for rotation
+  double precision :: d_temp(21),c_temp(21)
+  double precision :: xp,yp,zp
+  real(kind=CUSTOM_REAL) :: r_dummy,theta,phi
 
   ! initializes flag
   has_tomo_value = .false.
@@ -928,6 +936,37 @@ end subroutine init_tomography_files
     ! use trilinear interpolation in cell to define C_ij
     c_final(:) = interpolate_trilinear_array(c1(:),c2(:),c3(:),c4(:),c5(:),c6(:),c7(:),c8(:))
 
+    ! Voigt average
+    vp_model = sqrt(1./3.) * sqrt(0.5 * (c11 + c22) + 2. * c33)/sqrt(rho_model) 
+    vs_model = sqrt(1./3.) * sqrt(c66 + (c44+c55))/sqrt(rho_model) 
+
+    ! rotate to cartesian coordinates if required
+    if(CUBE2SPH_MESH) then 
+      ! set value 
+      xp = real(xmesh,kind=CUSTOM_REAL)
+      yp = real(ymesh,kind=CUSTOM_REAL)
+      zp = real(zmesh,kind=CUSTOM_REAL)
+      d_temp(:) = dble(c_final(:))
+      call xyz_2_rthetaphi(xp,yp,zp,r_dummy,theta,phi)
+      call rotate_tensor_radial_to_global(&
+        dble(theta),dble(phi),d_temp(1), d_temp(2), &
+        d_temp(3), d_temp(4), d_temp(5), d_temp(6), &
+        d_temp(7), d_temp(8), d_temp(9), d_temp(10), &  
+        d_temp(11), d_temp(12), d_temp(13), d_temp(14), &
+        d_temp(15), d_temp(16), d_temp(17), d_temp(18), &
+        d_temp(19), d_temp(20), d_temp(21), &
+        c_temp(1), c_temp(2), c_temp(3), c_temp(4),&
+        c_temp(5), c_temp(6), c_temp(7), c_temp(8), &
+        c_temp(9), c_temp(10), c_temp(11), c_temp(12), &
+        c_temp(13), c_temp(14), c_temp(15), c_temp(16),&
+        c_temp(17), c_temp(18), c_temp(19), c_temp(20), c_temp(21) &
+      )
+
+      ! copy c_temp to c_final
+      c_final(:) = real(c_temp(:),kind=CUSTOM_REAL)
+    endif
+
+    ! copy back
     c11 = c_final(1)
     c12 = c_final(2)
     c13 = c_final(3)
@@ -949,10 +988,6 @@ end subroutine init_tomography_files
     c55 = c_final(19)
     c56 = c_final(20)
     c66 = c_final(21)
-
-    ! Voigt average
-    vp_model = sqrt(1./3.) * sqrt(0.5 * (c11 + c22) + 2. * c33)/sqrt(rho_model) 
-    vs_model = sqrt(1./3.) * sqrt(c66 + (c44+c55))/sqrt(rho_model) 
   
   else 
 

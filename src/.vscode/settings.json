@@ -1,9 +1,16 @@
 {
-    "fortran.linter.modOutput": "/home/nqdu/code/c_fortran/specfem3d-cube2sph//src/.vscode/obj",
-    "fortran.linter.includePaths": ["/home/nqdu/code/c_fortran/specfem3d-cube2sph//setup",
-                                    "/opt/openmpi-5.0.6/include",
-                                    "/opt/openmpi-5.0.6/lib"
+    // "fortran.linter.modOutput": "/home/nqdu/code/c_fortran/specfem3d-cube2sph//src/.vscode/obj",
+    // "fortran.linter.includePaths": ["/home/nqdu/code/c_fortran/specfem3d-cube2sph//setup",
+    //                                 "/opt/openmpi-5.0.6/include",
+    //                                 "/opt/openmpi-5.0.6/lib"
+    //                             ],
+
+    "fortran.linter.modOutput": "~/code/c_fortran/specfem3d-cube2sph//src/.vscode/obj",
+    "fortran.linter.includePaths": ["~/code/c_fortran/specfem3d-cube2sph//setup",
+                                    "/opt/homebrew/Cellar/open-mpi/5.0.7/include",
+                                    "/opt/homebrew/Cellar/open-mpi/5.0.7/lib"
                                 ],
+
     "files.associations": {
         "cctype": "cpp",
         "clocale": "cpp",
