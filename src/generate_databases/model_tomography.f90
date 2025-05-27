@@ -936,6 +936,29 @@ end subroutine init_tomography_files
     ! use trilinear interpolation in cell to define C_ij
     c_final(:) = interpolate_trilinear_array(c1(:),c2(:),c3(:),c4(:),c5(:),c6(:),c7(:),c8(:))
 
+    ! temporay usage
+    c11 = c_final(1)
+    c12 = c_final(2)
+    c13 = c_final(3)
+    c14 = c_final(4)
+    c15 = c_final(5)
+    c16 = c_final(6)
+    c22 = c_final(7)
+    c23 = c_final(8)
+    c24 = c_final(9)
+    c25 = c_final(10)
+    c26 = c_final(11)
+    c33 = c_final(12)
+    c34 = c_final(13)
+    c35 = c_final(14)
+    c36 = c_final(15)
+    c44 = c_final(16)
+    c45 = c_final(17)
+    c46 = c_final(18)
+    c55 = c_final(19)
+    c56 = c_final(20)
+    c66 = c_final(21)
+
     ! Voigt average
     vp_model = sqrt(1./3.) * sqrt(0.5 * (c11 + c22) + 2. * c33)/sqrt(rho_model) 
     vs_model = sqrt(1./3.) * sqrt(c66 + (c44+c55))/sqrt(rho_model) 
@@ -964,31 +987,31 @@ end subroutine init_tomography_files
 
       ! copy c_temp to c_final
       c_final(:) = real(c_temp(:),kind=CUSTOM_REAL)
-    endif
 
-    ! copy back
-    c11 = c_final(1)
-    c12 = c_final(2)
-    c13 = c_final(3)
-    c14 = c_final(4)
-    c15 = c_final(5)
-    c16 = c_final(6)
-    c22 = c_final(7)
-    c23 = c_final(8)
-    c24 = c_final(9)
-    c25 = c_final(10)
-    c26 = c_final(11)
-    c33 = c_final(12)
-    c34 = c_final(13)
-    c35 = c_final(14)
-    c36 = c_final(15)
-    c44 = c_final(16)
-    c45 = c_final(17)
-    c46 = c_final(18)
-    c55 = c_final(19)
-    c56 = c_final(20)
-    c66 = c_final(21)
-  
+      ! copy back
+      c11 = c_final(1)
+      c12 = c_final(2)
+      c13 = c_final(3)
+      c14 = c_final(4)
+      c15 = c_final(5)
+      c16 = c_final(6)
+      c22 = c_final(7)
+      c23 = c_final(8)
+      c24 = c_final(9)
+      c25 = c_final(10)
+      c26 = c_final(11)
+      c33 = c_final(12)
+      c34 = c_final(13)
+      c35 = c_final(14)
+      c36 = c_final(15)
+      c44 = c_final(16)
+      c45 = c_final(17)
+      c46 = c_final(18)
+      c55 = c_final(19)
+      c56 = c_final(20)
+      c66 = c_final(21)
+    
+    endif
   else 
 
     ! Vp
