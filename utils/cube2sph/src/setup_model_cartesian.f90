@@ -70,7 +70,7 @@ program setup_model_cartesian
   !if (myrank == 0) write(*,*) '     reading in: rho.bin'
 
   filename = prname_lp(1:len_trim(prname_lp))//'rho.bin'
-  if (myrank == 0) print *, 'reading ', filename
+  if (myrank == 0) print *, 'reading ', trim(filename)
   open(unit=IIN,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
   if (ier /= 0) then
     print *,'error opening file: ',trim(filename)

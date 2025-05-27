@@ -32,10 +32,10 @@ set(CMAKE_Fortran_MODULE_DIRECTORY ${PROJECT_BINARY_DIR}/obj)
 
 ################# cmake setup #################
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
-if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
+if (CMAKE_C_COMPILER_ID MATCHES  "GNU")
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -g -march=native")
 set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -std=gnu -g -march=native ")
-elseif (CMAKE_C_COMPILER_ID STREQUAL "Intel")
+elseif (CMAKE_C_COMPILER_ID MATCHES "Intel")
   set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -g")
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -xHost -traceback")
 else()
