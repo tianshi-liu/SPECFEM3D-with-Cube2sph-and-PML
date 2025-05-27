@@ -768,7 +768,7 @@ end subroutine init_tomography_files
 
   ! nqdu add for rotation
   double precision :: d_temp(21),c_temp(21)
-  double precision :: xp,yp,zp
+  real(kind=CUSTOM_REAL) :: xp,yp,zp
   real(kind=CUSTOM_REAL) :: r_dummy,theta,phi
 
   ! initializes flag
