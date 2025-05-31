@@ -68,41 +68,43 @@ subroutine model_gll_aniso(myrank,nspec,LOCAL_PATH)
   read(28) rho_read
   close(28)
 
+  !nqdu comment 
+  ! compute vp/vs by voigt average
   ! vp
-  allocate(vp_read(NGLLX,NGLLY,NGLLZ,nspec),stat=ier)
-  if (ier /= 0) call exit_MPI_without_rank('error allocating array 648')
-  if (ier /= 0) stop 'error allocating array vp_read'
+  ! allocate(vp_read(NGLLX,NGLLY,NGLLZ,nspec),stat=ier)
+  ! if (ier /= 0) call exit_MPI_without_rank('error allocating array 648')
+  ! if (ier /= 0) stop 'error allocating array vp_read'
 
-  ! user output
-  if (myrank == 0) write(IMAIN,*) '     reading in: vp.bin'
+  ! ! user output
+  ! if (myrank == 0) write(IMAIN,*) '     reading in: vp.bin'
 
-  filename = prname_lp(1:len_trim(prname_lp))//'vp.bin'
-  open(unit=28,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
-  if (ier /= 0) then
-    print *,'error opening file: ',trim(filename)
-    stop 'error reading vp.bin file'
-  endif
+  ! filename = prname_lp(1:len_trim(prname_lp))//'vp.bin'
+  ! open(unit=28,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
+  ! if (ier /= 0) then
+  !   print *,'error opening file: ',trim(filename)
+  !   stop 'error reading vp.bin file'
+  ! endif
 
-  read(28) vp_read
-  close(28)
+  ! read(28) vp_read
+  ! close(28)
 
-  ! vs
-  allocate(vs_read(NGLLX,NGLLY,NGLLZ,nspec),stat=ier)
-  if (ier /= 0) call exit_MPI_without_rank('error allocating array 649')
-  if (ier /= 0) stop 'error allocating array vs_read'
+  ! ! vs
+  ! allocate(vs_read(NGLLX,NGLLY,NGLLZ,nspec),stat=ier)
+  ! if (ier /= 0) call exit_MPI_without_rank('error allocating array 649')
+  ! if (ier /= 0) stop 'error allocating array vs_read'
 
-  ! user output
-  if (myrank == 0) write(IMAIN,*) '     reading in: vs.bin'
+  ! ! user output
+  ! if (myrank == 0) write(IMAIN,*) '     reading in: vs.bin'
 
-  filename = prname_lp(1:len_trim(prname_lp))//'vs.bin'
-  open(unit=28,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
-  if (ier /= 0) then
-    print *,'error opening file: ',trim(filename)
-    stop 'error reading vs.bin file'
-  endif
+  ! filename = prname_lp(1:len_trim(prname_lp))//'vs.bin'
+  ! open(unit=28,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
+  ! if (ier /= 0) then
+  !   print *,'error opening file: ',trim(filename)
+  !   stop 'error reading vs.bin file'
+  ! endif
 
-  read(28) vs_read
-  close(28)
+  ! read(28) vs_read
+  ! close(28)
 
   ! C21
   if (myrank == 0) write(IMAIN,*) '     reading in: radial cijkl.bin'
@@ -264,6 +266,10 @@ subroutine model_gll_aniso(myrank,nspec,LOCAL_PATH)
         xp = xstore_dummy(iglob)
         yp = ystore_dummy(iglob)
         zp = zstore_dummy(iglob)
+
+        ! voigt_average
+        vp_read(i,j,k,ispec) = sqrt(1./3.) * sqrt(0.5 * (d11 + d22) + 2. * d33)/sqrt(rho_read(i,j,k,ispec)) 
+        vs_read(i,j,k,ispec) = sqrt(1./3.) * sqrt(d66 + (d44+d55))/sqrt(rho_read(i,j,k,ispec)) 
 
         ! now z axis is in r direction
         call xyz_2_rthetaphi(xp,yp,zp,r_dummy,theta,phi)
