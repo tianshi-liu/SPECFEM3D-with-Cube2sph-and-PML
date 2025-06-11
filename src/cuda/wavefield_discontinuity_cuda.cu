@@ -31,7 +31,7 @@
 
 
 
-__global__ void add_acceleration_discontinuity_kernel(
+__global__ static void add_acceleration_discontinuity_kernel(
                                   realw_const_p accel_wd,
                                   realw_const_p mass_in_wd,
                                   const int* boundary_to_iglob_wd,
@@ -51,7 +51,7 @@ __global__ void add_acceleration_discontinuity_kernel(
   }
 }
 
-__global__ void add_traction_discontinuity_kernel(
+__global__ static void add_traction_discontinuity_kernel(
                                   realw_const_p traction_wd,
                                   const int* face_ispec_wd,
                                   const int* face_ijk_wd,

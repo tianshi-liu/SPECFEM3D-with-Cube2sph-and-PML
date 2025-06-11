@@ -30,106 +30,6 @@ kernel_prepare_boundary_matrix (realw* array_val,int ndim,int num_interfaces,
     }
 }
 
-
-// #ifndef USE_CUDA_AWARE_MPI
-
-// extern "C"
-// void sync_accel_bdry_buffers_(long *Mesh_pointer,const int *iphase,realw_p buffer)
-// {
-//     Mesh *mp = (Mesh*)(*Mesh_pointer);
-//     // asynchronous transfer from device to host
-
-//     TRACE("\tsync_accel_bdry_buffers");
-//     if (mp->size_mpi_buffer == 0) return;
-
-//     int blocksize = BLOCKSIZE_TRANSFER;
-//     int recv_stage = (*iphase == 2);
-//     size_t size = mp->size_mpi_buffer* sizeof(realw);
-
-//     int size_padded = mp->max_nibool_interfaces_ext_mesh*NDIM * mp->num_interfaces_ext_mesh;
-//     size_padded = (size_padded + blocksize - 1) / blocksize;
-//     int nx,ny;
-//     get_blocks_xy(size_padded,&nx,&ny);
-//     dim3 grid(nx,ny,1);
-//     dim3 threads(blocksize,1,1);
-
-//     if(recv_stage) {
-//         cudaMemcpyAsync(mp->d_send_accel_buffer,buffer,size,
-//                         cudaMemcpyHostToDevice,mp->compute_stream);
-//         kernel_prepare_boundary_matrix <<<grid,threads,0,mp->compute_stream>>>(
-//             mp->d_accel,NDIM,mp->num_interfaces_ext_mesh,mp->max_nibool_interfaces_ext_mesh,
-//             mp->d_nibool_interfaces_ext_mesh,mp->d_ibool_interfaces_ext_mesh,
-//             mp->d_send_accel_buffer,1
-//         );
-//     }
-//     else {
-
-//         kernel_prepare_boundary_matrix <<<grid,threads,0,mp->compute_stream>>>(
-//             mp->d_accel,NDIM,mp->num_interfaces_ext_mesh,mp->max_nibool_interfaces_ext_mesh,
-//             mp->d_nibool_interfaces_ext_mesh,mp->d_ibool_interfaces_ext_mesh,
-//             mp->d_send_accel_buffer,0
-//         );
-
-//         // waits until previous compute stream finishes
-//         cudaMemcpyAsync(buffer,mp->d_send_accel_buffer,size,
-//                         cudaMemcpyDeviceToHost,mp->compute_stream);
-//         cudaStreamSynchronize(mp->compute_stream);
-//     }
-
-//     cudaDeviceSynchronize();
-
-    
-// }
-
-// extern "C"
-// void sync_ade_bdry_buffers_(long *Mesh_pointer,int *iphase,realw_p buffer)
-// {
-//     Mesh *mp = (Mesh*)(*Mesh_pointer);
-//     // asynchronous transfer from device to host
-
-//     TRACE("\tsync_ade_bdry_buffers");
-//     if (mp->size_mpi_buffer_pml == 0) return;
-
-//     int blocksize = BLOCKSIZE_TRANSFER;
-//     int recv_stage = (*iphase == 2);
-//     size_t size = mp->size_mpi_buffer_pml*sizeof(realw);
-
-//     int size_padded = mp->max_nibool_interfaces_PML*NDIM*NDIM* mp->num_interfaces_PML;
-//     size_padded = (size_padded + blocksize - 1) / blocksize;
-//     int nx,ny;
-//     get_blocks_xy(size_padded,&nx,&ny);
-//     dim3 grid(nx,ny,1);
-//     dim3 threads(blocksize,1,1);
-
-//     if(recv_stage) {
-//         cudaMemcpyAsync(mp->d_buffer_send_matrix_PML,buffer,size,
-//                             cudaMemcpyHostToDevice,mp->compute_stream);
-//         kernel_prepare_boundary_matrix <<<grid,threads,0,mp->compute_stream>>>(
-//             mp->d_Qt_t,NDIM*NDIM,mp->num_interfaces_PML,
-//             mp->max_nibool_interfaces_PML,
-//             mp->d_nibool_interfaces_PML,mp->d_ibool_interfaces_PML,
-//             mp->d_buffer_send_matrix_PML,recv_stage
-//         );
-//     }
-//     else {
-//         kernel_prepare_boundary_matrix <<<grid,threads,0,mp->compute_stream>>>(
-//             mp->d_Qt_t,NDIM*NDIM,mp->num_interfaces_PML,
-//             mp->max_nibool_interfaces_PML,
-//             mp->d_nibool_interfaces_PML,mp->d_ibool_interfaces_PML,
-//             mp->d_buffer_send_matrix_PML,recv_stage
-//         );
-
-//         // waits until previous compute stream finishes
-//         cudaMemcpyAsync(buffer,mp->d_buffer_send_matrix_PML,size,
-//                         cudaMemcpyDeviceToHost,mp->compute_stream);
-//         cudaStreamSynchronize(mp->compute_stream);
-//     }
-
-//     cudaDeviceSynchronize();
-// } 
-
-//#else
-
 /**
  * @brief assemble mpi buffers across different procs
  * @param buf_sd/rv mpi buffers, shape(num_intfs,max_nibool,ndim), it could be host/device memory
@@ -138,10 +38,11 @@ kernel_prepare_boundary_matrix (realw* array_val,int ndim,int num_interfaces,
  * @param nibool shape(num_intfs) no. of points needto exchange for each neighbor
  * @param req_sd/rv MPI asynchronize requests, shape(num_intfs)
  */
-void assemble_asyn_send(int ndim,realw *buf_sd, realw *buf_rv,
-                        int num_intfs,int max_nibool,const int* my_neighbors,
-                        const int *nibool,MPI_Request *req_sd,
-                        MPI_Request *req_rv,int tag)
+static void 
+assemble_asyn_send(int ndim,realw *buf_sd, realw *buf_rv,
+                    int num_intfs,int max_nibool,const int* my_neighbors,
+                    const int *nibool,MPI_Request *req_sd,
+                    MPI_Request *req_rv,int tag)
 {
     for(int it = 0; it < num_intfs; it ++) {
         int iloc = it * max_nibool * ndim;
