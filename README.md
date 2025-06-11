@@ -23,7 +23,7 @@ cmake .. -DCC=gcc -DMPIFC=mpif90  -DENABLE_CUDA=ON
 ```
 By default, the CUDA architecture will be chosen as `native`. If you want to use some user defined number, please open `CMakeLists.txt` and find `set_target_properties(cuda PROPERTIES CUDA_ARCHITECTURES native)`. Then set `native` to the number you want.
 
-The CUDA-Aware MPI technique would facilitate communications.If you want to enable cuda aware mpi, please use:
+The CUDA-Aware MPI technique would facilitate communications. If you want to enable cuda aware mpi, please use:
 ```bash 
 cmake .. -DCC=gcc -DMPIFC=mpif90 -DENABLE_CUDA=ON  \ 
         -DENABLE_CUDA_AWARE=ON
@@ -39,27 +39,27 @@ cmake .. -DCC=gcc -DMPIFC=mpif90
 make -j8
 ```
 
-## Steps
-1. Preparing parameter files (`DATA/Par_file`, `DATA/meshfem3D_files/Mesh_Par_file`) and model files (e.g., interface files, tomographic files)
+## Anisotropic Model Support
+You should provide `c21` model with density in `tomography.xyz`.
+1. Anisotropic models in `proc*_external_mesh.bin` are in cartesian coordinates, i.e. $C_{xxxx}, C_{xyzx}$ 
+2. Anisotropic models in `proc*_c11-c66.bin`, `tomography.xyz` are in radial coordinates,i.e. $C_{rrrr}, C_{r\theta \phi r}$ 
 
-2. Running the internal mesher (or an external mesher) to generate a cube-shaped mesh. In order to properly output the mesh files, the internal mesher needs to be run in serial (NPROCS=1).
+## Steps (EXAMPLES/NED-Model)
+*1.* Preparing parameter files (`DATA/Par_file_initmesh`, `DATA/meshfem3D_files/Mesh_Par_file`) and model files (e.g., interface files, tomographic files). Notes
+- Make should your simulation region is bigger than the study region, which can be tuned in `step0_plot_region.sh`.
+- If teleseismic simulation is required, please make sure the PML boundaries match the `WAVEFIELD_DISCONTINUITY_BOX_*` in `DATA/Par_file_initmesh`. Enable `COUPLE_WITH_INJECTION = .true.` and `INJECTINO_TYPE = 4`.
+- In this step, the `MODEL` parameter should be `default`. If you want to set user defined model, use negative material number, and match the file 
+with `nummaterial_velocity_file_tomo`.
+- For realistic models and topographies, please refer to `create_model`.
 
-3. Running the partitioner to partition the mesh to each processor.
+*2.* Running the internal mesher (or an external mesher) to generate a cube-shaped mesh. In order to properly output the mesh files, the internal mesher needs to be run in serial (NPROCS=1). Then run `step1_run_mesher.sh`, set the target `NPROC`. 
 
-4. Generating database for the cube-shaped mesh. This database is not used by the solver. This step aims to output the GLL model files and PML parameter files that are used in the next step.
+*3.* Set the `lat lon rotate_angle` of the center of the study region (which can be printed from `step0_plot_region.sh`) in `step2_slurm_cube2sph.sh`, MPI is required in this step. Do not change anything in `Cube2sph_model_par` except the ellipticity.
 
-5. Performing the "cubed sphere" transformation to generate a new mesh with curvature. This program reads the `proc*_Database` files of the cube-shaped mesh, and outputs the `proc*_Database` files of the deformed mesh. In this step, the users also have the option to do some SPECFEM3D\_GLOBE-style node stretching, and replace the GLL model with some pre-defined model (currently, we offer PREM, IASP91, S40RTS, and IRIS EMC NetCDF models) by properly setting the `Cube2sph_model_par` file. If curvilinear PML is used, this step also outputs PML-related files.
+*4.* Prepare `STATIONS`, `CMTSOLUTION` and `FORCESOLUTION`. All these files should be rotated to Cartesian coordinates by routines in `utils/cube2sph/bin/write*`. For teleseismic simulation, you need an empty `FORCESOLUTION`.
 
-6. Generating database for the deformed mesh. This will be the database used by the solver.
+*5.* (optional) Prepare Injection wavefields, which can be handled by [AxiSEMLib](https://github.com/nqdu/AxiSEMLib/tree/main).
 
-7. Performing rotation for source and receivers files.
+*6.* Launching the SPECFEM3D solver.
 
-8. Launching the SPECFEM3D solver.
-
-9. Performing rotation for the seismograms.
-
-Examples provided in `utils/cube2sph/cube2sph_examples` directory:
-- `pml_prem`: PML with PREM-onecrust model on a 20\*20 degrees domain
-- `stacey_prem`: Stacey boundary condition with PML-onecrust model on a 20\*20 degrees domain
-- `alaska_example`: mesh with surface and Moho topography and 3D tomographic model on a 22\*22 degrees domain
-- `northeast_china`: example for wavefield injection using Cube2sph-AxiSEM coupling (under development)
+*7.* Performing rotation for the seismograms.

@@ -32,7 +32,7 @@ subroutine setup_gll_model_cartesian(xstore,ystore,zstore,rho_new,&
   !if (myrank == 0) write(*,*) '     reading in: rho.bin'
 
   filename = prname_lp(1:len_trim(prname_lp))//'rho.bin'
-  if (myrank == 0) print *, 'reading ', filename
+  if (myrank == 0) print *, 'reading ', trim(filename)
   open(unit=IIN,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
   if (ier /= 0) then
     print *,'error opening file: ',trim(filename)
@@ -50,7 +50,7 @@ subroutine setup_gll_model_cartesian(xstore,ystore,zstore,rho_new,&
   !if (myrank == 0) write(*,*) '     reading in: vp.bin'
 
   filename = prname_lp(1:len_trim(prname_lp))//'vp.bin'
-  if (myrank == 0) print *, 'reading ', filename
+  if (myrank == 0) print *, 'reading ', trim(filename)
   open(unit=IIN,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
   if (ier /= 0) then
     print *,'error opening file: ',trim(filename)
@@ -68,7 +68,7 @@ subroutine setup_gll_model_cartesian(xstore,ystore,zstore,rho_new,&
   !if (myrank == 0) write(*,*) '     reading in: vs.bin'
 
   filename = prname_lp(1:len_trim(prname_lp))//'vs.bin'
-  if (myrank == 0) print *, 'reading ', filename
+  if (myrank == 0) print *, 'reading ', trim(filename)
   open(unit=IIN,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
   if (ier /= 0) then
     print *,'error opening file: ',trim(filename)

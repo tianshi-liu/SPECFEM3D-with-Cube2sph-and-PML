@@ -245,7 +245,6 @@
                                c22,c23,c24,c25,c26,c33, &
                                c34,c35,c36,c44,c45,c46,c55,c56,c66, &
                                ANISOTROPY)
-
           ! stores velocity model
           if (idomain_id == IDOMAIN_ACOUSTIC .or. idomain_id == IDOMAIN_ELASTIC) then
 
@@ -501,7 +500,9 @@
                        rho,vp,vs, &
                        iflag_aniso,qkappa_atten,qmu_atten,idomain_id, &
                        rho_s,kappa_s,rho_f,kappa_f,eta_f,kappa_fr,mu_fr, &
-                       phi,tort,kxx,kxy,kxz,kyy,kyz,kzz)
+                       phi,tort,kxx,kxy,kxz,kyy,kyz,kzz,&
+                        c11,c12,c13,c14,c15,c16,c22,c23,c24,c25,c26,c33,&
+                      c34,c35,c36,c44,c45,c46,c55,c56,c66)
 
 ! *********************************************************************************
 ! added by Ping Tong (TP / Tong Ping) for the FK3D calculation
@@ -620,7 +621,10 @@
 
   case (IMODEL_TOMO)
     ! gets model values from tomography file
-    call model_tomography(xmesh,ymesh,zmesh,rho,vp,vs,qkappa_atten,qmu_atten,imaterial_id,has_tomo_value)
+    call model_tomography(xmesh,ymesh,zmesh,rho,vp,vs,&
+                          qkappa_atten,qmu_atten,c11,c12,c13,c14,c15,&
+                          c16,c22,c23,c24,c25,c26,c33,c34,c35,c36,c44,&
+                          c45,c46,c55,c56,c66,imaterial_id,has_tomo_value)
 
     ! in case no tomography value defined for this region, fall back to defaults
     if (.not. has_tomo_value) then
@@ -641,7 +645,9 @@
                        xmesh,ymesh,zmesh,rho,vp,vs, &
                        iflag_aniso,qkappa_atten,qmu_atten,idomain_id, &
                        rho_s,kappa_s,rho_f,kappa_f,eta_f,kappa_fr,mu_fr, &
-                       phi,tort,kxx,kxy,kxz,kyy,kyz,kzz)
+                       phi,tort,kxx,kxy,kxz,kyy,kyz,kzz,&
+                      c11,c12,c13,c14,c15,c16,c22,c23,c24,c25,c26,c33,&
+                      c34,c35,c36,c44,c45,c46,c55,c56,c66)
 
     ! user model from external routine
     ! adds/gets velocity model as specified in model_external_values.f90
@@ -657,7 +663,7 @@
   end select
 
   ! adds anisotropic default model
-  if (ANISOTROPY) then
+  if (ANISOTROPY .and. (IMODEL /= IMODEL_DEFAULT) .and. (IMODEL /= IMODEL_TOMO)) then
     call model_aniso(iflag_aniso,rho,vp,vs, &
                     c11,c12,c13,c14,c15,c16, &
                     c22,c23,c24,c25,c26,c33, &

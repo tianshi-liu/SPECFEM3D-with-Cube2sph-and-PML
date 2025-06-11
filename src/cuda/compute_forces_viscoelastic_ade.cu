@@ -3,7 +3,7 @@
 #include "utils.cuh"
 
 
-__device__ __forceinline__ void 
+__device__ __forceinline__ static void 
 add_displ_discontinuity(int ispec,int tx,realw_const_p displ_wd,const int* ibool_wd,
                        const int *ispec_to_elem_wd,realw *ux,realw *uy,
                       realw* uz)
@@ -109,7 +109,7 @@ compute_stress(int ANISOTROPY,const realw* d_c11store,const realw* d_c12store,co
 /**
  * sig[1-6]: xx,xy,xz,yy,yz,zz
  */
-__device__ __forceinline__ void 
+__device__ __forceinline__ static void 
 compute_sigma_adepml(int ispec,int i,int j,int k,int ANISO,
                     const realw* d_c11store,const realw* d_c12store,const realw* d_c13store,
                     const realw* d_c14store,const realw* d_c15store,const realw* d_c16store,
@@ -256,7 +256,7 @@ compute_sigma_adepml(int ispec,int i,int j,int k,int ANISO,
   #undef Rmatinv
 }
 
-__device__ __forceinline__ void 
+__device__ __forceinline__ static void 
 compute_Qu_t_point(int ispec,int i,int j,int k,
                   realw duxdxl, realw duydxl, realw duzdxl, 
                   realw duxdyl, realw duydyl, realw duzdyl,
@@ -298,7 +298,7 @@ compute_Qu_t_point(int ispec,int i,int j,int k,
 }
 
 
-__device__ __forceinline__ void 
+__device__ __forceinline__ static void 
 compute_Qt_t(int ispec,int i,int j,int k,int tid,
              realw_const_p temp,realw fac1,
              realw fac2,realw fac3,
@@ -504,7 +504,7 @@ compute_Qt_t(int ispec,int i,int j,int k,int tid,
 }
 
 
-__device__ __forceinline__ void  
+__device__ __forceinline__ static void  
 mxm_3op(int i,int j,int k,realw_const_p hprimewgll,
         realw_const_p ux,realw_const_p uy,
         realw_const_p uz,realw_p tempx,realw_p tempy,
@@ -521,7 +521,7 @@ mxm_3op(int i,int j,int k,realw_const_p hprimewgll,
   *tempz = sz;
 }
 
-__device__ __forceinline__ void 
+__device__ __forceinline__ static void 
 compute_newcomp(realw_p sh_tempx,realw_p sh_tempy,realw_p sh_tempz,
                realw_p sh_hprimewgll_xx,realw sigma_xx,realw sigma_xy,
                realw sigma_xz,realw sigma_yy,realw sigma_yz,
@@ -967,7 +967,7 @@ compute_newcomp(realw_p sh_tempx,realw_p sh_tempy,realw_p sh_tempz,
   newtemp_adepml[2*N+17] = uz;
 }
 
-__device__ __forceinline__ void 
+__device__ __forceinline__ static void 
 compute_accel_adepml(int ispec,int i,int j,int k,realw_const_p temp,
                     realw fac1,realw fac2,realw fac3,realw_const_p r_trans, 
                     realw_const_p r_trans_inv, realw_const_p pml_kappa,
@@ -1070,7 +1070,7 @@ compute_accel_adepml(int ispec,int i,int j,int k,realw_const_p temp,
   #undef ri3zl
 }
 
-__device__ __forceinline__ void 
+__device__ __forceinline__ static void 
 add_pml_physical_contribution(int ispec_pml,const int *phy_spec,
                               const int *phy_ijk,const int *ibool_CPML,
                               realw_const_p phy_norm,realw_const_p rtrans,
@@ -1171,7 +1171,7 @@ add_pml_physical_contribution(int ispec_pml,const int *phy_spec,
 }
 
 // nqdu added ADE-PML kernels
-__global__ void 
+__global__ static void 
 kernel_forces_adepml(int nb_blocks_to_compute,
                       const int* d_ibool,
                      const int* d_phase_ispec_inner_elastic,

@@ -287,7 +287,7 @@
     write(IOUT) ibool_interfaces_ext_mesh_dummy
   endif
 
-! anisotropy
+  ! anisotropy
   if (ELASTIC_SIMULATION .and. ANISOTROPY) then
     !! TL: add output of kappav and muv, to compute anisotropic kernels
     write(IOUT) kappavstore
@@ -420,6 +420,7 @@
 ! outputs binary files for single mesh parameters (for example vp, vs, rho, ..)
 
   use generate_databases_par, only: myrank,NGLLX,NGLLY,NGLLZ,NGLLSQUARE,IMAIN,IOUT,FOUR_THIRDS
+  use generate_databases_par, only: ANISOTROPY
 
   ! MPI interfaces
   use generate_databases_par, only: nibool_interfaces_ext_mesh,ibool_interfaces_ext_mesh,num_interfaces_ext_mesh
@@ -531,6 +532,118 @@
   if (ier /= 0) stop 'error opening file rho.bin'
   write(IOUT) v_tmp
   close(IOUT)
+
+  ! anisotropy
+  if(ANISOTROPY) then 
+    ! convert to local coordinates 
+    call rotate_c66_global_to_radial_store()
+    
+    ! write GLL files
+    open(unit=IOUT,file=prname(1:len_trim(prname))//'c11.bin',status='unknown',form='unformatted',iostat=ier)
+    if (ier /= 0) stop 'error opening file c11.bin'
+    write(IOUT) c11store
+    close(IOUT)
+
+    open(unit=IOUT,file=prname(1:len_trim(prname))//'c12.bin',status='unknown',form='unformatted',iostat=ier)
+    if (ier /= 0) stop 'error opening file c12.bin'
+    write(IOUT) c12store
+    close(IOUT)
+
+    open(unit=IOUT,file=prname(1:len_trim(prname))//'c13.bin',status='unknown',form='unformatted',iostat=ier)
+    if (ier /= 0) stop 'error opening file c13.bin'
+    write(IOUT) c13store
+    close(IOUT)
+
+    open(unit=IOUT,file=prname(1:len_trim(prname))//'c14.bin',status='unknown',form='unformatted',iostat=ier)
+    if (ier /= 0) stop 'error opening file c14.bin'
+    write(IOUT) c14store
+    close(IOUT)
+
+    open(unit=IOUT,file=prname(1:len_trim(prname))//'c15.bin',status='unknown',form='unformatted',iostat=ier)
+    if (ier /= 0) stop 'error opening file c15.bin'
+    write(IOUT) c15store
+    close(IOUT)
+
+    open(unit=IOUT,file=prname(1:len_trim(prname))//'c16.bin',status='unknown',form='unformatted',iostat=ier)
+    if (ier /= 0) stop 'error opening file c16.bin'
+    write(IOUT) c16store
+    close(IOUT)
+
+    open(unit=IOUT,file=prname(1:len_trim(prname))//'c22.bin',status='unknown',form='unformatted',iostat=ier)
+    if (ier /= 0) stop 'error opening file c22.bin'
+    write(IOUT) c22store
+    close(IOUT)
+
+    open(unit=IOUT,file=prname(1:len_trim(prname))//'c23.bin',status='unknown',form='unformatted',iostat=ier)
+    if (ier /= 0) stop 'error opening file c23.bin'
+    write(IOUT) c23store
+    close(IOUT)
+
+    open(unit=IOUT,file=prname(1:len_trim(prname))//'c24.bin',status='unknown',form='unformatted',iostat=ier)
+    if (ier /= 0) stop 'error opening file c24.bin'
+    write(IOUT) c24store
+    close(IOUT)
+
+    open(unit=IOUT,file=prname(1:len_trim(prname))//'c25.bin',status='unknown',form='unformatted',iostat=ier)
+    if (ier /= 0) stop 'error opening file c25.bin'
+    write(IOUT) c25store
+    close(IOUT)
+
+    open(unit=IOUT,file=prname(1:len_trim(prname))//'c26.bin',status='unknown',form='unformatted',iostat=ier)
+    if (ier /= 0) stop 'error opening file c26.bin'
+    write(IOUT) c26store
+    close(IOUT)
+
+    open(unit=IOUT,file=prname(1:len_trim(prname))//'c33.bin',status='unknown',form='unformatted',iostat=ier)
+    if (ier /= 0) stop 'error opening file c33.bin'
+    write(IOUT) c33store
+    close(IOUT)
+
+    open(unit=IOUT,file=prname(1:len_trim(prname))//'c34.bin',status='unknown',form='unformatted',iostat=ier)
+    if (ier /= 0) stop 'error opening file c34.bin'
+    write(IOUT) c34store
+    close(IOUT)
+
+    open(unit=IOUT,file=prname(1:len_trim(prname))//'c35.bin',status='unknown',form='unformatted',iostat=ier)
+    if (ier /= 0) stop 'error opening file c35.bin'
+    write(IOUT) c35store
+    close(IOUT)
+
+    open(unit=IOUT,file=prname(1:len_trim(prname))//'c36.bin',status='unknown',form='unformatted',iostat=ier)
+    if (ier /= 0) stop 'error opening file c36.bin'
+    write(IOUT) c36store
+    close(IOUT)
+
+    open(unit=IOUT,file=prname(1:len_trim(prname))//'c44.bin',status='unknown',form='unformatted',iostat=ier)
+    if (ier /= 0) stop 'error opening file c44.bin'
+    write(IOUT) c44store
+    close(IOUT)
+
+    open(unit=IOUT,file=prname(1:len_trim(prname))//'c45.bin',status='unknown',form='unformatted',iostat=ier)
+    if (ier /= 0) stop 'error opening file c45.bin'
+    write(IOUT) c45store
+    close(IOUT)
+
+    open(unit=IOUT,file=prname(1:len_trim(prname))//'c46.bin',status='unknown',form='unformatted',iostat=ier)
+    if (ier /= 0) stop 'error opening file c46.bin'
+    write(IOUT) c46store
+    close(IOUT)
+
+    open(unit=IOUT,file=prname(1:len_trim(prname))//'c55.bin',status='unknown',form='unformatted',iostat=ier)
+    if (ier /= 0) stop 'error opening file c55.bin'
+    write(IOUT) c55store
+    close(IOUT)
+
+    open(unit=IOUT,file=prname(1:len_trim(prname))//'c56.bin',status='unknown',form='unformatted',iostat=ier)
+    if (ier /= 0) stop 'error opening file c56.bin'
+    write(IOUT) c56store
+    close(IOUT)
+
+    open(unit=IOUT,file=prname(1:len_trim(prname))//'c66.bin',status='unknown',form='unformatted',iostat=ier)
+    if (ier /= 0) stop 'error opening file c66.bin'
+    write(IOUT) c66store
+    close(IOUT)
+  endif
 
   ! attenuation
   ! shear attenuation Qmu
@@ -823,3 +936,89 @@
   close(IOUT)
 
   end subroutine save_arrays_solver_injection_boundary
+
+
+  subroutine rotate_c66_global_to_radial_store()
+  
+    use constants,only : NGLLX,NGLLY,NGLLZ,CUSTOM_REAL 
+    use create_regions_mesh_ext_par,only : xstore_dummy, ystore_dummy,zstore_dummy 
+    use generate_databases_par,only : ibool,NSPEC_AB
+    use create_regions_mesh_ext_par, only : c11store,c12store,c13store,&
+    c14store, c15store, c16store, c22store, c23store, c24store, &
+    c25store, c26store, c33store, c34store, c35store, c36store, &
+    c44store, c45store, c46store, c55store, c56store, c66store
+
+    implicit none
+
+    ! local 
+    double precision :: d_temp(21),c_temp(21)
+    integer :: i,j,k,ispec,iglob 
+    real(kind=CUSTOM_REAL) :: r_dummy,theta,phi
+
+    do ispec = 1, NSPEC_AB
+      do i=1,NGLLX; do j=1,NGLLY; do k=1,NGLLZ;
+        iglob = ibool(i,j,k,ispec)
+        call xyz_2_rthetaphi(xstore_dummy(iglob),ystore_dummy(iglob),&
+                              zstore_dummy(iglob),r_dummy,theta,phi)
+        c_temp(1 ) = c11store(i,j,k,ispec)
+        c_temp(2 ) = c12store(i,j,k,ispec)
+        c_temp(3 ) = c13store(i,j,k,ispec)
+        c_temp(4 ) = c14store(i,j,k,ispec)
+        c_temp(5 ) = c15store(i,j,k,ispec)
+        c_temp(6 ) = c16store(i,j,k,ispec)
+        c_temp(7 ) = c22store(i,j,k,ispec)
+        c_temp(8 ) = c23store(i,j,k,ispec)
+        c_temp(9 ) = c24store(i,j,k,ispec)
+        c_temp(10) = c25store(i,j,k,ispec)
+        c_temp(11) = c26store(i,j,k,ispec)
+        c_temp(12) = c33store(i,j,k,ispec)
+        c_temp(13) = c34store(i,j,k,ispec)
+        c_temp(14) = c35store(i,j,k,ispec)
+        c_temp(15) = c36store(i,j,k,ispec)
+        c_temp(16) = c44store(i,j,k,ispec)
+        c_temp(17) = c45store(i,j,k,ispec)
+        c_temp(18) = c46store(i,j,k,ispec)
+        c_temp(19) = c55store(i,j,k,ispec)
+        c_temp(20) = c56store(i,j,k,ispec)
+        c_temp(21) = c66store(i,j,k,ispec)
+
+        call rotate_tensor_global_to_radial(&
+          dble(theta),dble(phi),d_temp(1), d_temp(2), &
+            d_temp(3), d_temp(4), d_temp(5), d_temp(6), &
+            d_temp(7), d_temp(8), d_temp(9), d_temp(10), &  
+            d_temp(11), d_temp(12), d_temp(13), d_temp(14), &
+            d_temp(15), d_temp(16), d_temp(17), d_temp(18), &
+            d_temp(19), d_temp(20), d_temp(21),&
+            c_temp(1), c_temp(2), c_temp(3), c_temp(4),&
+            c_temp(5), c_temp(6), c_temp(7), c_temp(8), &
+            c_temp(9), c_temp(10), c_temp(11), c_temp(12), &
+            c_temp(13), c_temp(14), c_temp(15), c_temp(16),&
+            c_temp(17), c_temp(18), c_temp(19), c_temp(20), c_temp(21)&
+        )
+        
+        ! copy back 
+        c11store(i,j,k,ispec) = real(d_temp(1 ),kind=CUSTOM_REAL)
+        c12store(i,j,k,ispec) = real(d_temp(2 ),kind=CUSTOM_REAL)
+        c13store(i,j,k,ispec) = real(d_temp(3 ),kind=CUSTOM_REAL)
+        c14store(i,j,k,ispec) = real(d_temp(4 ),kind=CUSTOM_REAL)
+        c15store(i,j,k,ispec) = real(d_temp(5 ),kind=CUSTOM_REAL)
+        c16store(i,j,k,ispec) = real(d_temp(6 ),kind=CUSTOM_REAL)
+        c22store(i,j,k,ispec) = real(d_temp(7 ),kind=CUSTOM_REAL)
+        c23store(i,j,k,ispec) = real(d_temp(8 ),kind=CUSTOM_REAL)
+        c24store(i,j,k,ispec) = real(d_temp(9 ),kind=CUSTOM_REAL)
+        c25store(i,j,k,ispec) = real(d_temp(10),kind=CUSTOM_REAL)
+        c26store(i,j,k,ispec) = real(d_temp(11),kind=CUSTOM_REAL)
+        c33store(i,j,k,ispec) = real(d_temp(12),kind=CUSTOM_REAL)
+        c34store(i,j,k,ispec) = real(d_temp(13),kind=CUSTOM_REAL)
+        c35store(i,j,k,ispec) = real(d_temp(14),kind=CUSTOM_REAL)
+        c36store(i,j,k,ispec) = real(d_temp(15),kind=CUSTOM_REAL)
+        c44store(i,j,k,ispec) = real(d_temp(16),kind=CUSTOM_REAL)
+        c45store(i,j,k,ispec) = real(d_temp(17),kind=CUSTOM_REAL)
+        c46store(i,j,k,ispec) = real(d_temp(18),kind=CUSTOM_REAL)
+        c55store(i,j,k,ispec) = real(d_temp(19),kind=CUSTOM_REAL)
+        c56store(i,j,k,ispec) = real(d_temp(20),kind=CUSTOM_REAL)
+        c66store(i,j,k,ispec) = real(d_temp(21),kind=CUSTOM_REAL)
+
+      enddo; enddo; enddo;
+    enddo
+  end subroutine rotate_c66_global_to_radial_store
