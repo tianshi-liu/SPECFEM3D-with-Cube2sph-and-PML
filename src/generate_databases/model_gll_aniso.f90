@@ -73,36 +73,36 @@ subroutine model_gll_aniso(myrank,nspec,LOCAL_PATH)
   if (ier /= 0) call exit_MPI_without_rank('error allocating array 648')
   if (ier /= 0) stop 'error allocating array vp_read'
 
-  ! user output
-  if (myrank == 0) write(IMAIN,*) '     reading in: vp.bin'
+  ! ! user output
+  ! if (myrank == 0) write(IMAIN,*) '     reading in: vp.bin'
 
-  filename = prname_lp(1:len_trim(prname_lp))//'vp.bin'
-  open(unit=28,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
-  if (ier /= 0) then
-    print *,'error opening file: ',trim(filename)
-    stop 'error reading vp.bin file'
-  endif
+  ! filename = prname_lp(1:len_trim(prname_lp))//'vp.bin'
+  ! open(unit=28,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
+  ! if (ier /= 0) then
+  !   print *,'error opening file: ',trim(filename)
+  !   stop 'error reading vp.bin file'
+  ! endif
 
-  read(28) vp_read
-  close(28)
+  ! read(28) vp_read
+  ! close(28)
 
   ! vs
   allocate(vs_read(NGLLX,NGLLY,NGLLZ,nspec),stat=ier)
   if (ier /= 0) call exit_MPI_without_rank('error allocating array 649')
   if (ier /= 0) stop 'error allocating array vs_read'
 
-  ! user output
-  if (myrank == 0) write(IMAIN,*) '     reading in: vs.bin'
+  ! ! user output
+  ! if (myrank == 0) write(IMAIN,*) '     reading in: vs.bin'
 
-  filename = prname_lp(1:len_trim(prname_lp))//'vs.bin'
-  open(unit=28,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
-  if (ier /= 0) then
-    print *,'error opening file: ',trim(filename)
-    stop 'error reading vs.bin file'
-  endif
+  ! filename = prname_lp(1:len_trim(prname_lp))//'vs.bin'
+  ! open(unit=28,file=trim(filename),status='old',action='read',form='unformatted',iostat=ier)
+  ! if (ier /= 0) then
+  !   print *,'error opening file: ',trim(filename)
+  !   stop 'error reading vs.bin file'
+  ! endif
 
-  read(28) vs_read
-  close(28)
+  ! read(28) vs_read
+  ! close(28)
 
   ! C21
   if (myrank == 0) write(IMAIN,*) '     reading in: radial cijkl.bin'
@@ -232,6 +232,12 @@ subroutine model_gll_aniso(myrank,nspec,LOCAL_PATH)
   if (ier /= 0) stop 'error opening file c66.bin'
   read(28) c66store
   close(28)
+
+
+  ! voigt_average
+  if(myrank == 0) write(IMAIN,*) '     get vp/vs by Voigt averaging ...'
+  vp_read = sqrt(1./3.) * sqrt(0.5 * (c11store + c22store) + 2. * c33store)/sqrt(rho_read) 
+  vs_read = sqrt(1./3.) * sqrt(c66store + (c44store+c55store))/sqrt(rho_read) 
 
   eta_anistore = 1.
 

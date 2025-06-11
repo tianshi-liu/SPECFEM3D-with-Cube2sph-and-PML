@@ -1,6 +1,6 @@
 #include "mesh_constants_cuda.h"
 
-__global__ void 
+__global__ static void 
 kernel_update_adepml_accel(const int *CPML_to_glob,int nglob_CPML,
                           const realw *Qt,const realw* rvolume,
                           realw *__restrict__ accel)
@@ -37,7 +37,7 @@ void include_adepml_accel_aux_device_(long *Mesh_pointer)
 
 }
 
-__global__ void 
+__global__ static void 
 kernel_update_Qu_conv(const realw *coeff_exp1, const realw* coeff_exp2,
                         int nspec_CPML, const realw* Qu_t,realw* __restrict__ Qu)
 {
@@ -54,36 +54,6 @@ kernel_update_Qu_conv(const realw *coeff_exp1, const realw* coeff_exp2,
         }
     }
 }
-
-// __global__ void 
-// kernel_update_Qu_conv2(int nspec_CPML, realw* __restrict__ Qu_t)
-// {
-//     uint idx = threadIdx.x + (blockIdx.x + blockIdx.y*gridDim.x)*blockDim.x;
-//     const uint N = nspec_CPML * NDIM * NDIM * NGLL3;
-//     if(idx < N){
-//         Qu_t[idx] = 0.;
-//     }
-// }
-
-
-// __global__ void 
-// kernel_update_Qu_conv(const realw *coeff_exp1, const realw* coeff_exp2,int nspec_CPML,
-//                       realw* __restrict__ Qu,realw* __restrict__ Qu_t)
-// {
-//     int idx = blockIdx.x + gridDim.x*blockIdx.y; // = 
-//     int igll3 = threadIdx.x;
-//     int ispec_CPML = idx / NDIM, idim = idx % NDIM;
-//     if(ispec_CPML < nspec_CPML && idim < NDIM && igll3 < NGLL3){
-//         // Qu(3,3,NGLL3,nspec_CPML) coeff(3,NGLL3,nspec_CPML)
-//         for(int i = 0; i < NDIM; i ++) {
-//             int idx_q = ((ispec_CPML * NGLL3 + igll3) * NDIM + i) * NDIM + idim;
-//             int idx_c = (ispec_CPML * NGLL3 + igll3) * NDIM + idim;
-//             Qu[idx_q] = Qu[idx_q] * coeff_exp1[idx_c] + 
-//                         Qu_t[idx_q] * coeff_exp2[idx_c];
-//             Qu_t[idx_q] = 0.f;
-//         }
-//     }
-// }
 
 extern "C"
 void update_qu_conv_device_(long *Mesh_pointer)
@@ -144,42 +114,6 @@ kernel_update_Qt_conv2(int nglob_CPML, const realw *coeff_glob_exp1,
         }
     }
 }
-
-
-// __global__ void 
-// kernel_update_Qt_conv(int nglob_CPML, const realw *coeff_glob_exp1,
-//                         const realw* coeff_glob_exp2,const realw* rvolume,
-//                         realw* __restrict__ Qt,
-//                         realw* __restrict__ Qt_t)
-// {
-//     int i = threadIdx.x + blockDim.x * blockIdx.x;
-//     if(i >= nglob_CPML )  return;
-
-//     // Apply rvolume scaling: Qt_t(:,:,i) *= rvolume(i)
-//     for (int j = 0; j < NDIM; j++) {
-//         for (int k = 0; k < NDIM; k++) {
-//             int index = j + k * NDIM + i * NDIM*NDIM; // Column-major indexing
-//             Qt_t[index] *= rvolume[i];
-//         }
-//     }
-
-//     // Compute Qt update: Qt(:,i,:) = Qt(:,i,:) * coeff_glob_exp1(:,i) + coeff_glob_exp2(:,i) * Qt_t(:,i,:)
-//     for (int j = 0; j < NDIM; j++) {
-//         for (int k = 0; k < NDIM; k++) {
-//             int index = j + k * NDIM + i * NDIM*NDIM; // Column-major indexing
-//             Qt[index] = Qt[index] * coeff_glob_exp1[j + i * NDIM] + 
-//                         coeff_glob_exp2[j + i * NDIM] * Qt_t[index];
-//         }
-//     }
-
-//     // Reset Qt_t to zero: Qt_t(:,:,:) = 0.0
-//     for (int j = 0; j < NDIM; j++) {
-//         for (int k = 0; k < NDIM; k++) {
-//             int index = j + k * NDIM + i * NDIM*NDIM;; // Column-major indexing
-//             Qt_t[index] = 0.0f;
-//         }
-//     }
-// }
 
 extern "C" void
 update_qt_conv_device_(long *Mesh_pointer)
