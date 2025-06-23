@@ -1,7 +1,7 @@
 source module_load
 mkdir -p bin/ obj/
-FC=ifort
-CC=icc
+FC=gfortran
+CC=gcc
 echo "-------------------------------------------"
 echo "Configuring SPECFEM with ${CC} and ${FC}"
 echo "-------------------------------------------"
@@ -37,6 +37,7 @@ cd utils/cube2sph
 sed -i "/^FC=/c\FC=${FC}" Makefile
 sed -i "/^CC=/c\CC=${CC}" Makefile
 sed -i "/^NCDFCFLAGS=/c\NCDFCFLAGS=" Makefile
+sed -i "/^NCDFLDFLAGS=/c\NCDFLDFLAGS=" Makefile
 mkdir -p bin/ obj/
 make clean
 make all
