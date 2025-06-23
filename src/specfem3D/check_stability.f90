@@ -90,16 +90,6 @@
       ! way 2: just get maximum of field from GPU
       call get_norm_elastic_from_device(Usolidnorm,Mesh_pointer,1)
     else
-      do igll = 1, NGLOB_AB
-        if (isnan(displ(1,igll)).or.isnan(displ(2,igll)).or.&
-                isnan(displ(3,igll))) then
-          print *, 'nan igll = ', igll, ' myrank = ', myrank, ' tstep= ', it
-        endif
-        if (max(displ(1,igll),displ(2,igll),displ(3,igll)) > &
-                STABILITY_THRESHOLD) then
-          print *, 'unstable igll = ', igll, ' myrank = ', myrank, 'tstep= ', it
-        endif
-      enddo
       Usolidnorm = maxval(sqrt(displ(1,:)**2 + displ(2,:)**2 + displ(3,:)**2))
     endif
 
