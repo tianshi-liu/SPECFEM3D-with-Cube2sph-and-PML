@@ -8,7 +8,7 @@ program create_slice
   logical, parameter :: USE_GLL_POINTS = .true.
   logical, parameter :: LINEAR_INTERP = .true.
   !logical, parameter :: normalize = .true.
-  integer, parameter :: MAX_POINTS_IN_SLICE = 10000000
+  integer, parameter :: MAX_POINTS_IN_SLICE = 20000000
   integer, dimension(:), allocatable :: iaddx, iaddy, iaddz
   double precision, dimension(:), allocatable :: shape3D
   double precision, dimension(NGLLX) :: hxis, hpxis

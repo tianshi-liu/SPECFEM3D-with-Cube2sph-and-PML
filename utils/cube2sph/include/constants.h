@@ -110,12 +110,12 @@
 
 !---  ETOPO4 4-minute model
 ! size of topography and bathymetry file
-  integer, parameter :: NX_BATHY = 5400,NY_BATHY = 2700
+!  integer, parameter :: NX_BATHY = 5400,NY_BATHY = 2700
 ! resolution of topography file in minutes
-  integer, parameter :: RESOLUTION_TOPO_FILE = 4
+!  integer, parameter :: RESOLUTION_TOPO_FILE = 4
 ! pathname of the topography file
 ! character (len=*), parameter :: PATHNAME_TOPO_FILE = 'DATA/topo_bathy/topo_bathy_etopo4_from_etopo2_subsampled.bin'
-  character (len=*), parameter :: PATHNAME_TOPO_FILE = 'DATA/topo_bathy/topo_bathy_etopo4_smoothed_window_7.bin'
+!  character (len=*), parameter :: PATHNAME_TOPO_FILE = 'DATA/topo_bathy/topo_bathy_etopo4_smoothed_window_7.bin'
 
 !--- ETOPO2 2-minute model
 ! size of topography and bathymetry file
@@ -132,11 +132,11 @@
 
 !--- ETOPO1 1-minute model
 ! size of topography and bathymetry file
-! integer, parameter :: NX_BATHY = 21600,NY_BATHY = 10800
+ integer, parameter :: NX_BATHY = 21600,NY_BATHY = 10800
 ! resolution of topography file in minutes
-! integer, parameter :: RESOLUTION_TOPO_FILE = 1
+ integer, parameter :: RESOLUTION_TOPO_FILE = 1
 ! pathname of the topography file
-! character (len=*), parameter :: PATHNAME_TOPO_FILE = 'DATA/topo_bathy/topo_bathy_etopo1_ice_c_original_unmodified_unsmoothed.bin'
+ character (len=*), parameter :: PATHNAME_TOPO_FILE = 'DATA/topo_bathy/topo_bathy_etopo1_ice_c_original_unmodified_unsmoothed.bin'
 ! character (len=*), parameter :: PATHNAME_TOPO_FILE = 'DATA/topo_bathy/topo_bathy_etopo1_ice_c_smoothed_window_3.bin'
 
 
@@ -518,7 +518,7 @@
 ! flag to turn off the conversion of geographic to geocentric coordinates for
 ! the seismic source and the stations; i.e. assume a perfect sphere, which
 ! can be useful for benchmarks of a spherical Earth with fictitious sources and stations
-  logical, parameter :: ASSUME_PERFECT_SPHERE = .false.
+  logical, parameter :: ASSUME_PERFECT_SPHERE = .true.
 
 ! flags to do benchmark runs to measure scaling of the code
 ! for a limited number of time steps only, setting the initial field to 1

@@ -1,13 +1,21 @@
+#CC=icc
+#FC=ifort
 CC=icc
 FC=ifort
 MPIFC=mpif90
 
-FCFLAGS=-O3 -traceback -module ./obj -I./obj -I. -I./include
-CFLAGS=-O3 -traceback -I./include
+ifeq ($(FC), ifort)
+  FCFLAGS=-O3 -traceback -module ./obj -I./obj -I. -I./include
+  CFLAGS=-O3 -traceback -I./include
+else ifeq ($(FC), gfortran)
+  FCFLAGS=-O3 -g -J./obj -I./obj -I. -I./include
+  CFLAGS=-O3 -g -I./include
+endif
 
-NCDFCFLAGS=-I/usr/local/include
-NCDFLDFLAGS=-L/usr/local/lib
-NCDFLDLIBS=-lnetcdff
+#NCDFCFLAGS=-I/scinet/niagara/software/2019b/opt/gcc-8.3.0-hdf5-1.8.21/netcdf/4.6.3/include
+NCDFCFLAGS=
+NCDFLDFLAGS=
+NCDFLDLIBS=-lnetcdf -lnetcdff
 
 FC_MODEXT=mod
 FC_MODDIR=./obj
@@ -95,7 +103,8 @@ write_cmt_solution_file_obj = \
 	$O/specfem3D_par.solverstatic_module.o
 
 write_stations_file_obj = \
-	$O/specfem3D_par.solverstatic_module.o
+	$O/specfem3D_par.solverstatic_module.o \
+	$O/geographic_to_cartesian.o
 
 shared_obj= \
 	$O/calendar.shared.o \
@@ -274,7 +283,7 @@ $O/find_parameter_value.o: ./src/find_parameter_value.f90
 	${FC} ${FCFLAGS} -c -o $@ $<
 
 $O/update_parameters_from_netcdf.o: ./src/update_parameters_from_netcdf.f90
-	${FC} ${FCFLAGS} ${NCDFCFLAGS} -c -o $@ $<
+	${FC} ${FCFLAGS} ${NCDFCFLAGS}  -c -o $@ $<
 $O/netcdf_model_wrapper.o: ./src/netcdf_model_wrapper.f90
 	${FC} ${FCFLAGS} ${NCDFCFLAGS} -c -o $@ $<
 
@@ -288,6 +297,9 @@ $O/get_boundary_from_netcdf.o: ./src/get_boundary_from_netcdf.f90
 	${FC} ${FCFLAGS} -c -o $@ $<
 
 $O/get_model_mantle.o: ./src/get_model_mantle.f90
+	${FC} ${FCFLAGS} -c -o $@ $<
+
+$O/geographic_to_cartesian.o: ./src/geographic_to_cartesian.f90
 	${FC} ${FCFLAGS} -c -o $@ $<
 
 $O/%.solver.o: ./src/specfem3D/%.f90 $O/shared_par.shared_module.o
@@ -308,6 +320,12 @@ $E/write_cmt_solution_file: ./src/write_cmt_solution_file.f90 $(write_cmt_soluti
 $E/write_stations_file: ./src/write_stations_file.f90 $(write_stations_file_obj) $(shared_obj)
 	${MPIFC} ${FCFLAGS} -o $@ $^
 
+$E/write_stations_file_new: ./src/write_stations_file_new.f90 $(write_stations_file_obj) $(shared_obj)
+	${MPIFC} ${FCFLAGS} -o $@ $^
+
+$E/write_netcdf_grid_xyz: ./src/write_netcdf_grid_xyz.f90 $(write_stations_file_obj) $(shared_obj)
+	${MPIFC} ${FCFLAGS} -o $@ $^
+	
 $E/write_horizontal_slice_vtk: ./src/write_horizontal_slice_vtk.f90 $O/cube2sph_trans.o $(write_stations_file_obj) $(shared_obj)
 	${MPIFC} ${FCFLAGS} -o $@ $^
 $E/write_vertical_slice_vtk: ./src/write_vertical_slice_vtk.f90 $O/cube2sph_trans.o $(shared_obj)

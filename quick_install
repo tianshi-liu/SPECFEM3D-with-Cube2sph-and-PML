@@ -1,19 +1,42 @@
 source module_load
 mkdir -p bin/ obj/
-./configure FC=ifort CC=icc MPIFC=mpif90 --with-mpi -enable-vectorization
-#./configure FC=gfortran CC=gcc MPIFC=mpif90 --with-mpi
+FC=ifort
+CC=icc
+echo "-------------------------------------------"
+echo "Configuring SPECFEM with ${CC} and ${FC}"
+echo "-------------------------------------------"
+./configure FC=${FC} CC=${CC} MPIFC=mpif90 --with-mpi
 make realclean
 #make all > compile_log
+echo "-------------------------------------------"
+echo "Compiling SPECFEM"
+echo "-------------------------------------------"
 make meshfem3D
 make decompose_mesh
 make aux
 make generate_databases
 make specfem3D
 make postprocess
+echo "-------------------------------------------"
+echo "Compiling spherical postprocessing routines"
+echo "-------------------------------------------"
+sed -i "/^FC=/c\FC=${FC}" Makefile_sph
+sed -i "/^CC=/c\CC=${CC}" Makefile_sph
 make all -f Makefile_sph
+echo "-------------------------------------------"
+echo "Compiling slicing routines"
+echo "-------------------------------------------"
+sed -i "/^FC=/c\FC=${FC}" Makefile_slice
+sed -i "/^CC=/c\CC=${CC}" Makefile_slice
 make bin/xcreate_slice_loc -f Makefile_slice
 make bin/xcreate_slice -f Makefile_slice
+echo "-------------------------------------------"
+echo "Compiling Cube2sph routines"
+echo "-------------------------------------------"
 cd utils/cube2sph
+sed -i "/^FC=/c\FC=${FC}" Makefile
+sed -i "/^CC=/c\CC=${CC}" Makefile
+sed -i "/^NCDFCFLAGS=/c\NCDFCFLAGS=" Makefile
 mkdir -p bin/ obj/
 make clean
 make all

@@ -27,7 +27,7 @@ program write_stations_file
   logical :: ELLIPTICITY
   integer :: iorientation
   double precision :: stazi,stdip
-  double precision, allocatable, dimension(:) :: x_target,y_target,z_target
+  !double precision, allocatable, dimension(:) :: x_target,y_target,z_target
   integer :: irec
   integer :: ier
   double precision :: ell
@@ -45,7 +45,7 @@ program write_stations_file
   call MPI_Comm_rank(MPI_COMM_WORLD, myrank, ier)
   call get_command_argument(1, STATIONS_FILE)
   !STATIONS_FILE = 'DATA/STATIONS'
-  ONE_CRUST = .true.
+  !ONE_CRUST = .true.
   call get_command_argument(4, arg_str)
   read(arg_str, *) TOPOGRAPHY
   call get_command_argument(5, arg_str)
@@ -71,15 +71,15 @@ program write_stations_file
            stele(nrec), &
            stbur(nrec),stat=ier)
   allocate(nu(NDIM,NDIM,nrec),stat=ier)
-  allocate(x_target(nrec), &
-           y_target(nrec), &
-           z_target(nrec),stat=ier)
-  if (TOPOGRAPHY) then
-    allocate(ibathy_topo(NX_BATHY,NY_BATHY),stat=ier)
-    call make_ellipticity(nspl,rspl,espl,espl2,ONE_CRUST)
-    ibathy_topo(:,:) = 0
-    call read_topo_bathy_file(ibathy_topo)
-  endif
+  call prepare_topography_ellipticity(TOPOGRAPHY)
+  !if (TOPOGRAPHY) then
+  !  allocate(ibathy_topo(NX_BATHY,NY_BATHY),stat=ier)
+  !  call make_ellipticity(nspl,rspl,espl,espl2,ONE_CRUST)
+  !  ibathy_topo(:,:) = 0
+  !  call read_topo_bathy_file(ibathy_topo)
+  !  call prepare_topography_ellipticity(TOPOGRAPHY)
+  !endif
+  
   open(unit=IIN,file=trim(STATIONS_FILE),status='old',action='read',iostat=ier)
   if (ier /= 0 ) call exit_MPI(myrank,'Error opening STATIONS file')
 
@@ -129,96 +129,13 @@ program write_stations_file
           status='unknown', form='formatted', action='write', iostat=ier)
   do irec = 1,nrec
 
-
-    ! station lat/lon in degrees
-    lat = stlat(irec)
-    lon = stlon(irec)
-
-    ! limits longitude to [0.0,360.0]
-    if (lon < 0.d0 ) lon = lon + 360.d0
-    if (lon > 360.d0 ) lon = lon - 360.d0
-
-    ! converts geographic latitude stlat (degrees) to geocentric colatitude theta (radians)
-    call lat_2_geocentric_colat_dble(lat,theta)
-
-    phi = lon*DEGREES_TO_RADIANS
-    call reduce(theta,phi)
-
-    ! record three components for each station
-    do iorientation = 1,3
-      !     North
-      if (iorientation == 1) then
-        stazi = 0.d0
-        stdip = 0.d0
-      !     East
-      else if (iorientation == 2) then
-        stazi = 90.d0
-        stdip = 0.d0
-      !     Vertical
-      else if (iorientation == 3) then
-        stazi = 0.d0
-        stdip = - 90.d0
-      else
-        call exit_MPI(myrank,'incorrect orientation')
-      endif
-
-      !     get the orientation of the seismometer
-      thetan=(90.0d0+stdip)*DEGREES_TO_RADIANS
-      phin=stazi*DEGREES_TO_RADIANS
-
-      ! we use the same convention as in Harvard normal modes for the orientation
-
-      !     vertical component
-      n(1) = cos(thetan)
-      !     N-S component
-      n(2) = - sin(thetan)*cos(phin)
-      !     E-W component
-      n(3) = sin(thetan)*sin(phin)
-
-      !     get the Cartesian components of n in the model: nu
-      sint = sin(theta)
-      cost = cos(theta)
-      sinp = sin(phi)
-      cosp = cos(phi)
-      nu(iorientation,1,irec) = n(1)*sint*cosp+n(2)*cost*cosp-n(3)*sinp
-      nu(iorientation,2,irec) = n(1)*sint*sinp+n(2)*cost*sinp+n(3)*cosp
-      nu(iorientation,3,irec) = n(1)*cost-n(2)*sint
-    enddo
-
-    ! normalized receiver radius
-    r0 = R_UNIT_SPHERE
-
-    ! finds elevation of receiver
-    if (TOPOGRAPHY) then
-       call get_topo_bathy(lat,lon,elevation,ibathy_topo)
-       r0 = r0 + elevation/R_EARTH
-    endif
-    ! ellipticity
-    if (ELLIPTICITY) then
-      cost=cos(theta)
-      ! this is the Legendre polynomial of degree two, P2(cos(theta)),
-      ! see the discussion above eq (14.4) in Dahlen and Tromp (1998)
-      p20=0.5d0*(3.0d0*cost*cost-1.0d0)
-      ! get ellipticity using spline evaluation
-      call spline_evaluation(rspl,espl,espl2,nspl,r0,ell)
-      ! this is eq (14.4) in Dahlen and Tromp (1998)
-      r0=r0*(1.0d0-(2.0d0/3.0d0)*ell*p20)
-    endif
-
-    ! subtract station burial depth (in meters)
-    r0 = r0 - stbur(irec)/R_EARTH
-
-    ! compute the Cartesian position of the receiver
-    x_target_rec = r0*sin(theta)*cos(phi)
-    y_target_rec = r0*sin(theta)*sin(phi)
-    z_target_rec = r0*cos(theta)
-
-    x_target(irec) = x_target_rec * R_EARTH
-    y_target(irec) = y_target_rec * R_EARTH
-    z_target(irec) = z_target_rec * R_EARTH
+    call geographic_to_cartesian(stlat(irec), stlon(irec), stele(irec), &
+                                 stbur(irec), TOPOGRAPHY, ELLIPTICITY, &
+                                 x_target_rec, y_target_rec, z_target_rec, &
+                                 nu(:,:,irec))
     write(IOUT, "(a7,a7,f23.4,f23.4,f5.1,f23.4)") station_name(irec), &
-            network_name(irec), y_target(irec), x_target(irec), &
-            0.0, z_target(irec) 
+            network_name(irec), y_target_rec, x_target_rec, &
+            0.0, z_target_rec
   enddo
   close(IOUT)
   call get_command_argument(3, STATIONS_FILE)
@@ -240,10 +157,7 @@ program write_stations_file
            stele, &
            stbur)
   deallocate(nu)
-  deallocate(x_target, &
-           y_target, &
-           z_target)
-  if (TOPOGRAPHY) deallocate(ibathy_topo)
+  if (TOPOGRAPHY) call deallocate_topography()
   call MPI_Finalize(ier)
 end program write_stations_file
 

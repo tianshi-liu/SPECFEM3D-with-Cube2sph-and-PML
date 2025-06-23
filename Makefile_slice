@@ -2,9 +2,14 @@ FC=ifort
 CC=icc
 MPIFC=mpif90
 SETUP=./setup
-CFLAGS=-I${SETUP}  -DFORCE_VECTORIZATION -DWITH_MPI -g -O2 -DFORCE_VECTORIZATION -DWITH_MPI -I/scinet/niagara/software/2018a/opt/intel-2018.2/openmpi/3.1.0/include
-FCFLAGS=-g   -xHost -fpe0 -ftz -assume buffered_io -assume byterecl -align sequence -std03 -diag-disable 6477 -implicitnone -gen-interfaces -warn all -O3 -check nobounds -DFORCE_VECTORIZATION
-FCFLAGS_f90 = -module ./obj -I./obj -I.  -I${SETUP}
+#CFLAGS=-I${SETUP}  -DFORCE_VECTORIZATION -DWITH_MPI -g -O2 -DFORCE_VECTORIZATION -DWITH_MPI -I/scinet/niagara/software/2018a/opt/intel-2018.2/openmpi/3.1.0/include
+ifeq ($(FC), ifort)
+  FCFLAGS=-g   -xHost -fpe0 -ftz -assume buffered_io -assume byterecl -align sequence -std03 -diag-disable 6477 -implicitnone -gen-interfaces -warn all -O3 -check nobounds
+  FCFLAGS_f90 = -module ./obj -I./obj -I.  -I${SETUP}
+else ifeq ($(FC), gfortran)
+  FCFLAGS=-g   -std=f2008 -fimplicit-none -fmax-errors=10 -pedantic -pedantic-errors -Waliasing -Wampersand -Wcharacter-truncation -Wline-truncation -Wsurprising -Wno-tabs -Wunderflow -ffpe-trap=invalid,zero,overflow -Wunused -O3 -finline-functions
+  FCFLAGS_f90=-J./obj -I./obj -I.  -I${SETUP}
+endif
 O=./obj
 E=./bin
 create_slice_loc_obj= \

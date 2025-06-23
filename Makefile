@@ -36,7 +36,7 @@ FC_DEFINE = -D
 MPIFC = mpif90
 MPILIBS = 
 
-FLAGS_CHECK = -xHost -fpe0 -ftz -assume buffered_io -assume byterecl -align sequence -std03 -diag-disable 6477 -implicitnone -gen-interfaces -warn all -O3 -check nobounds -DFORCE_VECTORIZATION
+FLAGS_CHECK = -xHost -fpe0 -ftz -assume buffered_io -assume byterecl -align sequence -std03 -diag-disable 6477 -implicitnone -gen-interfaces -warn all -O3 -check nobounds
 
 FCFLAGS_f90 = -module ./obj -I./obj -I.  -I${SETUP}
 
@@ -49,7 +49,7 @@ MPIFCCOMPILE_CHECK = ${MPIFC} ${FCFLAGS} $(FLAGS_CHECK) $(COND_OPENMP_FFLAGS)
 
 CC = icc
 CFLAGS = -g -O2 $(CPPFLAGS)
-CPPFLAGS = -I${SETUP}  -DFORCE_VECTORIZATION $(COND_MPI_CPPFLAGS)
+CPPFLAGS = -I${SETUP}  $(COND_MPI_CPPFLAGS)
 
 # all linker flags
 MPILIBS +=  

@@ -61,27 +61,18 @@ contains
     integer, intent(in)  :: nsize
     integer, intent(in)  :: sup_neighbor
     integer, intent(in)  :: NGNOD
-    !! TL: modify to allow for very large mesh
-    !integer, dimension(0:NGNOD*nspec-1), intent(in)  :: elmnts
-    integer, dimension(0:NGNOD*int8(nspec)-1), intent(in)  :: elmnts
+    integer, dimension(0:NGNOD*nspec-1), intent(in)  :: elmnts
 
     integer, dimension(0:nspec)  :: xadj
-    !! TL: modify to allow for very large mesh
-    !integer, dimension(0:sup_neighbor*nspec-1)  :: adjncy
-    integer, dimension(0:sup_neighbor*int8(nspec)-1)  :: adjncy
+    integer, dimension(0:sup_neighbor*nspec-1)  :: adjncy
     integer, dimension(0:nnodes-1)  :: nnodes_elmnts
-    !! TL: modify to allow for very large mesh
-    !integer, dimension(0:nsize*nnodes-1)  :: nodes_elmnts
-    integer, dimension(0:nsize*int8(nnodes)-1)  :: nodes_elmnts
+    integer, dimension(0:nsize*nnodes-1)  :: nodes_elmnts
     integer, intent(out) :: max_neighbor
     integer, intent(in)  :: ncommonnodes
 
     ! local parameters
     
-    !! TL: modify to allow for very large mesh
-    !integer  :: i, j, k, l, m, nb_edges
-    integer  :: j, k, l, m, nb_edges
-    integer (kind=8) :: i
+    integer  :: i, j, k, l, m, nb_edges
     logical  :: is_neighbor
     integer  :: num_node, n
     integer  :: elem_base, elem_target
@@ -95,9 +86,8 @@ contains
     nb_edges = 0
 
     ! list of elements per node
-    !! TL: modify to allow for very large mesh
-    do i = 0, NGNOD*int8(nspec)-1
-       nodes_elmnts(int8(elmnts(i))*nsize+nnodes_elmnts(elmnts(i))) = i/NGNOD
+    do i = 0, NGNOD*nspec-1
+       nodes_elmnts(elmnts(i)*nsize+nnodes_elmnts(elmnts(i))) = i/NGNOD
        nnodes_elmnts(elmnts(i)) = nnodes_elmnts(elmnts(i)) + 1
     enddo
 
@@ -107,27 +97,22 @@ contains
           do l = k+1, nnodes_elmnts(j)-1
 
              connectivity = 0
-             !! TL: modify to allow for very large mesh
-             elem_base = nodes_elmnts(k+int8(j)*nsize)
-             elem_target = nodes_elmnts(l+int8(j)*nsize)
+             elem_base = nodes_elmnts(k+j*nsize)
+             elem_target = nodes_elmnts(l+j*nsize)
              !!TL: debug
              if (elem_base == elem_target) then
                print *, elem_base, elem_target
                print *, j
                do n = 0, nnodes_elmnts(j)-1
-                 print *, nodes_elmnts(n+int8(j)*nsize)
+                 print *, nodes_elmnts(n+j*nsize)
                enddo
                stop 'error: wrong neighbour'
              endif
              !!!!!!!!!!!!
              do n = 1, NGNOD_EIGHT_CORNERS
-                !! TL: modify to allow for very large mesh
-                !num_node = elmnts(NGNOD*elem_base+n-1)
-                num_node = elmnts(NGNOD*int8(elem_base)+n-1)
+                num_node = elmnts(NGNOD*elem_base+n-1)
                 do m = 0, nnodes_elmnts(num_node)-1
-                   !! TL: modify to allow for very large mesh
-                   !if (nodes_elmnts(m+num_node*nsize) == elem_target) then
-                   if (nodes_elmnts(m+int8(num_node)*nsize) == elem_target) then
+                   if (nodes_elmnts(m+num_node*nsize) == elem_target) then
                       connectivity = connectivity + 1
                    endif
                 enddo
@@ -142,20 +127,20 @@ contains
                 !! nodes_elmnts(l+j*nsize) = elem_target
                 do m = 0, xadj(elem_base)
                    if (.not. is_neighbor) then
-                      if (adjncy(int8(elem_base)*sup_neighbor+m) == elem_target) then
+                      if (adjncy(elem_base*sup_neighbor+m) == elem_target) then
                          is_neighbor = .true.
                       endif
                    endif
                 enddo
                 if (.not. is_neighbor) then
-                   adjncy(int8(elem_base)*sup_neighbor &
+                   adjncy(elem_base*sup_neighbor &
                           + xadj(elem_base)) = elem_target
 
                    xadj(elem_base) = xadj(elem_base) + 1
                    if (xadj(elem_base) > sup_neighbor) &
                     stop 'ERROR: too many neighbors per element, error in the mesh or in the code.'
 
-                   adjncy(int8(elem_target)*sup_neighbor &
+                   adjncy(elem_target*sup_neighbor &
                           + xadj(elem_target)) = elem_base
 
                    xadj(elem_target) = xadj(elem_target) + 1
@@ -174,14 +159,12 @@ contains
        k = xadj(i)
        xadj(i) = nb_edges
        do j = 0, k-1
-          !! TL: modify to allow for very large mesh
-          !adjncy(nb_edges) = adjncy(i*sup_neighbor+j)
-          adjncy(nb_edges) = adjncy(int8(i)*sup_neighbor+j)
+          adjncy(nb_edges) = adjncy(i*sup_neighbor+j)
           ! TL: check for the "loops not allowed" error in Scotch
           if (adjncy(nb_edges)==i) then
             print *, 'element', i, 'wrong neighbour'
             do m = 0, k-1
-              print *, adjncy(int8(i)*sup_neighbor+m)
+              print *, adjncy(i*sup_neighbor+m)
             enddo
             stop 'error: wrong neighbour'
           endif
@@ -244,9 +227,7 @@ contains
     integer, intent(in) :: nnodes
     integer, dimension(0:nspec-1), intent(in)  :: part
     integer, dimension(0:nnodes-1), intent(in)  :: nnodes_elmnts
-    !! TL: modify to allow for very large mesh
-    !integer, dimension(0:nsize*nnodes-1), intent(in)  :: nodes_elmnts
-    integer, dimension(0:nsize*int8(nnodes)-1), intent(in)  :: nodes_elmnts
+    integer, dimension(0:nsize*nnodes-1), intent(in)  :: nodes_elmnts
     integer, dimension(:), pointer  :: glob2loc_nodes_nparts
     integer, dimension(:), pointer  :: glob2loc_nodes_parts
     integer, dimension(:), pointer  :: glob2loc_nodes
@@ -269,9 +250,7 @@ contains
     do num_node = 0, nnodes-1
        glob2loc_nodes_nparts(num_node) = size_glob2loc_nodes
        do el = 0, nnodes_elmnts(num_node)-1
-          !! TL: modify to allow for very large mesh
-          !parts_node(part(nodes_elmnts(el+nsize*num_node))) = 1
-          parts_node(part(nodes_elmnts(el+nsize*int8(num_node)))) = 1
+          parts_node(part(nodes_elmnts(el+nsize*num_node))) = 1
        enddo
 
        do num_part = 0, nparts-1
@@ -300,9 +279,7 @@ contains
 
     do num_node = 0, nnodes-1
        do el = 0, nnodes_elmnts(num_node)-1
-          !! TL: modify to allow for very large mesh
-          !parts_node(part(nodes_elmnts(el+nsize*num_node))) = 1
-          parts_node(part(nodes_elmnts(el+nsize*int8(num_node)))) = 1
+          parts_node(part(nodes_elmnts(el+nsize*num_node))) = 1
        enddo
        do num_part = 0, nparts-1
 
@@ -340,13 +317,9 @@ contains
     integer, intent(in)  :: NGNOD
     integer, intent(in) :: sup_neighbor
     integer, dimension(0:nspec-1), intent(in)  :: part
-    !! TL: modify to allow for very large mesh
-    !integer, dimension(0:NGNOD*nspec-1), intent(in)  :: elmnts
-    integer, dimension(0:NGNOD*int8(nspec)-1), intent(in)  :: elmnts
+    integer, dimension(0:NGNOD*nspec-1), intent(in)  :: elmnts
     integer, dimension(0:nspec), intent(in)  :: xadj
-    !! TL: modify to allow for very large mesh
-    !integer, dimension(0:sup_neighbor*nspec-1), intent(in)  :: adjncy
-    integer, dimension(0:sup_neighbor*int8(nspec)-1), intent(in)  :: adjncy
+    integer, dimension(0:sup_neighbor*nspec-1), intent(in)  :: adjncy
     integer, dimension(:),pointer  :: tab_size_interfaces, tab_interfaces
     integer, intent(out)  :: ninterfaces
 

@@ -6,7 +6,7 @@ program create_slice_loc
   use projection_on_FD_grid
   implicit none
   logical, parameter :: NEAREST_GLL_POINT = .false.
-  integer, parameter :: NARGS = 3, MAX_POINTS_IN_SLICE = 10000000
+  integer, parameter :: NARGS = 3, MAX_POINTS_IN_SLICE = 20000000
   character(len=MAX_STRING_LEN) slice_fn, mesh_dir, out_fn, prname
   integer :: myrank, sizeprocs, NSPEC_IRREGULAR, ios, err, ier, ourtag=1, irank
 

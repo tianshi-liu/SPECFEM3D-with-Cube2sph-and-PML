@@ -336,7 +336,7 @@
 
   ! local parameter
   logical :: cap_smooth
-  double precision, parameter :: cap_degree = 0.5
+  double precision, parameter :: cap_degree = 0.025
   integer, parameter :: NTHETA = 20, NPHI = 60
   double precision :: xlon(NTHETA*NPHI),xlat(NTHETA*NPHI),weight(NTHETA*NPHI)
   integer :: i

@@ -923,7 +923,7 @@ module decompose_mesh
     if (ier /= 0) stop 'Error allocating array xadj'
     !! TL: modify to allow for very large mesh
     !!allocate(adjncy(1:sup_neighbor*nspec),stat=ier)
-    allocate(adjncy(1:sup_neighbor*int8(nspec)),stat=ier)
+    allocate(adjncy(1:sup_neighbor*nspec),stat=ier)
     if (ier /= 0) call exit_MPI_without_rank('error allocating array 109')
     if (ier /= 0) stop 'Error allocating array adjncy'
     allocate(nnodes_elmnts(1:nnodes),stat=ier)
@@ -931,7 +931,7 @@ module decompose_mesh
     if (ier /= 0) stop 'Error allocating array nnodes_elmnts'
     !! TL: modify to allow for very large mesh
     !!allocate(nodes_elmnts(1:nsize*nnodes),stat=ier)
-    allocate(nodes_elmnts(1:nsize*int8(nnodes)),stat=ier)
+    allocate(nodes_elmnts(1:nsize*nnodes),stat=ier)
     if (ier /= 0) call exit_MPI_without_rank('error allocating array 111')
     if (ier /= 0) stop 'Error allocating array nodes_elmnts'
 
