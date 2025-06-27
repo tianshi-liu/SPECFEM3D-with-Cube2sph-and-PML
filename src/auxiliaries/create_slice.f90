@@ -1,4 +1,5 @@
 program create_slice
+  use,intrinsic :: ieee_arithmetic
   use mpi
   use constants
   use shared_parameters, only: NGNOD
@@ -18,7 +19,7 @@ program create_slice
   real(kind=CUSTOM_REAL), dimension(MAX_POINTS_IN_SLICE) :: val, dist_rec
   real(kind=CUSTOM_REAL), dimension(3) :: real_dummy 
   real(kind=CUSTOM_REAL), dimension(:,:,:,:), allocatable ::  database
-  real(kind=CUSTOM_REAL), parameter :: FILL_VAL = -1.0e10
+  real(kind=CUSTOM_REAL) :: FILL_VAL
   integer :: irank, current_rank, ios, ispec, iglob, ier
   character(len=MAX_STRING_LEN) slice_fn, loc_fn, out_fn, prname, &
                                 model_name, model_dir, norm_string,&
@@ -38,6 +39,9 @@ program create_slice
     print*,'usage: ./xcreate_slice model_name model_dir database_dir coordfile glllocfile  outfile do_norm'
     stop
   endif
+
+  ! set value of fill_val
+  FILL_VAL = ieee_value(FILL_VAL,ieee_quiet_nan)
 
   call get_command_argument(1, model_name)
   call get_command_argument(2, model_dir)
