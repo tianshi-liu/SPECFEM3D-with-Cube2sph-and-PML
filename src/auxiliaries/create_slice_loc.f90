@@ -195,7 +195,7 @@ program create_slice_loc
   if (myrank == 0) open(11, file=out_fn, iostat=ios, action='write')
   if (myrank == 0) then
     do ipt = 1, n_pts_proc
-      write(11, '(3i12, 4e18.6)')ipt_rec(ipt), 0, ispec_rec(ipt), &
+      write(11, '(3(I0,1x), 4(G0,1x))')ipt_rec(ipt), 0, ispec_rec(ipt), &
                xi_rec(ipt), eta_rec(ipt), gamma_rec(ipt), dist_rec(ipt)
     enddo
   else
