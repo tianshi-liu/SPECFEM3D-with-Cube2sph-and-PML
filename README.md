@@ -42,7 +42,7 @@ make -j8
 ## Anisotropic Model Support
 You should provide `c21` model with density in `tomography.xyz`.
 1. Anisotropic models in `proc*_external_mesh.bin` are in cartesian coordinates, i.e. $C_{xxxx}, C_{xyzx}$ 
-2. Anisotropic models in `proc*_c11-c66.bin`, `tomography.xyz` are in radial coordinates,i.e. $C_{rrrr}, C_{r\theta \phi r}$ 
+2. Anisotropic models in `proc*_c11-c66.bin`, `tomography.xyz` are in radial coordinates,i.e. $C_{rrrr}, C_{r\theta \phi r}$. The notation rule for $c_{ijkl}$ is : $C_{1232} = C_{\theta \phi r \phi}$. 
 
 ## Steps (EXAMPLES/NED-Model)
 *1.* Preparing parameter files (`DATA/Par_file_initmesh`, `DATA/meshfem3D_files/Mesh_Par_file`) and model files (e.g., interface files, tomographic files). Notes
