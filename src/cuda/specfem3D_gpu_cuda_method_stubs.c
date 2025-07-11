@@ -926,6 +926,17 @@ void update_velocity_device_(long* Mesh_pointer,realw *delta2ov2_f){}
 void sync_wavefield_(int *size_f, realw *h_field,long *Mesh_pointer,int *flag_f,int *dev2host_f){}
 
 
+// io 
+void 
+FC_FUNC_(write_subsample_file_cuda,WRITE_SUBSAMPLE_FILE_cuda)(
+    int *f_it_save, long *Mesh_pointer
+){}
+
+void
+FC_FUNC_(read_subsample_file_cuda,READ_SUBSAMPLE_FILE_cuda)(
+    int *f_it_save, long *Mesh_pointer
+){}
+
 void 
 smooth_sph_pde_cuda_(int *h_nspec, int *h_nglob,int *nprocs,
    int *h_nstep,int *nspec_max,int *phase_ispec_inner_elastic,

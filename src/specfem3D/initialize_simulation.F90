@@ -257,6 +257,9 @@
   ! nqdu
   ! determin the NSTEP_PER_FORWARD_OUTPUT if required
   call determine_ntsamp
+  ! if(myrank == 0) &
+  !   write(IMAIN, *) '  subsample NSTEP =  ',NSTEP_PER_FORWARD_OUTPUT
+
 
   ! initializes adjoint simulations
   call initialize_simulation_adjoint()

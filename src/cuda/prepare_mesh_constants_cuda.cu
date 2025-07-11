@@ -416,6 +416,11 @@ void FC_FUNC_(prepare_constants_device,
   size = (*max_nibool_interfaces_ext_mesh) * NDIM * (*num_interfaces_ext_mesh);
   print_CUDA_error_if_any(cudaMalloc((void**)&(mp->d_recv_accel_buffer),size*sizeof(realw)),4005);
 
+  // pinned memory for subsample field transfer
+  if(mp->SUBSAMPLE_FWD_WAVEFIELD) {
+    cudaMallocHost((void**)&mp->h_sub_buffer,mp->NGLOB_AB*3*sizeof(realw));
+  }
+
 #ifdef ENABLE_VERY_SLOW_ERROR_CHECKING
   exit_on_cuda_error("prepare_constants_device");
 #endif
@@ -1648,6 +1653,11 @@ TRACE("prepare_cleanup_device");
               mp->d_epsilondev_xz,mp->d_b_epsilondev_xz,
               mp->d_epsilondev_yz,mp->d_b_epsilondev_yz
       );
+    }
+
+    // nqdu add
+    if(mp->SUBSAMPLE_FWD_WAVEFIELD) {
+      cudaFreeHost(mp->h_sub_buffer);
     }
 
     if (*ATTENUATION ){

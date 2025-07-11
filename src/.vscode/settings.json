@@ -7,8 +7,8 @@
 
     "fortran.linter.modOutput": "~/code/c_fortran/specfem3d-cube2sph//src/.vscode/obj",
     "fortran.linter.includePaths": ["~/code/c_fortran/specfem3d-cube2sph//setup",
-                                    "/opt/homebrew/Cellar/open-mpi/5.0.7/include",
-                                    "/opt/homebrew/Cellar/open-mpi/5.0.7/lib"
+                                    "/opt/openmpi-5.0.6/include",
+                                    "/opt/openmpi-5.0.6/lib"
                                 ],
 
     "files.associations": {
@@ -88,6 +88,11 @@
         "fstream": "cpp",
         "future": "cpp",
         "valarray": "cpp",
-        "stdfloat": "cpp"
+        "stdfloat": "cpp",
+        "__hash_table": "c",
+        "__split_buffer": "c",
+        "__tree": "c",
+        "queue": "c",
+        "stack": "c"
     }
 }
