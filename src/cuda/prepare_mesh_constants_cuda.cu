@@ -1207,7 +1207,7 @@ void FC_FUNC_(prepare_fields_elastic_adj_dev,
 
     size = NGLL3 * mp->NSPEC_AB; // note: non-aligned; if align, check memcpy below and indexing
     #define ALLOC(n,a) cudaMalloc((void**)&a,n*sizeof(int)); \
-                       cudaMemset(a,0,n*sizeof(n))
+                       cudaMemset(a,0,n*sizeof(int))
 
     // solid pressure
     ALLOC(size,mp->d_epsilon_trace_over_3); ALLOC(size,mp->d_b_epsilon_trace_over_3);

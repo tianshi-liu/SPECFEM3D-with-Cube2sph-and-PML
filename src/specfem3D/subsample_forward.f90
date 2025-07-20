@@ -1,6 +1,6 @@
 subroutine open_forward_wavefield_write()
   use specfem_par, only: NDIM,MAX_STRING_LEN,OUTPUT_FILES
-  use specfem_par,only: NGLOB_AB,NDIM,myrank 
+  use specfem_par,only: NGLOB_AB,NDIM
   use iso_c_binding,only : c_null_char
 
   implicit none
@@ -15,7 +15,7 @@ end subroutine open_forward_wavefield_write
 
 subroutine open_forward_wavefield_read()
   use specfem_par, only: NDIM,MAX_STRING_LEN,OUTPUT_FILES
-  use specfem_par,only: NGLOB_AB,NDIM 
+  use specfem_par,only: NGLOB_AB,NDIM,NSTEP,NSTEP_PER_FORWARD_OUTPUT 
   use iso_c_binding,only : c_null_char
 
   implicit none
@@ -26,7 +26,9 @@ subroutine open_forward_wavefield_read()
   file_name = trim(file_name) // c_null_char
 
   ! gather total size
-  call open_subsample_read(NDIM*NGLOB_AB,file_name)
+  call open_subsample_read(NDIM*NGLOB_AB,file_name,&
+                           NSTEP,&
+                           NSTEP_PER_FORWARD_OUTPUT)
 
 end subroutine open_forward_wavefield_read
 
@@ -94,7 +96,7 @@ subroutine compute_kernels_from_subsampled_wavefield()
   ! GPU MODE
   if(GPU_MODE) then 
     dt_kl = deltat*NSTEP_PER_FORWARD_OUTPUT
-    call compute_subsample_strain(Mesh_pointer,dt_kl)
+    call compute_subsample_strain(Mesh_pointer)
     call compute_kernels_elastic_cuda(Mesh_pointer,dt_kl)
     if(APPROXIMATE_HESS_KL) then 
       call compute_kernels_hess_cuda(Mesh_pointer,dt_kl, &

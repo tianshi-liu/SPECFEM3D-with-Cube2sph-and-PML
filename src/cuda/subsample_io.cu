@@ -22,11 +22,14 @@ FC_FUNC_(write_subsample_file_cuda,WRITE_SUBSAMPLE_FILE_cuda)(
 )
 {
     Mesh* mp = (Mesh*)(*Mesh_pointer); // get Mesh from fortran integer wrapper
-    cudaMemcpy(
+    cudaMemcpyAsync(
         mp->h_sub_buffer,
         mp->d_displ,mp->NGLOB_AB*3*sizeof(realw),
-        cudaMemcpyDeviceToHost
+        cudaMemcpyDeviceToHost,mp->compute_stream
     );
+
+    // wait finish
+    cudaStreamSynchronize(mp->compute_stream);
 
     FC_FUNC_(write_subsample_file,WRITE_SUBSAMPLE_FILE)(
         f_it_save,mp->h_sub_buffer
@@ -44,10 +47,11 @@ FC_FUNC_(read_subsample_file_cuda,READ_SUBSAMPLE_FILE_cuda)(
         f_it_save,mp->h_sub_buffer
     );
 
-    cudaMemcpy(
+    cudaMemcpyAsync(
         mp->d_b_displ,
         mp->h_sub_buffer,mp->NGLOB_AB*3*sizeof(realw),
-        cudaMemcpyHostToDevice
+        cudaMemcpyHostToDevice,
+        mp->copy_stream
     );
 
 
