@@ -215,7 +215,8 @@ void FC_FUNC_(compute_kernels_elastic_cuda,
   dim3 threads(blocksize,1,1);
 
   if (mp->anisotropic_kl ){
-    compute_kernels_ani_cudakernel<<<grid,threads>>>(mp->d_ispec_is_elastic,mp->d_ibool,
+    compute_kernels_ani_cudakernel<<<grid,threads,0,mp->compute_stream>>>(
+                                                    mp->d_ispec_is_elastic,mp->d_ibool,
                                                      mp->d_accel, mp->d_b_displ,
                                                      mp->d_epsilondev_xx,
                                                      mp->d_epsilondev_yy,
@@ -235,7 +236,8 @@ void FC_FUNC_(compute_kernels_elastic_cuda,
                                                      mp->NSPEC_AB);
 
   }else{
-    compute_kernels_cudakernel<<<grid,threads>>>(mp->d_ispec_is_elastic,mp->d_ibool,
+    compute_kernels_cudakernel<<<grid,threads,0,mp->compute_stream>>>(
+                                                 mp->d_ispec_is_elastic,mp->d_ibool,
                                                  mp->d_accel, mp->d_b_displ,
                                                  mp->d_epsilondev_xx,
                                                  mp->d_epsilondev_yy,
@@ -934,7 +936,7 @@ compute_subsample_strain_(long *Mesh_pointer)
   dim3 threads(blocksize,1,1);
 
   // lauch kernels to compute strain for adjoint field
-  kernel_compute_strain <<<grid,threads>>> (
+  kernel_compute_strain <<<grid,threads,0,mp->compute_stream>>> (
     mp->NSPEC_AB,mp->d_irregular_element_number,mp->d_displ,
     mp->d_xix,mp->d_xiy,mp->d_xiz,
     mp->d_etax,mp->d_etay,mp->d_etaz,mp->d_gammax,mp->d_gammay,mp->d_gammaz,
@@ -944,8 +946,10 @@ compute_subsample_strain_(long *Mesh_pointer)
     mp->d_epsilon_trace_over_3
   );
 
+  cudaStreamSynchronize(mp->copy_stream);
+
   // strain for backward wavefield
-  kernel_compute_strain <<<grid,threads>>> (
+  kernel_compute_strain <<<grid,threads,0,mp->compute_stream>>> (
     mp->NSPEC_AB,mp->d_irregular_element_number,mp->d_b_displ,
     mp->d_xix,mp->d_xiy,mp->d_xiz,
     mp->d_etax,mp->d_etay,mp->d_etaz,mp->d_gammax,mp->d_gammay,mp->d_gammaz,

@@ -420,7 +420,7 @@
 ! outputs binary files for single mesh parameters (for example vp, vs, rho, ..)
 
   use generate_databases_par, only: myrank,NGLLX,NGLLY,NGLLZ,NGLLSQUARE,IMAIN,IOUT,FOUR_THIRDS
-  use generate_databases_par, only: ANISOTROPY
+  use generate_databases_par, only: ANISOTROPY,IMODEL,IMODEL_GLL
 
   ! MPI interfaces
   use generate_databases_par, only: nibool_interfaces_ext_mesh,ibool_interfaces_ext_mesh,num_interfaces_ext_mesh
@@ -535,8 +535,8 @@
 
   ! anisotropy
   if(ANISOTROPY) then 
-    ! convert to local coordinates 
-    call rotate_c66_global_to_radial_store()
+    ! convert to local coordinates if the read model is GLL
+    if(IMODEL == IMODEL_GLL) call rotate_c66_global_to_radial_store()
     
     ! write GLL files
     open(unit=IOUT,file=prname(1:len_trim(prname))//'c11.bin',status='unknown',form='unformatted',iostat=ier)

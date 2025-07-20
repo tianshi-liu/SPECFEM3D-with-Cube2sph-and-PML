@@ -697,6 +697,9 @@ typedef struct mesh_ {
   realw *d_buffer_recv_matrix_PML;
   realw *d_recv_accel_buffer;
 
+  // subsample functions
+  realw* h_sub_buffer; // use cudaMallocHost
+
 #ifdef USE_CUDA_AWARE_MPI
   #if !(defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT)
   #error "CUDA AWARE MPI is not enabled!"

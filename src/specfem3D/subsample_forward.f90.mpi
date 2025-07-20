@@ -1,78 +1,137 @@
 subroutine open_forward_wavefield_write()
-  use specfem_par, only: NDIM,MAX_STRING_LEN,OUTPUT_FILES
-  use specfem_par,only: NGLOB_AB,NDIM
-  use iso_c_binding,only : c_null_char
+  use specfem_par, only: NDIM,IFILE_FWD_WAVEFIELD_MPI_FH,&
+                         MAX_STRING_LEN,OUTPUT_FILES,myrank
+  use specfem_par,only: NGLOB_AB,NDIM,subsample_offset,subsample_total_size 
+  use specfem_par,only: NSTEP,NSTEP_PER_FORWARD_OUTPUT,CUSTOM_REAL
+  use my_mpi
 
   implicit none
-  character (len=MAX_STRING_LEN) :: file_name
+  integer :: ier,i,info
+  integer(kind=MPI_OFFSET_KIND) :: itloc
+  character (len=MAX_STRING_LEN) :: file_name,chunck
 
   file_name = OUTPUT_FILES(1:len_trim(OUTPUT_FILES)) // 'forward_wavefield.bin'
-  file_name = trim(file_name) // c_null_char
 
-  call open_subsample_write(NDIM*NGLOB_AB,file_name)
 
+  ! gather total size
+  call MPI_Exscan(int(NDIM*NGLOB_AB,kind=8),subsample_offset,1,MPI_LONG,MPI_SUM,my_local_mpi_comm_world,ier)
+  if(myrank == 0) subsample_offset = 0
+
+  ! compute total size of all data in this time
+  call MPI_Allreduce(int(NDIM*NGLOB_AB,kind=8), subsample_total_size, 1, &
+                    MPI_LONG, MPI_SUM, my_local_mpi_comm_world, ier)
+  
+  print*,'rank = ',myrank,NDIM*NGLOB_AB, subsample_offset,subsample_total_size
+
+  !info 
+  ! call MPI_Info_create(info,ier)
+  ! write(chunck,'(I0)') NDIM*NGLOB_AB*CUSTOM_REAL
+  ! call MPI_Info_set(info,"cb_buffer_size",chunck,ier)
+
+  call MPI_File_open(my_local_mpi_comm_world, file_name, &
+       MPI_MODE_WRONLY + MPI_MODE_CREATE, MPI_INFO_NULL, &
+       IFILE_FWD_WAVEFIELD_MPI_FH, ier)
+  
+  if (ier /= 0) &
+       call exit_MPI_without_rank('error opening to write:'// file_name)
+
+  ! get file size
+  itloc = 0
+  do i=1,NSTEP 
+    if(mod(i, NSTEP_PER_FORWARD_OUTPUT) == 0) then 
+      itloc = itloc + 1
+    endif
+  enddo
+
+  itloc = itloc*NDIM*NGLOB_AB*CUSTOM_REAL
+  ! print*,'file total size = ',itloc
+  !call MPI_File_set_size(IFILE_FWD_WAVEFIELD_MPI_FH,itloc,ier)
+      
 end subroutine open_forward_wavefield_write
 
 subroutine open_forward_wavefield_read()
-  use specfem_par, only: NDIM,MAX_STRING_LEN,OUTPUT_FILES
-  use specfem_par,only: NGLOB_AB,NDIM,NSTEP,NSTEP_PER_FORWARD_OUTPUT 
-  use iso_c_binding,only : c_null_char
-
+  use specfem_par, only: NDIM,IFILE_FWD_WAVEFIELD_MPI_FH,&
+                         MAX_STRING_LEN,OUTPUT_FILES,myrank
+  use specfem_par,only: NGLOB_AB,NDIM,subsample_offset,subsample_total_size 
+  use my_mpi
   implicit none
-
+  integer :: ier
   character (len=MAX_STRING_LEN) :: file_name
 
   file_name = OUTPUT_FILES(1:len_trim(OUTPUT_FILES)) // 'forward_wavefield.bin'
-  file_name = trim(file_name) // c_null_char
 
   ! gather total size
-  call open_subsample_read(NDIM*NGLOB_AB,file_name,&
-                           NSTEP,&
-                           NSTEP_PER_FORWARD_OUTPUT)
+  call MPI_Exscan(int(NDIM*NGLOB_AB,kind=8),subsample_offset,1,MPI_LONG,MPI_SUM,my_local_mpi_comm_world,ier)
+  if(myrank == 0) subsample_offset = 0
 
+  ! compute total size of all data in this time
+  call MPI_Allreduce(int(NDIM*NGLOB_AB,kind=8), subsample_total_size, 1, &
+                    MPI_LONG, MPI_SUM, my_local_mpi_comm_world, ier)
+
+  call MPI_File_open(my_local_mpi_comm_world, file_name,&
+                     MPI_MODE_RDONLY, MPI_INFO_NULL,&
+                     IFILE_FWD_WAVEFIELD_MPI_FH, ier)
+
+  if (ier /= 0) &
+       call exit_MPI_without_rank('error opening to read:'// file_name)
 end subroutine open_forward_wavefield_read
 
 subroutine close_forward_wavefield()
+  use specfem_par, only: IFILE_FWD_WAVEFIELD_MPI_FH
+  use my_mpi 
 
-  implicit none
-  call close_subsample_file()
-  
+  integer :: ier 
+  call MPI_File_close(IFILE_FWD_WAVEFIELD_MPI_FH,ier)
 end subroutine close_forward_wavefield
 
 subroutine write_subsampled_forward_wavefield(it)
-  use specfem_par, only: NSTEP_PER_FORWARD_OUTPUT,&
-                          Mesh_pointer,GPU_MODE
+  use specfem_par, only: IFILE_FWD_WAVEFIELD_MPI_FH, NSTEP_PER_FORWARD_OUTPUT,&
+                          Mesh_pointer,GPU_MODE,NDIM,NGLOB_AB,CUSTOM_REAL
   use specfem_par_elastic, only: displ
+  use specfem_par,only: offset => subsample_offset,total_size => subsample_total_size 
+  use my_mpi
 
   implicit none
-  integer :: i_save, it
+  integer :: i_save, it,ier
+  integer(kind=MPI_OFFSET_KIND) :: file_offset 
+  integer :: status(MPI_STATUS_SIZE)
 
   i_save = int(it / NSTEP_PER_FORWARD_OUTPUT)
 
-  if(GPU_MODE) then 
-    call write_subsample_file_cuda(i_save,Mesh_pointer)
-  else 
-    call write_subsample_file(i_save,displ)
-  endif
+  if(GPU_MODE) call  transfer_displ_from_device(NDIM*NGLOB_AB,displ, Mesh_pointer)
+
+  file_offset = int((i_save - 1) * total_size + offset,kind=MPI_OFFSET_KIND) * CUSTOM_REAL
+  
+  ! write
+  call MPI_File_write_at(IFILE_FWD_WAVEFIELD_MPI_FH,&
+                        file_offset,displ,NGLOB_AB*NDIM,&
+                        MPI_REAL,status,ier)
 
 end subroutine write_subsampled_forward_wavefield
 
 subroutine read_subsampled_forward_wavefield(b_it)
-  use specfem_par, only: NSTEP_PER_FORWARD_OUTPUT,&
-                          GPU_MODE,Mesh_pointer
+  use specfem_par, only: IFILE_FWD_WAVEFIELD_MPI_FH, NSTEP_PER_FORWARD_OUTPUT,&
+                          GPU_MODE,Mesh_pointer,NDIM,NGLOB_AB,CUSTOM_REAL
+  use specfem_par,only: offset => subsample_offset,total_size => subsample_total_size 
   use specfem_par_elastic, only: b_displ
+  use my_mpi
 
   implicit none
-  integer :: i_save, b_it
+  integer :: i_save, b_it,ier 
+  integer(kind=MPI_OFFSET_KIND) :: file_offset 
+  integer :: status(MPI_STATUS_SIZE)
 
   i_save = int(b_it / NSTEP_PER_FORWARD_OUTPUT)
 
-  if(GPU_MODE) then 
-    call read_subsample_file_cuda(i_save,Mesh_pointer)
-  else 
-    call read_subsample_file(i_save,b_displ)
-  endif
 
+  file_offset = int((i_save - 1) * total_size + offset,kind=MPI_OFFSET_KIND) * CUSTOM_REAL
+
+  ! read
+  call MPI_File_read_at(IFILE_FWD_WAVEFIELD_MPI_FH,&
+                        file_offset,b_displ,NGLOB_AB*NDIM,&
+                        MPI_REAL,status,ier) 
+
+  if(GPU_MODE) call transfer_b_displ_to_device(NDIM*NGLOB_AB,b_displ, Mesh_pointer)
   
 end subroutine read_subsampled_forward_wavefield
 
@@ -96,7 +155,7 @@ subroutine compute_kernels_from_subsampled_wavefield()
   ! GPU MODE
   if(GPU_MODE) then 
     dt_kl = deltat*NSTEP_PER_FORWARD_OUTPUT
-    call compute_subsample_strain(Mesh_pointer)
+    call compute_subsample_strain(Mesh_pointer,dt_kl)
     call compute_kernels_elastic_cuda(Mesh_pointer,dt_kl)
     if(APPROXIMATE_HESS_KL) then 
       call compute_kernels_hess_cuda(Mesh_pointer,dt_kl, &
