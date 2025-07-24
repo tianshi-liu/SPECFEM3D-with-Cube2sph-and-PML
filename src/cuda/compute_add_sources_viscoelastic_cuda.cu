@@ -92,13 +92,23 @@ void FC_FUNC_(compute_add_sources_el_cuda,
   int NSOURCES = *h_NSOURCES;
 
   // convert to GPU precision
-  realw* stf_pre_compute;
-  stf_pre_compute = (realw*)malloc(NSOURCES * sizeof(realw));
-  for (int i_source=0;i_source < NSOURCES;i_source++) stf_pre_compute[i_source] = (realw)h_stf_pre_compute[i_source];
+  // realw* stf_pre_compute;
+  // stf_pre_compute = (realw*)malloc(NSOURCES * sizeof(realw));
+  // for (int i_source=0;i_source < NSOURCES;i_source++) stf_pre_compute[i_source] = (realw)h_stf_pre_compute[i_source];
 
-  print_CUDA_error_if_any(cudaMemcpy(mp->d_stf_pre_compute,stf_pre_compute,
-                                     NSOURCES*sizeof(realw),cudaMemcpyHostToDevice),18);
-  free(stf_pre_compute);
+  // print_CUDA_error_if_any(cudaMemcpy(mp->d_stf_pre_compute,stf_pre_compute,
+  //                                    NSOURCES*sizeof(realw),cudaMemcpyHostToDevice),18);
+  // free(stf_pre_compute);
+
+  // nqdu added
+  realw* stf_pre_compute = mp->h_buffer_stf;
+  for (int i_source=0;i_source < NSOURCES;i_source++) stf_pre_compute[i_source] = (realw)h_stf_pre_compute[i_source];
+  cudaMemcpyAsync(
+    mp->d_stf_pre_compute,stf_pre_compute,
+    NSOURCES*sizeof(realw),cudaMemcpyHostToDevice,
+    mp->compute_stream
+  );
+  cudaStreamSynchronize(mp->compute_stream);
 
 #ifdef ENABLE_VERY_SLOW_ERROR_CHECKING
   exit_on_cuda_error("compute_add_sources_el_cuda copy");
@@ -138,13 +148,23 @@ void FC_FUNC_(compute_add_sources_el_s3_cuda,
   int NSOURCES = *h_NSOURCES;
 
   // convert to GPU precision
-  realw* stf_pre_compute;
-  stf_pre_compute = (realw*)malloc(NSOURCES * sizeof(realw));
-  for (int i_source=0;i_source < NSOURCES;i_source++) stf_pre_compute[i_source] = (realw)h_stf_pre_compute[i_source];
+  // realw* stf_pre_compute;
+  // stf_pre_compute = (realw*)malloc(NSOURCES * sizeof(realw));
+  // for (int i_source=0;i_source < NSOURCES;i_source++) stf_pre_compute[i_source] = (realw)h_stf_pre_compute[i_source];
 
-  print_CUDA_error_if_any(cudaMemcpy(mp->d_stf_pre_compute,stf_pre_compute,
-                                     NSOURCES*sizeof(realw),cudaMemcpyHostToDevice),18);
-  free(stf_pre_compute);
+  // print_CUDA_error_if_any(cudaMemcpy(mp->d_stf_pre_compute,stf_pre_compute,
+  //                                    NSOURCES*sizeof(realw),cudaMemcpyHostToDevice),18);
+  // free(stf_pre_compute);
+
+  // nqdu added
+  realw* stf_pre_compute = mp->h_buffer_stf;
+  for (int i_source=0;i_source < NSOURCES;i_source++) stf_pre_compute[i_source] = (realw)h_stf_pre_compute[i_source];
+  cudaMemcpyAsync(
+    mp->d_stf_pre_compute,stf_pre_compute,
+    NSOURCES*sizeof(realw),cudaMemcpyHostToDevice,
+    mp->compute_stream
+  );
+  cudaStreamSynchronize(mp->compute_stream);
 
 #ifdef ENABLE_VERY_SLOW_ERROR_CHECKING
   exit_on_cuda_error("compute_add_sources_el_s3_cuda copy");

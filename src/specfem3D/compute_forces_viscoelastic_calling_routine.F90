@@ -340,14 +340,14 @@ subroutine compute_forces_viscoelastic_calling()
   endif
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  !if (PML_CONDITIONS) then
-  !  if (SIMULATION_TYPE == 1 .and. SAVE_FORWARD) then
-  !    if (nglob_interface_PML_elastic > 0) then
-  !      call save_field_on_pml_interface(displ,veloc,accel,nglob_interface_PML_elastic, &
-  !                                       b_PML_field,b_reclen_PML_field)
-  !    endif
-  !  endif
-  !endif
+  if (PML_CONDITIONS) then
+   if (SIMULATION_TYPE == 1 .and. SAVE_FORWARD) then
+     if (nglob_interface_PML_elastic > 0) then
+       call save_field_on_pml_interface(displ,veloc,accel,nglob_interface_PML_elastic, &
+                                        b_PML_field,b_reclen_PML_field)
+     endif
+   endif
+  endif
 
 end subroutine compute_forces_viscoelastic_calling
 

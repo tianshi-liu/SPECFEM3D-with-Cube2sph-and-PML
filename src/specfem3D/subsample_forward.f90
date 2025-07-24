@@ -1,6 +1,6 @@
 subroutine open_forward_wavefield_write()
   use specfem_par, only: NDIM,MAX_STRING_LEN,OUTPUT_FILES
-  use specfem_par,only: NGLOB_AB,NDIM
+  use specfem_par,only: NGLOB_AB,WFIO_ptr
   use iso_c_binding,only : c_null_char
 
   implicit none
@@ -9,13 +9,14 @@ subroutine open_forward_wavefield_write()
   file_name = OUTPUT_FILES(1:len_trim(OUTPUT_FILES)) // 'forward_wavefield.bin'
   file_name = trim(file_name) // c_null_char
 
-  call open_subsample_write(NDIM*NGLOB_AB,file_name)
+  call open_subsample_write(WFIO_ptr,NDIM*NGLOB_AB,file_name)
 
 end subroutine open_forward_wavefield_write
 
 subroutine open_forward_wavefield_read()
-  use specfem_par, only: NDIM,MAX_STRING_LEN,OUTPUT_FILES
+  use specfem_par, only: NDIM,MAX_STRING_LEN,OUTPUT_FILES,WFIO_ptr
   use specfem_par,only: NGLOB_AB,NDIM,NSTEP,NSTEP_PER_FORWARD_OUTPUT 
+  use specfem_par,only: WFIO_ptr
   use iso_c_binding,only : c_null_char
 
   implicit none
@@ -26,22 +27,22 @@ subroutine open_forward_wavefield_read()
   file_name = trim(file_name) // c_null_char
 
   ! gather total size
-  call open_subsample_read(NDIM*NGLOB_AB,file_name,&
-                           NSTEP,&
+  call open_subsample_read(WFIO_ptr,NDIM*NGLOB_AB,&
+                           file_name,NSTEP,&
                            NSTEP_PER_FORWARD_OUTPUT)
 
 end subroutine open_forward_wavefield_read
 
 subroutine close_forward_wavefield()
-
+  use specfem_par,only: WFIO_ptr
   implicit none
-  call close_subsample_file()
+  call close_subsample_file(WFIO_ptr)
   
 end subroutine close_forward_wavefield
 
 subroutine write_subsampled_forward_wavefield(it)
   use specfem_par, only: NSTEP_PER_FORWARD_OUTPUT,&
-                          Mesh_pointer,GPU_MODE
+                          Mesh_pointer,GPU_MODE,WFIO_ptr
   use specfem_par_elastic, only: displ
 
   implicit none
@@ -50,9 +51,9 @@ subroutine write_subsampled_forward_wavefield(it)
   i_save = int(it / NSTEP_PER_FORWARD_OUTPUT)
 
   if(GPU_MODE) then 
-    call write_subsample_file_cuda(i_save,Mesh_pointer)
+    call write_subsample_file_cuda(WFIO_ptr,i_save,Mesh_pointer)
   else 
-    call write_subsample_file(i_save,displ)
+    call write_subsample_file(WFIO_ptr,i_save,displ)
   endif
 
 end subroutine write_subsampled_forward_wavefield
@@ -61,16 +62,17 @@ subroutine read_subsampled_forward_wavefield(b_it)
   use specfem_par, only: NSTEP_PER_FORWARD_OUTPUT,&
                           GPU_MODE,Mesh_pointer
   use specfem_par_elastic, only: b_displ
-
+  use specfem_par,only: WFIO_ptr
+ 
   implicit none
   integer :: i_save, b_it
 
   i_save = int(b_it / NSTEP_PER_FORWARD_OUTPUT)
 
   if(GPU_MODE) then 
-    call read_subsample_file_cuda(i_save,Mesh_pointer)
+    call read_subsample_file_cuda(WFIO_ptr,i_save,Mesh_pointer)
   else 
-    call read_subsample_file(i_save,b_displ)
+    call read_subsample_file(WFIO_ptr,i_save,b_displ)
   endif
 
   

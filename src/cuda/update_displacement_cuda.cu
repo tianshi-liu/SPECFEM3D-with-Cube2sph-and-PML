@@ -143,11 +143,15 @@ void FC_FUNC_(update_displacement_cuda,
 }
 
 
-extern "C"
-void update_displacement_cuda_ade_(long* Mesh_pointer,
+extern "C" void 
+FC_FUNC_(update_displacement_cuda_ade,UPDATE_DISPLACEMENT_CUDA_ADE) (
+                                          long* Mesh_pointer,
                                           realw* deltat_F,
                                           realw* deltatsqover2_F,
-                                          realw* deltatover2_F) 
+                                          realw* deltatover2_F,
+                                          realw* b_deltat_F,
+                                          realw* b_deltatsqover2_F,
+                                          realw* b_deltatover2_F) 
 {
 
   TRACE("\tupdate_displacement_cuda_ade");
@@ -171,8 +175,13 @@ void update_displacement_cuda_ade_(long* Mesh_pointer,
 
   UpdateDispVeloc_kernel<<<grid,threads,0,mp->compute_stream>>>(mp->d_displ,mp->d_veloc,mp->d_accel,
                                                                 size,deltat,deltatsqover2,deltatover2);
-}
 
+  if(mp->simulation_type == 3 && (!mp->SUBSAMPLE_FWD_WAVEFIELD)) {
+    UpdateDispVeloc_kernel<<<grid,threads,0,mp->compute_stream>>>(
+      mp->d_displ,mp->d_veloc,mp->d_accel,
+      size,*b_deltat_F,*b_deltatsqover2_F,*b_deltatover2_F);
+  }
+}
 
 /* ----------------------------------------------------------------------------------------------- */
 

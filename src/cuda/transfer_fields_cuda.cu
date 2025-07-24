@@ -71,6 +71,73 @@ void FC_FUNC_(transfer_fields_el_from_device,
 
 }
 
+static void __global__
+kernel_transfer_b_pml_field(
+  realw_p displ,realw_p veloc, realw_p accel,
+  realw_p b_pml_field, int nglob_intf_pml,
+  const int* pnts_intf_pml, int ndim,bool field2buffer)
+{
+  // get index
+  int id = threadIdx.x + blockDim.x * blockIdx.x;
+  int iglob_pml = id  / nglob_intf_pml, i = id % nglob_intf_pml;
+  if(iglob_pml < nglob_intf_pml &&  i < ndim) {
+    int iglob = pnts_intf_pml[iglob_pml];
+    if(!field2buffer) {
+      displ[iglob*ndim + i] = b_pml_field[iglob_pml*ndim*3 + i];
+      veloc[iglob*ndim + i] = b_pml_field[iglob_pml*ndim*3 + i + ndim];
+      accel[iglob*ndim + i] = b_pml_field[iglob_pml*ndim*3 + i + ndim*2];
+    }
+    else {
+      b_pml_field[iglob_pml*ndim*3 + i] = displ[iglob*ndim + i];
+      b_pml_field[iglob_pml*ndim*3 + i + ndim] = veloc[iglob*ndim + i];
+      b_pml_field[iglob_pml*ndim*3 + i + ndim*2] = accel[iglob*ndim + i];
+    }
+  }
+}
+
+// nqdu added
+extern "C" 
+void FC_FUNC_(transfer_b_pml_field_to_device,
+              TRANSFER_B_PML_FIELD_TO_DEVICE)(int* size, realw *b_pml_field,long* Mesh_pointer) {
+  
+  TRACE("transfer_b_pml_field_to_device");
+
+  Mesh* mp = (Mesh*)(*Mesh_pointer); //get mesh pointer out of fortran integer container
+
+  print_CUDA_error_if_any(
+    cudaMemcpy(mp->d_b_PML_field,b_pml_field,sizeof(realw)*(*size),cudaMemcpyHostToDevice),40009);
+
+
+  int nb = (mp->nglob_interface_PML_elastic * NDIM + NGLL3_PADDED) / NGLL3_PADDED;
+
+  kernel_transfer_b_pml_field <<<nb,NGLL3_PADDED,0,mp->compute_stream>>> (
+    mp->d_b_displ,mp->d_b_veloc,mp->d_b_accel,mp->d_b_PML_field,
+    mp->nglob_interface_PML_elastic,mp->d_points_interface_PML_elastic,
+    NDIM,false
+  );
+}
+
+extern "C" 
+void FC_FUNC_(transfer_b_pml_field_from_device,
+              TRANSFER_B_PML_FIELD_FROM_DEVICE)(int* size, realw *b_pml_field,long* Mesh_pointer) {
+  
+  TRACE("transfer_b_pml_field_from_device");
+
+  Mesh* mp = (Mesh*)(*Mesh_pointer); //get mesh pointer out of fortran integer container
+
+  int nb = (mp->nglob_interface_PML_elastic * NDIM + NGLL3_PADDED) / NGLL3_PADDED;
+
+  kernel_transfer_b_pml_field <<<nb,NGLL3_PADDED,0,mp->compute_stream>>> (
+    mp->d_displ,mp->d_veloc,mp->d_accel,mp->d_b_PML_field,
+    mp->nglob_interface_PML_elastic,mp->d_points_interface_PML_elastic,
+    NDIM,true
+  );
+
+  print_CUDA_error_if_any(
+    cudaMemcpy(b_pml_field,mp->d_b_PML_field,sizeof(realw)*(*size),cudaMemcpyDeviceToHost),40010);
+}
+
+
 /* ----------------------------------------------------------------------------------------------- */
 
 extern "C"

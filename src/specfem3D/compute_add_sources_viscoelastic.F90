@@ -455,7 +455,7 @@
 !       adjoint source traces which start at -t0 and end at time (NSTEP-1)*DT - t0
 !       for step it=1: (NSTEP -it + 1)*DT - t0 for backward wavefields corresponds to time T
 
-! adjoint simulations
+  ! adjoint simulations
   if (SIMULATION_TYPE == 2 .or. SIMULATION_TYPE == 3) then
     ! adds adjoint source in this partitions
     if (nadj_rec_local > 0) then
@@ -508,34 +508,36 @@
 !           b_displ(it=1) corresponds to -t0 + (NSTEP-1)*DT.
 !           thus indexing is NSTEP - it , instead of NSTEP - it - 1
 
-! adjoint simulations
-  if (SIMULATION_TYPE == 3 .and. NOISE_TOMOGRAPHY == 0 .and. nsources_local > 0) then
+  !nqdu comment, not required
+  ! adjoint simulations
+  ! if (SIMULATION_TYPE == 3 .and. NOISE_TOMOGRAPHY == 0 &
+  !     .and. nsources_local > 0 .and. ) then
 
-    if (NSOURCES > 0) then
-      do isource = 1,NSOURCES
-        ! current time
-        if (USE_LDDRK) then
-          time_source_dble = dble(NSTEP-it)*DT - dble(C_LDDRK(istage))*DT - t0 - tshift_src(isource)
-        else
-          time_source_dble = dble(NSTEP-it)*DT - t0 - tshift_src(isource)
-        endif
+  !   if (NSOURCES > 0) then
+  !     do isource = 1,NSOURCES
+  !       ! current time
+  !       if (USE_LDDRK) then
+  !         time_source_dble = dble(NSTEP-it)*DT - dble(C_LDDRK(istage))*DT - t0 - tshift_src(isource)
+  !       else
+  !         time_source_dble = dble(NSTEP-it)*DT - t0 - tshift_src(isource)
+  !       endif
 
-        !! add external source time function
-        if (USE_EXTERNAL_SOURCE_FILE) then
-           stf = user_source_time_function(NSTEP-it+1, isource)
-        else
-           ! determines source time function value
-           stf = get_stf_viscoelastic(time_source_dble,isource)
-        endif
+  !       !! add external source time function
+  !       if (USE_EXTERNAL_SOURCE_FILE) then
+  !          stf = user_source_time_function(NSTEP-it+1, isource)
+  !       else
+  !          ! determines source time function value
+  !          stf = get_stf_viscoelastic(time_source_dble,isource)
+  !       endif
 
-        ! stores precomputed source time function factor
-        stf_pre_compute(isource) = stf
-      enddo
+  !       ! stores precomputed source time function factor
+  !       stf_pre_compute(isource) = stf
+  !     enddo
 
-      ! only implements SIMTYPE=3
-      call compute_add_sources_el_s3_cuda(Mesh_pointer,stf_pre_compute,NSOURCES)
-    endif
-  endif ! adjoint
+  !     ! only implements SIMTYPE=3
+  !     call compute_add_sources_el_s3_cuda(Mesh_pointer,stf_pre_compute,NSOURCES)
+  !   endif
+  ! endif ! adjoint
 
   ! for noise simulations
   if (NOISE_TOMOGRAPHY > 0) then

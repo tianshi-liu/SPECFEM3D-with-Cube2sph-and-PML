@@ -261,6 +261,10 @@
   !   write(IMAIN, *) '  subsample NSTEP =  ',NSTEP_PER_FORWARD_OUTPUT
 
 
+  if(PML_CONDITIONS .AND. (SAVE_FORWARD .and. SUBSAMPLE_FORWARD_WAVEFIELD)) then 
+    stop 'SAVE_FOWARD and SUBSAMPLE cannot be activated simultaneously!'
+  endif
+
   ! initializes adjoint simulations
   call initialize_simulation_adjoint()
 

@@ -309,6 +309,10 @@ logical :: SUBSAMPLE_FORWARD_WAVEFIELD
 integer :: NSTEP_PER_FORWARD_OUTPUT
 integer, parameter :: IFILE_FORWARD_WAVEFIELD = 82
 
+! nqdu added
+! subsampling c pointer wrapper
+integer(kind=8) :: WFIO_ptr
+
 end module specfem_par
 
 !=====================================================================

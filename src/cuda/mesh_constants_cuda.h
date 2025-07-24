@@ -436,6 +436,8 @@ typedef struct mesh_ {
   field* d_stf_pre_compute;
   int* d_islice_selected_source;
   int* d_ispec_selected_source;
+  // pinned memory stf_pre_compute
+  realw* h_buffer_stf;
 
   // receivers
   int* d_ispec_selected_rec_loc;
@@ -696,6 +698,13 @@ typedef struct mesh_ {
   MPI_Request *req_send_PML, *req_recv_PML;
   realw *d_buffer_recv_matrix_PML;
   realw *d_recv_accel_buffer;
+
+  // PML backward vars
+  int nglob_interface_PML_elastic, nglob_interface_PML_acoustic;
+  int *d_points_interface_PML_elastic;  // shape(nglob_interface_PML_elastic)
+  int *d_points_interface_PML_acoustic; // shape(nglob_interface_PML_acoustic)
+  realw *d_b_PML_field;  // shape(nglob_interface_PML_elastic)
+  realw *d_b_PML_potential; 
 
   // subsample functions
   realw* h_sub_buffer; // use cudaMallocHost

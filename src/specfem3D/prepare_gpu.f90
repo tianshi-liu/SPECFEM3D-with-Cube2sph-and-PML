@@ -459,7 +459,8 @@ subroutine prepare_ADE_PML_GPU()
     pml_physical_normal,pml_physical_jacobian2Dw,ibool_CPML,CPML_to_glob,&
     r_trans,r_trans_inv,rvolume,nibool_interfaces_PML,&
     ibool_interfaces_PML,buffer_send_matrix_PML,&
-    Qu,Qu_t,Qt,Qt_t)
+    Qu,Qu_t,Qt,Qt_t,nglob_interface_PML_elastic,nglob_interface_PML_acoustic, &
+    points_interface_PML_elastic,points_interface_PML_acoustic)
 
 end subroutine prepare_ADE_PML_GPU
 
