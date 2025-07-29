@@ -95,11 +95,17 @@ void FC_FUNC_(wavefield_discontinuity_add_traction_cuda,
     dim3 grid(num_blocks_x,num_blocks_y);
     dim3 threads(blocksize,1,1);
 
+    // pointers
+    realw * accel_ptr = mp->d_accel;
+    if(mp->simulation_type != 1) {
+      accel_ptr = mp->d_b_accel;
+    }
+
     add_acceleration_discontinuity_kernel
     <<<grid, threads, 0, mp->compute_stream>>>(mp->d_accel_wd,
                                                 mp->d_mass_in_wd,
                                                 mp->d_boundary_to_iglob_wd,
-                                                size, mp->d_accel);
+                                                size, accel_ptr);
 
     size = (*size_faces);
     blocksize = NGLL2;
@@ -115,7 +121,7 @@ void FC_FUNC_(wavefield_discontinuity_add_traction_cuda,
                                                 mp->d_face_ijk_wd,
                                                 mp->d_face_jacobian2Dw_wd,
                                                 mp->d_ibool,
-                                                size, mp->d_accel);
+                                                size, accel_ptr);
 
   }
 }

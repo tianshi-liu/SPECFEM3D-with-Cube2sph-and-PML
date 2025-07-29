@@ -451,6 +451,8 @@ subroutine prepare_ADE_PML_GPU()
   use specfem_par,only: Mesh_pointer
   implicit none
 
+  ! print*,nglob_interface_PML_elastic,nglob_interface_PML_acoustic
+
   call prepare_ADE_PML_device( &
     Mesh_pointer,NSPEC_CPML,num_pml_physical,num_interfaces_PML,max_nibool_interfaces_PML,&
     nglob_CPML,nglob_pml_in,is_CPML,spec_to_CPML,&
@@ -459,7 +461,8 @@ subroutine prepare_ADE_PML_GPU()
     pml_physical_normal,pml_physical_jacobian2Dw,ibool_CPML,CPML_to_glob,&
     r_trans,r_trans_inv,rvolume,nibool_interfaces_PML,&
     ibool_interfaces_PML,buffer_send_matrix_PML,&
-    Qu,Qu_t,Qt,Qt_t)
+    Qu,Qu_t,Qt,Qt_t,nglob_interface_PML_elastic,nglob_interface_PML_acoustic, &
+    points_interface_PML_elastic,points_interface_PML_acoustic)
 
 end subroutine prepare_ADE_PML_GPU
 

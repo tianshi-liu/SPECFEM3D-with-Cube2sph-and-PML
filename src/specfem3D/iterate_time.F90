@@ -208,7 +208,8 @@
 
   !nqdu
   ! mask IS_WAVEFIELD_DISCONTINUITY for simu_type == 3
-  if(SIMULATION_TYPE == 3) IS_WAVEFIELD_DISCONTINUITY = .false.
+  if(SIMULATION_TYPE == 3 .and. SUBSAMPLE_FORWARD_WAVEFIELD) &
+       IS_WAVEFIELD_DISCONTINUITY = .false.
 
   !! Tianshi Liu: for solving wavefield discontinuity problem with
   !! non-split-node scheme
@@ -289,6 +290,10 @@
       if (ELASTIC_SIMULATION) then 
         if(PML_CONDITIONS .and. USE_ADE_PML) then 
           call compute_forces_viscoelastic_ADE_GPU_calling()
+
+          if(SIMULATION_TYPE == 3 .and. (.not. SUBSAMPLE_FORWARD_WAVEFIELD)) then 
+            call compute_forces_viscoelastic_ADE_GPU_backward_calling()
+          endif
         else 
           call compute_forces_viscoelastic_GPU_calling()
         endif

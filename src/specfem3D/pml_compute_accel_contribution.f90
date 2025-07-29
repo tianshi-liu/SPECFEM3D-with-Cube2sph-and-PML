@@ -249,27 +249,50 @@ subroutine save_field_on_pml_interface(displ,veloc,accel,nglob_interface_PML_ela
 
   use specfem_par, only: NGLOB_AB,it
   use constants, only: CUSTOM_REAL,NDIM
+
+  ! nqdu add
+  use specfem_par,only : GPU_MODE,Mesh_pointer
+  use pml_par,only : points_interface_PML_elastic
   implicit none
 
   integer, intent(in) :: nglob_interface_PML_elastic,b_reclen_PML_field
   real(kind=CUSTOM_REAL), dimension(NDIM,NGLOB_AB), intent(in) :: displ,veloc,accel
   real(kind=CUSTOM_REAL), dimension(9,nglob_interface_PML_elastic) :: b_PML_field
 
-  integer :: iglob
+  integer :: iglob_pml,iglob
 
-  do iglob = 1, nglob_interface_PML_elastic
-    b_PML_field(1,iglob) = displ(1,iglob)
-    b_PML_field(2,iglob) = displ(2,iglob)
-    b_PML_field(3,iglob) = displ(3,iglob)
+  if(GPU_MODE) then
+    call transfer_b_pml_field_from_device(b_PML_field,Mesh_pointer)
+  else 
+    do iglob_pml = 1, nglob_interface_PML_elastic
+      iglob = points_interface_PML_elastic(iglob_pml)
+      b_PML_field(1,iglob_pml) = displ(1,iglob)
+      b_PML_field(2,iglob_pml) = displ(2,iglob)
+      b_PML_field(3,iglob_pml) = displ(3,iglob)
 
-    b_PML_field(4,iglob) = veloc(1,iglob)
-    b_PML_field(5,iglob) = veloc(2,iglob)
-    b_PML_field(6,iglob) = veloc(3,iglob)
+      b_PML_field(4,iglob_pml) = veloc(1,iglob)
+      b_PML_field(5,iglob_pml) = veloc(2,iglob)
+      b_PML_field(6,iglob_pml) = veloc(3,iglob)
 
-    b_PML_field(7,iglob) = accel(1,iglob)
-    b_PML_field(8,iglob) = accel(2,iglob)
-    b_PML_field(9,iglob) = accel(3,iglob)
-  enddo
+      b_PML_field(7,iglob_pml) = accel(1,iglob)
+      b_PML_field(8,iglob_pml) = accel(2,iglob)
+      b_PML_field(9,iglob_pml) = accel(3,iglob)
+    enddo
+  endif
+
+  ! do iglob = 1, nglob_interface_PML_elastic
+  !   b_PML_field(1,iglob) = displ(1,iglob)
+  !   b_PML_field(2,iglob) = displ(2,iglob)
+  !   b_PML_field(3,iglob) = displ(3,iglob)
+
+  !   b_PML_field(4,iglob) = veloc(1,iglob)
+  !   b_PML_field(5,iglob) = veloc(2,iglob)
+  !   b_PML_field(6,iglob) = veloc(3,iglob)
+
+  !   b_PML_field(7,iglob) = accel(1,iglob)
+  !   b_PML_field(8,iglob) = accel(2,iglob)
+  !   b_PML_field(9,iglob) = accel(3,iglob)
+  ! enddo
 
   call write_abs(0,b_PML_field,b_reclen_PML_field,it)
 
@@ -280,46 +303,70 @@ end subroutine save_field_on_pml_interface
 subroutine read_field_on_pml_interface(b_accel,b_veloc,b_displ,nglob_interface_PML_elastic, &
                                        b_PML_field,b_reclen_PML_field)
 
-  use specfem_par, only: NGLOB_AB,ibool,NSTEP,it
-  use pml_par, only: NSPEC_CPML,CPML_to_spec
+  use specfem_par, only: NGLOB_AB,NSTEP,it
   use constants, only: CUSTOM_REAL,NDIM,NGLLX,NGLLY,NGLLZ
+
+  !nqdu
+  use specfem_par,only : GPU_MODE,Mesh_pointer
+  use pml_par,only : points_interface_PML_elastic
   implicit none
 
   integer, intent(in) :: nglob_interface_PML_elastic,b_reclen_PML_field
   real(kind=CUSTOM_REAL), dimension(NDIM,NGLOB_AB) :: b_displ,b_veloc,b_accel
   real(kind=CUSTOM_REAL), dimension(9,nglob_interface_PML_elastic) :: b_PML_field
 
-  integer :: iglob,ispec,ispec_pml,i,j,k
+  integer :: iglob,iglob_pml 
 
-  do ispec_pml = 1, NSPEC_CPML
-    ispec = CPML_to_spec(ispec_pml)
-    do i = 1, NGLLX
-      do j = 1, NGLLY
-        do k = 1, NGLLZ
-          iglob = ibool(i,j,k,ispec)
-          b_displ(:,iglob) = 0._CUSTOM_REAL
-          b_veloc(:,iglob) = 0._CUSTOM_REAL
-          b_accel(:,iglob) = 0._CUSTOM_REAL
-        enddo
-      enddo
-    enddo
-  enddo
+  ! do ispec_pml = 1, NSPEC_CPML
+  !   ispec = CPML_to_spec(ispec_pml)
+  !   do i = 1, NGLLX
+  !     do j = 1, NGLLY
+  !       do k = 1, NGLLZ
+  !         iglob = ibool(i,j,k,ispec)
+  !         b_displ(:,iglob) = 0._CUSTOM_REAL
+  !         b_veloc(:,iglob) = 0._CUSTOM_REAL
+  !         b_accel(:,iglob) = 0._CUSTOM_REAL
+  !       enddo
+  !     enddo
+  !   enddo
+  ! enddo
 
   call read_abs(0,b_PML_field,b_reclen_PML_field,NSTEP-it+1)
 
-  do iglob = 1, nglob_interface_PML_elastic
-    b_displ(1,iglob) = b_PML_field(1,iglob)
-    b_displ(2,iglob) = b_PML_field(2,iglob)
-    b_displ(3,iglob) = b_PML_field(3,iglob)
+  ! nqdu added copy to gpu
+  if(GPU_MODE) then 
+    call transfer_b_pml_field_to_device(b_PML_field,Mesh_pointer)
+  else 
+    do iglob_pml = 1, nglob_interface_PML_elastic
+      iglob = points_interface_PML_elastic(iglob_pml)
+      b_displ(1,iglob) = b_PML_field(1,iglob)
+      b_displ(2,iglob) = b_PML_field(2,iglob)
+      b_displ(3,iglob) = b_PML_field(3,iglob)
 
-    b_veloc(1,iglob) = b_PML_field(4,iglob)
-    b_veloc(2,iglob) = b_PML_field(5,iglob)
-    b_veloc(3,iglob) = b_PML_field(6,iglob)
+      b_veloc(1,iglob) = b_PML_field(4,iglob)
+      b_veloc(2,iglob) = b_PML_field(5,iglob)
+      b_veloc(3,iglob) = b_PML_field(6,iglob)
 
-    b_accel(1,iglob) = b_PML_field(7,iglob)
-    b_accel(2,iglob) = b_PML_field(8,iglob)
-    b_accel(3,iglob) = b_PML_field(9,iglob)
-  enddo
+      b_accel(1,iglob) = b_PML_field(7,iglob)
+      b_accel(2,iglob) = b_PML_field(8,iglob)
+      b_accel(3,iglob) = b_PML_field(9,iglob)
+    enddo
+  endif
+
+
+  ! do iglob = 1, nglob_interface_PML_elastic
+  !   b_displ(1,iglob) = b_PML_field(1,iglob)
+  !   b_displ(2,iglob) = b_PML_field(2,iglob)
+  !   b_displ(3,iglob) = b_PML_field(3,iglob)
+
+  !   b_veloc(1,iglob) = b_PML_field(4,iglob)
+  !   b_veloc(2,iglob) = b_PML_field(5,iglob)
+  !   b_veloc(3,iglob) = b_PML_field(6,iglob)
+
+  !   b_accel(1,iglob) = b_PML_field(7,iglob)
+  !   b_accel(2,iglob) = b_PML_field(8,iglob)
+  !   b_accel(3,iglob) = b_PML_field(9,iglob)
+  ! enddo
 
 end subroutine read_field_on_pml_interface
 !

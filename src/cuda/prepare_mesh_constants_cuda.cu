@@ -297,7 +297,12 @@ void FC_FUNC_(prepare_constants_device,
   // compute stream
   cudaStreamCreate(&mp->compute_stream);
   // copy stream (needed to transfer mpi buffers)
-  if (mp->num_interfaces_ext_mesh * mp->max_nibool_interfaces_ext_mesh > 0){
+  // if (mp->num_interfaces_ext_mesh * mp->max_nibool_interfaces_ext_mesh > 0){
+  //   cudaStreamCreate(&mp->copy_stream);
+  // }
+
+  // nqdu added
+  if (mp->num_interfaces_ext_mesh * mp->max_nibool_interfaces_ext_mesh > 0 || *SUBSAMPLE_FORWARD_WAVEFIELD == 1){
     cudaStreamCreate(&mp->copy_stream);
   }
 
@@ -324,6 +329,9 @@ void FC_FUNC_(prepare_constants_device,
 
     // buffer for source time function values
     print_CUDA_error_if_any(cudaMalloc((void**)&mp->d_stf_pre_compute,(*NSOURCES)*sizeof(field)),1303);
+
+    // buffer for source time function, pinned memory
+    cudaMallocHost((void**)&mp->h_buffer_stf,(*NSOURCES)*sizeof(realw));
   }
   copy_todevice_int((void**)&mp->d_islice_selected_source,h_islice_selected_source,(*NSOURCES));
   copy_todevice_int((void**)&mp->d_ispec_selected_source,h_ispec_selected_source,(*NSOURCES));
@@ -1080,9 +1088,9 @@ void FC_FUNC_(prepare_fields_elastic_adj_dev,
   print_CUDA_error_if_any(cudaMalloc((void**)&(mp->d_b_veloc),sizeof(realw)*size),5202);
   print_CUDA_error_if_any(cudaMalloc((void**)&(mp->d_b_accel),sizeof(realw)*size),5203);
   // initializes values to zero
-  //print_CUDA_error_if_any(cudaMemset(mp->d_b_displ,0,sizeof(realw)*size),5207);
-  //print_CUDA_error_if_any(cudaMemset(mp->d_b_veloc,0,sizeof(realw)*size),5207);
-  //print_CUDA_error_if_any(cudaMemset(mp->d_b_accel,0,sizeof(realw)*size),5207);
+  print_CUDA_error_if_any(cudaMemset(mp->d_b_displ,0,sizeof(realw)*size),5207);
+  print_CUDA_error_if_any(cudaMemset(mp->d_b_veloc,0,sizeof(realw)*size),5207);
+  print_CUDA_error_if_any(cudaMemset(mp->d_b_accel,0,sizeof(realw)*size),5207);
 
   #ifdef USE_TEXTURES_FIELDS
   {
@@ -1526,6 +1534,9 @@ TRACE("prepare_cleanup_device");
   if (mp->simulation_type == 1  || mp->simulation_type == 3){
     cudaFree(mp->d_sourcearrays);
     cudaFree(mp->d_stf_pre_compute);
+
+    // nqdu added
+    cudaFreeHost(mp->h_buffer_stf);
   }
 
   cudaFree(mp->d_islice_selected_source);
@@ -1771,12 +1782,19 @@ TRACE("prepare_cleanup_device");
     // free space
     free(mp->req_recv_PML); free(mp->req_send_PML);
 
-
 #ifndef USE_CUDA_AWARE_MPI
     cudaFreeHost(mp->h_buffer_recv_matrix_PML);
     cudaFreeHost(mp->h_buffer_send_matrix_PML);
 #endif
-    
+
+    // free space for PML inner boundary
+    if((! mp->SUBSAMPLE_FWD_WAVEFIELD) &&
+        ((mp->simulation_type == 1 && mp->save_forward) || 
+        (mp->simulation_type == 3)) )
+    {
+      dealloc(mp->d_points_interface_PML_acoustic,mp->d_points_interface_PML_elastic);
+      dealloc(mp->d_b_PML_field,mp->d_b_PML_potential);
+    }
   }
 
   // free space
@@ -1860,7 +1878,11 @@ void prepare_ade_pml_device_(
                               int *d_ibool_interfaces_PML,
                               realw *d_buffer_send_matrix_PML,
                               realw *d_Qu,realw *d_Qu_t,
-                              realw *d_Qt,realw *d_Qt_t
+                              realw *d_Qt,realw *d_Qt_t,
+                              int *nglob_intf_pml_el,
+                              int *nglob_intf_pml_ac,
+                              int *pnts_intf_pml_el,
+                              int *pnts_intf_pml_ac
                                ) 
 {
   // copy constants
@@ -1922,6 +1944,33 @@ void prepare_ade_pml_device_(
   print_CUDA_error_if_any(cudaMallocHost((void**)&(mp->h_buffer_recv_matrix_PML),mp->size_mpi_buffer_pml*sizeof(realw)),4018);
   print_CUDA_error_if_any(cudaMallocHost((void**)&(mp->h_buffer_send_matrix_PML),mp->size_mpi_buffer_pml*sizeof(realw)),4019);
 #endif
+
+  // allocate space for PML inner boundaries
+  if((! mp->SUBSAMPLE_FWD_WAVEFIELD) &&
+      ((mp->simulation_type == 1 && mp->save_forward) || 
+       (mp->simulation_type == 3)) )
+  {
+    mp->nglob_interface_PML_elastic = *nglob_intf_pml_el;
+    mp->nglob_interface_PML_acoustic = *nglob_intf_pml_ac;
+    size_t size = sizeof(int)*(*nglob_intf_pml_el);
+    cudaMalloc((void**)&(mp->d_points_interface_PML_elastic),size);
+    cudaMemcpy(mp->d_points_interface_PML_elastic,
+              pnts_intf_pml_el,size,
+              cudaMemcpyHostToDevice);
+
+    // allocate space for PML_field
+    cudaMalloc((void**)&(mp->d_b_PML_field),size*9);
+
+    size = sizeof(int)*(*nglob_intf_pml_ac);
+    cudaMalloc((void**)&(mp->d_points_interface_PML_acoustic),size);
+    cudaMemcpy(mp->d_points_interface_PML_acoustic,
+              pnts_intf_pml_ac,size,
+              cudaMemcpyHostToDevice);
+
+    // allocate space for PML_field
+    cudaMalloc((void**)&(mp->d_b_PML_potential),size);
+  }
+
 
   #undef DCOPY1
   #undef DCOPY

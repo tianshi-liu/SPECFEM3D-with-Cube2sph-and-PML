@@ -143,11 +143,15 @@ void FC_FUNC_(update_displacement_cuda,
 }
 
 
-extern "C"
-void update_displacement_cuda_ade_(long* Mesh_pointer,
+extern "C" void 
+FC_FUNC_(update_displacement_cuda_ade,UPDATE_DISPLACEMENT_CUDA_ADE) (
+                                          long* Mesh_pointer,
                                           realw* deltat_F,
                                           realw* deltatsqover2_F,
-                                          realw* deltatover2_F) 
+                                          realw* deltatover2_F,
+                                          realw* b_deltat_F,
+                                          realw* b_deltatsqover2_F,
+                                          realw* b_deltatover2_F) 
 {
 
   TRACE("\tupdate_displacement_cuda_ade");
@@ -171,8 +175,13 @@ void update_displacement_cuda_ade_(long* Mesh_pointer,
 
   UpdateDispVeloc_kernel<<<grid,threads,0,mp->compute_stream>>>(mp->d_displ,mp->d_veloc,mp->d_accel,
                                                                 size,deltat,deltatsqover2,deltatover2);
-}
 
+  if(mp->simulation_type == 3 && (!mp->SUBSAMPLE_FWD_WAVEFIELD)) {
+    UpdateDispVeloc_kernel<<<grid,threads,0,mp->compute_stream>>>(
+      mp->d_b_displ,mp->d_b_veloc,mp->d_b_accel,
+      size,*b_deltat_F,*b_deltatsqover2_F,*b_deltatover2_F);
+  }
+}
 
 /* ----------------------------------------------------------------------------------------------- */
 
@@ -538,7 +547,7 @@ __global__ void kernel_apply_mass(realw_p accel, realw_const_p rmassx,
 }
 
 extern "C"
-void apply_massmat_device_(long* Mesh_pointer)
+void apply_massmat_device_(long* Mesh_pointer,const int *backward)
 {
   TRACE("\tapply_massmat_device");
 
@@ -549,9 +558,18 @@ void apply_massmat_device_(long* Mesh_pointer)
   int blocksize = BLOCKSIZE_KERNEL3;
   int nb = (size + blocksize - 1) / blocksize;
 
-  kernel_apply_mass <<<nb,blocksize,0,mp->compute_stream>>> (
-    mp->d_accel,mp->d_rmassx,mp->d_rmassy,mp->d_rmassz,mp->NGLOB_AB
-  );
+
+  if(*backward) {
+    kernel_apply_mass <<<nb,blocksize,0,mp->compute_stream>>> (
+      mp->d_b_accel,mp->d_rmassx,mp->d_rmassy,mp->d_rmassz,mp->NGLOB_AB
+    );
+  }
+  else {
+    kernel_apply_mass <<<nb,blocksize,0,mp->compute_stream>>> (
+      mp->d_accel,mp->d_rmassx,mp->d_rmassy,mp->d_rmassz,mp->NGLOB_AB
+    );
+  }
+
 }
 
 __global__ void kernel_UpdateVeloc(realw_p veloc, const realw *accel,
@@ -564,7 +582,7 @@ __global__ void kernel_UpdateVeloc(realw_p veloc, const realw *accel,
 }
 
 extern "C"
-void update_velocity_device_(long* Mesh_pointer,realw *delta2ov2_f)
+void update_velocity_device_(long* Mesh_pointer,realw *delta2ov2_f,const int *backward)
 {
   TRACE("\tupdate_velocity_newmark");
 
@@ -575,9 +593,17 @@ void update_velocity_device_(long* Mesh_pointer,realw *delta2ov2_f)
   int blocksize = BLOCKSIZE_KERNEL3;
   int nb = (size + blocksize - 1) / blocksize;
   realw dtover2 = *delta2ov2_f;
-  kernel_UpdateVeloc<<<nb,blocksize,0,mp->compute_stream >>> (
-    mp->d_veloc,mp->d_accel,dtover2,size
-  );
+
+  if(!*backward) {
+    kernel_UpdateVeloc<<<nb,blocksize,0,mp->compute_stream >>> (
+      mp->d_veloc,mp->d_accel,dtover2,size
+    );
+  }
+  else {
+    kernel_UpdateVeloc<<<nb,blocksize,0,mp->compute_stream >>> (
+      mp->d_b_veloc,mp->d_b_accel,dtover2,size
+    );
+  }
 }
 
 

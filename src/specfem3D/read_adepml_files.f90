@@ -6,10 +6,10 @@ subroutine read_adepml_files()
   implicit none
   integer :: ier, iout_vtk=998
   character(len=MAX_STRING_LEN) :: database_name, vtk_name
-  integer :: ispec_CPML,i,j,k,ispec,iglob,iglob_CPML,iface, iside
+  integer :: ispec_CPML,i,j,k,iglob,iglob_CPML,iface, iside
   !integer, dimension(:), allocatable :: iglob_CPML_temp
   real, dimension(:,:,:,:), allocatable :: rvolume_loc
-  logical :: POINT_EXIST
+  !logical :: POINT_EXIST
 
   database_name = prname(1:len_trim(prname))//'adepml_damping_indexing.bin'
 

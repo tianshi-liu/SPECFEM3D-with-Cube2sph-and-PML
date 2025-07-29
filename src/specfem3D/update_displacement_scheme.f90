@@ -271,10 +271,11 @@
     ! wavefields on GPU
 
     ! check
-    if (SIMULATION_TYPE == 3) then
-      if (PML_CONDITIONS .and. (.not. USE_ADE_PML)) then
+    if (SIMULATION_TYPE == 3 .and. (.not. SUBSAMPLE_FORWARD_WAVEFIELD)) then
+      if (PML_CONDITIONS .and. USE_ADE_PML) then
         if (nglob_interface_PML_elastic > 0) then
-          call exit_MPI(myrank,'elastic time marching scheme with PML_CONDITIONS on GPU not implemented yet...')
+          call read_field_on_pml_interface(b_accel,b_veloc,b_displ,nglob_interface_PML_elastic, &
+                                           b_PML_field,b_reclen_PML_field)
         endif
       endif
     endif
@@ -284,7 +285,8 @@
     if(.not. USE_ADE_PML) then 
       call update_displacement_cuda(Mesh_pointer,deltat,deltatsqover2,deltatover2,b_deltat,b_deltatsqover2,b_deltatover2)
     else 
-      call update_displacement_cuda_ade(Mesh_pointer,deltat,deltatsqover2,deltatover2)
+      call update_displacement_cuda_ade(Mesh_pointer,deltat,deltatsqover2,deltatover2,&
+                                        b_deltat,b_deltatsqover2,b_deltatover2)
     endif
   endif ! GPU_MODE
 

@@ -256,10 +256,14 @@
 
   ! nqdu
   ! determin the NSTEP_PER_FORWARD_OUTPUT if required
-  call determine_ntsamp
-  ! if(myrank == 0) &
-  !   write(IMAIN, *) '  subsample NSTEP =  ',NSTEP_PER_FORWARD_OUTPUT
+  call get_subsample_ntsamp()
+  if(myrank == 0) &
+    write(IMAIN, *) '  subsample NSTEP =  ',NSTEP_PER_FORWARD_OUTPUT
 
+
+  if(PML_CONDITIONS .AND. (SAVE_FORWARD .and. SUBSAMPLE_FORWARD_WAVEFIELD)) then 
+    stop 'SAVE_FOWARD and SUBSAMPLE cannot be activated simultaneously!'
+  endif
 
   ! initializes adjoint simulations
   call initialize_simulation_adjoint()
@@ -528,7 +532,7 @@
 
 
 !nqdu
-subroutine determine_ntsamp()
+subroutine get_subsample_ntsamp()
   use specfem_par,only: NSTEP_PER_FORWARD_OUTPUT,SUBSAMPLE_FORWARD_WAVEFIELD,DT
   implicit none
 
@@ -583,4 +587,4 @@ subroutine determine_ntsamp()
   call bcast_all_singlei(NSTEP_PER_FORWARD_OUTPUT)
   call bcast_all_singlel(SUBSAMPLE_FORWARD_WAVEFIELD)
   
-end subroutine determine_ntsamp
+end subroutine get_subsample_ntsamp
