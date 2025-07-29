@@ -366,6 +366,7 @@ subroutine compute_forces_viscoelastic_backward_calling()
   use pml_par
   use fault_solver_dynamic, only: bc_dynflt_set3d_all
   use fault_solver_kinematic, only: bc_kinflt_set_all
+  use wavefield_discontinuity_par,only: IS_WAVEFIELD_DISCONTINUITY
 
   implicit none
 
@@ -374,6 +375,12 @@ subroutine compute_forces_viscoelastic_backward_calling()
   ! checks
   if (SIMULATION_TYPE /= 3) &
     call exit_MPI(myrank,'error calling compute_forces_viscoelastic_backward() with wrong SIMULATION_TYPE')
+
+
+  if (IS_WAVEFIELD_DISCONTINUITY .and. COUPLE_WITH_INJECTION_TECHNIQUE) then
+    call read_wavefield_discontinuity_file()
+  endif
+
 
   ! distinguishes two runs: for elements in contact with MPI interfaces, and elements within the partitions
   do iphase = 1,2
@@ -392,6 +399,12 @@ subroutine compute_forces_viscoelastic_backward_calling()
 
     ! computes additional contributions
     if (iphase == 1) then
+
+      !nqdu if (IS_WAVEFIELD_DISCONTINUITY) then
+      if(IS_WAVEFIELD_DISCONTINUITY .AND. COUPLE_WITH_INJECTION_TECHNIQUE) then 
+        call add_traction_discontinuity()
+      endif
+      
       ! adds elastic absorbing boundary term to acceleration (Stacey conditions)
       if (STACEY_ABSORBING_CONDITIONS) then
         call compute_stacey_viscoelastic_backward(NSPEC_AB, &

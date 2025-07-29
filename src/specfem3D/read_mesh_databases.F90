@@ -1241,6 +1241,11 @@
     if (ier /= 0) call exit_MPI_without_rank('error allocating array 1589')
     if (ier /= 0) stop 'Error allocating array b_accel'
 
+    ! nqdu added 
+    b_displ(:,:) = 0
+    b_accel(:,:) = 0.
+    b_veloc(:,:) = 0.
+    
     ! adjoint kernels
 
     ! primary, isotropic kernels

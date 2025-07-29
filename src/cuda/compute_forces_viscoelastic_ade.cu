@@ -1172,19 +1172,24 @@ add_pml_physical_contribution(int ispec_pml,const int *phy_spec,
 
 // nqdu added ADE-PML kernels
 __global__ static void 
-kernel_forces_adepml(int nb_blocks_to_compute,
+kernel_forces_adepml(
+                      int nb_blocks_to_compute,
                       const int* d_ibool,
-                     const int* d_phase_ispec_inner_elastic,
-                     const int num_phase_ispec_elastic,
-                     const int d_iphase,
-                     const int* d_irregular_element_number,
-                     const realw* d_displ,
+                      const int* d_phase_ispec_inner_elastic,
+                      const int num_phase_ispec_elastic,
+                      const int d_iphase,
+                      const int* d_irregular_element_number,
+                      const realw* d_displ,
                       realw_p d_accel,
                       const int ANISOTROPY,
                       const realw* d_xix,realw_const_p d_xiy,realw_const_p d_xiz,
                       const realw* d_etax,realw_const_p d_etay,realw_const_p d_etaz,
                       const realw* d_gammax,realw_const_p d_gammay,realw_const_p d_gammaz,
                       const realw xix_regular,const realw jacobian_regular,
+                      const int COMPUTE_AND_STORE_STRAIN,
+                      realw_p epsilondev_xx,realw_p epsilondev_yy,realw_p epsilondev_xy,
+                      realw_p epsilondev_xz,realw_p epsilondev_yz,
+                      realw_p epsilon_trace_over_3, const int backward_simulation,
                       realw_const_p d_hprime_xx,
                       realw_const_p d_hprimewgll_xx,
                       realw_const_p d_wgllwgll_xy,realw_const_p d_wgllwgll_xz,realw_const_p d_wgllwgll_yz,
@@ -1263,6 +1268,8 @@ kernel_forces_adepml(int nb_blocks_to_compute,
   // global index
   iglob = d_ibool[offset] - 1 ;
 
+  // skip all pml elements for backward simulation
+  if(backward_simulation && is_CPML[working_element]) return;
 
   // loads hprime's into shared memory
   if (threadIdx.x < NGLL3) {
@@ -1291,7 +1298,24 @@ kernel_forces_adepml(int nb_blocks_to_compute,
     &duxdxl,&duxdyl,&duxdzl,&duydxl,&duydyl,&duydzl,&duzdxl,&duzdyl,&duzdzl,
     d_xix,d_xiy,d_xiz,d_etax,d_etay,d_etaz,d_gammax,d_gammay,d_gammaz,ispec_irreg,xix_regular,0);
   
-  if(!is_CPML[working_element]) {
+  if(COMPUTE_AND_STORE_STRAIN) {
+    // save deviatoric strain for Runge-Kutta scheme
+    
+    if (threadIdx.x < NGLL3) {
+        realw templ = 0.33333333333333333333f * (duxdxl + duydyl + duzdzl); // 1./3. = 0.33333
+        // local storage: stresses at this current time step
+        // fortran: epsilondev_xx(:,:,:,ispec) = epsilondev_xx_loc(:,:,:)
+        epsilondev_xx[tx + working_element*NGLL3] = duxdxl - templ; // epsilondev_xx_loc;
+        epsilondev_yy[tx + working_element*NGLL3] = duydyl - templ; // epsilondev_yy_loc;
+        epsilondev_xy[tx + working_element*NGLL3] = 0.5f * (duxdyl + duydxl); // epsilondev_xy_loc;
+        epsilondev_xz[tx + working_element*NGLL3] = 0.5f * (duzdxl + duxdzl); // epsilondev_xz_loc;
+        epsilondev_yz[tx + working_element*NGLL3] = 0.5f * (duzdyl + duydzl); //epsilondev_yz_loc;
+        epsilon_trace_over_3[tx + working_element*NGLL3] = templ;
+
+    } // threadIdx.x
+  }
+  
+  if(!is_CPML[working_element]) { // backward simulation, only tackle regular elements
     // compute stress
     compute_stress(ANISOTROPY,d_c11store,d_c12store,d_c13store,d_c14store,d_c15store,
                   d_c16store,d_c22store,d_c23store, d_c24store, d_c25store,d_c26store,
@@ -1340,6 +1364,7 @@ kernel_forces_adepml(int nb_blocks_to_compute,
     } // threadIdx.x
   }
   else {
+
     realw newtemp_adepml[3][3][6];
     int ispec_pml = spec_to_CPML[working_element] - 1;
 
@@ -1415,7 +1440,8 @@ void compute_forces_viscoelastic_cuda_ade_(long* Mesh_pointer,
                                                 int* nspec_inner_elastic,
                                                 int* COMPUTE_AND_STORE_STRAIN,
                                                 int* ATTENUATION,
-                                                int* ANISOTROPY) {
+                                                int* ANISOTROPY,
+                                                int *backward_simulation) {
 
   TRACE("\tcompute_forces_viscoelastic_cuda_ade");
   // EPIK_TRACER("compute_forces_viscoelastic_cuda");
@@ -1445,13 +1471,42 @@ void compute_forces_viscoelastic_cuda_ade_(long* Mesh_pointer,
 
   dim3 grid(num_blocks_x,num_blocks_y);
   dim3 threads(blocksize,1,1);
-  
+
+  // pointers
+  realw *accel,*displ;
+  realw *epsilondev_xx,*epsilondev_xy,*epsilondev_xz;
+  realw *epsilondev_yz, *epsilondev_yy,*epsilondev_trace_over_3;
+
+  if(*backward_simulation) {
+    accel = mp->d_b_accel;
+    displ = mp->d_b_displ;
+    epsilondev_xx = mp->d_b_epsilondev_xx;
+    epsilondev_xy = mp->d_b_epsilondev_xy;
+    epsilondev_yz = mp->d_b_epsilondev_yz;
+    epsilondev_yy = mp->d_b_epsilondev_yy;
+    epsilondev_xz = mp->d_b_epsilondev_xz;
+    epsilondev_trace_over_3 = mp->d_b_epsilon_trace_over_3;
+  }
+  else {
+    accel = mp->d_accel;
+    displ = mp->d_displ;
+    epsilondev_xx = mp->d_epsilondev_xx;
+    epsilondev_xy = mp->d_epsilondev_xy;
+    epsilondev_yz = mp->d_epsilondev_yz;
+    epsilondev_yy = mp->d_epsilondev_yy;
+    epsilondev_xz = mp->d_epsilondev_xz;
+    epsilondev_trace_over_3 = mp->d_epsilon_trace_over_3;
+  }
+
   kernel_forces_adepml <<< grid,threads,0,mp->compute_stream>>> (
     num_elements,mp->d_ibool,mp->d_phase_ispec_inner_elastic,
     mp->num_phase_ispec_elastic,*iphase,mp->d_irregular_element_number,
-    mp->d_displ,mp->d_accel,*ANISOTROPY,mp->d_xix,mp->d_xiy,mp->d_xiz,
+    displ,accel,*ANISOTROPY,mp->d_xix,mp->d_xiy,mp->d_xiz,
     mp->d_etax,mp->d_etay,mp->d_etaz,mp->d_gammax,mp->d_gammay,mp->d_gammaz,
-    mp->xix_regular,mp->jacobian_regular,mp->d_hprime_xx,mp->d_hprimewgll_xx,
+    mp->xix_regular,mp->jacobian_regular, *COMPUTE_AND_STORE_STRAIN,
+    epsilondev_xx,epsilondev_yy,epsilondev_xy,
+    epsilondev_xz,epsilondev_yz,epsilondev_trace_over_3,
+    *backward_simulation,mp->d_hprime_xx,mp->d_hprimewgll_xx,
     mp->d_wgllwgll_xy,mp->d_wgllwgll_xz,mp->d_wgllwgll_yz,mp->d_kappav,
     mp->d_muv,mp->d_c11store,mp->d_c12store,mp->d_c13store,mp->d_c14store,
     mp->d_c15store,mp->d_c16store,mp->d_c22store,mp->d_c23store,mp->d_c24store,

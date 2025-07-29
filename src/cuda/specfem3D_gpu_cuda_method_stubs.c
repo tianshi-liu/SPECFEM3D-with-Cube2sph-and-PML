@@ -417,10 +417,10 @@ void FC_FUNC_(fault_solver_gpu,
                               
 void FC_FUNC_(transfer_b_pml_field_to_device,
               TRANSFER_B_PML_FIELD_TO_DEVICE)(
-               int* size, realw *b_pml_field,long* Mesh_pointer) {}
+               realw *b_pml_field,long* Mesh_pointer) {}
 
 void FC_FUNC_(transfer_b_pml_field_from_device,
-              TRANSFER_B_PML_FIELD_FROM_DEVICE)(int* size, realw *b_pml_field,long* Mesh_pointer) {}
+              TRANSFER_B_PML_FIELD_FROM_DEVICE)(realw *b_pml_field,long* Mesh_pointer) {}
 
 
 //
@@ -931,14 +931,15 @@ void compute_forces_viscoelastic_cuda_ade_(
    int* nspec_inner_elastic,
    int* COMPUTE_AND_STORE_STRAIN,
    int* ATTENUATION,
-   int* ANISOTROPY) {}
+   int* ANISOTROPY,
+int *backward_simulation) {}
 
-void sync_accel_bdry_buffers_(long *Mesh_pointer,const int *iphase,const realw* buffer){}
+void sync_accel_bdry_buffers_(long *Mesh_pointer,const int *iphase,const realw* buffer,const int *backward){}
 void sync_ade_bdry_buffers_(long *Mesh_pointer,int *iphase,realw* buffer){}
 
-void apply_massmat_device_(long* Mesh_pointer){}
+void apply_massmat_device_(long* Mesh_pointer,const int *backward){}
 
-void update_velocity_device_(long* Mesh_pointer,realw *delta2ov2_f){}
+void update_velocity_device_(long* Mesh_pointer,realw *delta2ov2_f,const int *backward){}
 
 void sync_wavefield_(int *size_f, realw *h_field,long *Mesh_pointer,int *flag_f,int *dev2host_f){}
 

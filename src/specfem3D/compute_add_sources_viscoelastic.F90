@@ -573,6 +573,64 @@
   end subroutine compute_add_sources_viscoelastic_GPU
 
 
+  subroutine compute_add_sources_viscoelastic_backward_GPU()
+
+  use constants
+  use specfem_par, only: nsources_local,tshift_src,dt,t0, &
+    USE_LDDRK,istage, &
+    NSOURCES,it,SIMULATION_TYPE,NSTEP, &
+    NOISE_TOMOGRAPHY, user_source_time_function,&
+    Mesh_pointer,USE_EXTERNAL_SOURCE_FILE
+
+  ! coupling
+  use shared_parameters, only: COUPLE_WITH_INJECTION_TECHNIQUE
+
+  implicit none
+
+  ! local parameters
+  double precision :: stf,time_source_dble
+  double precision,external :: get_stf_viscoelastic
+  ! for GPU_MODE
+  double precision, dimension(NSOURCES) :: stf_pre_compute
+
+  integer :: isource
+
+  ! checks if anything to do
+  if (SIMULATION_TYPE /= 3 .or. COUPLE_WITH_INJECTION_TECHNIQUE) return
+
+  if (SIMULATION_TYPE == 3 .and. NOISE_TOMOGRAPHY == 0 &
+      .and. nsources_local > 0) then
+
+    if (NSOURCES > 0) then
+      do isource = 1,NSOURCES
+        ! current time
+        if (USE_LDDRK) then
+          time_source_dble = dble(NSTEP-it)*DT - dble(C_LDDRK(istage))*DT - t0 - tshift_src(isource)
+        else
+          time_source_dble = dble(NSTEP-it)*DT - t0 - tshift_src(isource)
+        endif
+
+        !! add external source time function
+        if (USE_EXTERNAL_SOURCE_FILE) then
+           stf = user_source_time_function(NSTEP-it+1, isource)
+        else
+           ! determines source time function value
+           stf = get_stf_viscoelastic(time_source_dble,isource)
+        endif
+
+        ! stores precomputed source time function factor
+        stf_pre_compute(isource) = stf
+      enddo
+
+      ! only implements SIMTYPE=3
+      call compute_add_sources_el_s3_cuda(Mesh_pointer,stf_pre_compute,NSOURCES)
+    endif
+  endif ! adjoint
+
+
+  end subroutine compute_add_sources_viscoelastic_backward_GPU
+
+
 !
 !=====================================================================
 !

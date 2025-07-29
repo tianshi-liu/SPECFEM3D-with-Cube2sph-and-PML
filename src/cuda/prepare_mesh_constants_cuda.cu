@@ -1088,9 +1088,9 @@ void FC_FUNC_(prepare_fields_elastic_adj_dev,
   print_CUDA_error_if_any(cudaMalloc((void**)&(mp->d_b_veloc),sizeof(realw)*size),5202);
   print_CUDA_error_if_any(cudaMalloc((void**)&(mp->d_b_accel),sizeof(realw)*size),5203);
   // initializes values to zero
-  //print_CUDA_error_if_any(cudaMemset(mp->d_b_displ,0,sizeof(realw)*size),5207);
-  //print_CUDA_error_if_any(cudaMemset(mp->d_b_veloc,0,sizeof(realw)*size),5207);
-  //print_CUDA_error_if_any(cudaMemset(mp->d_b_accel,0,sizeof(realw)*size),5207);
+  print_CUDA_error_if_any(cudaMemset(mp->d_b_displ,0,sizeof(realw)*size),5207);
+  print_CUDA_error_if_any(cudaMemset(mp->d_b_veloc,0,sizeof(realw)*size),5207);
+  print_CUDA_error_if_any(cudaMemset(mp->d_b_accel,0,sizeof(realw)*size),5207);
 
   #ifdef USE_TEXTURES_FIELDS
   {
@@ -1952,23 +1952,23 @@ void prepare_ade_pml_device_(
   {
     mp->nglob_interface_PML_elastic = *nglob_intf_pml_el;
     mp->nglob_interface_PML_acoustic = *nglob_intf_pml_ac;
-    size_t size = sizeof(int)*(*nglob_intf_pml_el*9);
-    cudaMalloc((void**)mp->d_points_interface_PML_elastic,size);
+    size_t size = sizeof(int)*(*nglob_intf_pml_el);
+    cudaMalloc((void**)&(mp->d_points_interface_PML_elastic),size);
     cudaMemcpy(mp->d_points_interface_PML_elastic,
               pnts_intf_pml_el,size,
               cudaMemcpyHostToDevice);
 
     // allocate space for PML_field
-    cudaMalloc((void**)mp->d_b_PML_field,size);
+    cudaMalloc((void**)&(mp->d_b_PML_field),size*9);
 
     size = sizeof(int)*(*nglob_intf_pml_ac);
-    cudaMalloc((void**)mp->d_points_interface_PML_acoustic,size);
+    cudaMalloc((void**)&(mp->d_points_interface_PML_acoustic),size);
     cudaMemcpy(mp->d_points_interface_PML_acoustic,
               pnts_intf_pml_ac,size,
               cudaMemcpyHostToDevice);
 
     // allocate space for PML_field
-    cudaMalloc((void**)mp->d_b_PML_potential,size);
+    cudaMalloc((void**)&(mp->d_b_PML_potential),size);
   }
 
 

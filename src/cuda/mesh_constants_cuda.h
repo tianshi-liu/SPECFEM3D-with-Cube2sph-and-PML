@@ -703,7 +703,7 @@ typedef struct mesh_ {
   int nglob_interface_PML_elastic, nglob_interface_PML_acoustic;
   int *d_points_interface_PML_elastic;  // shape(nglob_interface_PML_elastic)
   int *d_points_interface_PML_acoustic; // shape(nglob_interface_PML_acoustic)
-  realw *d_b_PML_field;  // shape(nglob_interface_PML_elastic)
+  realw *d_b_PML_field;  // shape(nglob_interface_PML_elastic,9)
   realw *d_b_PML_potential; 
 
   // subsample functions

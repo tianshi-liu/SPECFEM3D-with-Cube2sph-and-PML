@@ -262,7 +262,7 @@ subroutine save_field_on_pml_interface(displ,veloc,accel,nglob_interface_PML_ela
   integer :: iglob_pml,iglob
 
   if(GPU_MODE) then
-    call transfer_b_pml_field_from_device(9*nglob_interface_PML_elastic,b_PML_field,Mesh_pointer)
+    call transfer_b_pml_field_from_device(b_PML_field,Mesh_pointer)
   else 
     do iglob_pml = 1, nglob_interface_PML_elastic
       iglob = points_interface_PML_elastic(iglob_pml)
@@ -303,8 +303,7 @@ end subroutine save_field_on_pml_interface
 subroutine read_field_on_pml_interface(b_accel,b_veloc,b_displ,nglob_interface_PML_elastic, &
                                        b_PML_field,b_reclen_PML_field)
 
-  use specfem_par, only: NGLOB_AB,ibool,NSTEP,it
-  use pml_par, only: NSPEC_CPML,CPML_to_spec
+  use specfem_par, only: NGLOB_AB,NSTEP,it
   use constants, only: CUSTOM_REAL,NDIM,NGLLX,NGLLY,NGLLZ
 
   !nqdu
@@ -336,7 +335,7 @@ subroutine read_field_on_pml_interface(b_accel,b_veloc,b_displ,nglob_interface_P
 
   ! nqdu added copy to gpu
   if(GPU_MODE) then 
-    call transfer_b_pml_field_to_device(9*nglob_interface_PML_elastic,b_PML_field,Mesh_pointer)
+    call transfer_b_pml_field_to_device(b_PML_field,Mesh_pointer)
   else 
     do iglob_pml = 1, nglob_interface_PML_elastic
       iglob = points_interface_PML_elastic(iglob_pml)

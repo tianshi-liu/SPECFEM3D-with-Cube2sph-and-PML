@@ -60,7 +60,8 @@ assemble_asyn_send(int ndim,realw *buf_sd, realw *buf_rv,
 extern "C"
 void sync_accel_bdry_buffers_(long *Mesh_pointer,const int *iphase,
                               const int* my_neighbors,
-                              const int *nibool)
+                              const int *nibool,
+                              const int *backward)
 {
     Mesh *mp = (Mesh*)(*Mesh_pointer);
     // asynchronous transfer from device to host
@@ -78,6 +79,12 @@ void sync_accel_bdry_buffers_(long *Mesh_pointer,const int *iphase,
     dim3 grid(nx,ny,1);
     dim3 threads(blocksize,1,1);
 
+    // pointers
+    realw * accel_ptr = mp->d_accel;
+    if(*backward) {
+        accel_ptr = mp->d_b_accel;
+    }
+
     // buffer pointer
     realw *buf_sd = mp->d_send_accel_buffer, *buf_rv = mp->d_recv_accel_buffer;
 
@@ -94,7 +101,7 @@ void sync_accel_bdry_buffers_(long *Mesh_pointer,const int *iphase,
                         mp->compute_stream);
 #endif
         kernel_prepare_boundary_matrix <<<grid,threads,0,mp->compute_stream>>>(
-            mp->d_accel,NDIM,mp->num_interfaces_ext_mesh,mp->max_nibool_interfaces_ext_mesh,
+            accel_ptr,NDIM,mp->num_interfaces_ext_mesh,mp->max_nibool_interfaces_ext_mesh,
             mp->d_nibool_interfaces_ext_mesh,mp->d_ibool_interfaces_ext_mesh,
             mp->d_recv_accel_buffer,1
         );
@@ -106,7 +113,7 @@ void sync_accel_bdry_buffers_(long *Mesh_pointer,const int *iphase,
     }
     else {
         kernel_prepare_boundary_matrix <<<grid,threads,0,mp->compute_stream>>>(
-            mp->d_accel,NDIM,mp->num_interfaces_ext_mesh,mp->max_nibool_interfaces_ext_mesh,
+            accel_ptr,NDIM,mp->num_interfaces_ext_mesh,mp->max_nibool_interfaces_ext_mesh,
             mp->d_nibool_interfaces_ext_mesh,mp->d_ibool_interfaces_ext_mesh,
             mp->d_send_accel_buffer,0
         );

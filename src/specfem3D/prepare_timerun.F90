@@ -560,8 +560,10 @@
   ! use specfem_par, only: myrank,SIMULATION_TYPE,GPU_MODE,UNDO_ATTENUATION_AND_OR_PML
   ! use constants, only: IMAIN,NGNOD_EIGHT_CORNERS,USE_ADE_PML,&
   !                      SUBSAMPLE_FORWARD_WAVEFIELD
-  use specfem_par, only: myrank,SIMULATION_TYPE,GPU_MODE,UNDO_ATTENUATION_AND_OR_PML,&
-                         SUBSAMPLE_FORWARD_WAVEFIELD
+  ! use specfem_par, only: myrank,SIMULATION_TYPE,GPU_MODE,UNDO_ATTENUATION_AND_OR_PML,&
+  !                        SUBSAMPLE_FORWARD_WAVEFIELD
+  use specfem_par,only: myrank,GPU_MODE,UNDO_ATTENUATION_AND_OR_PML,&
+                         USE_ADE_PML
   use constants, only: IMAIN,NGNOD_EIGHT_CORNERS,USE_ADE_PML
 
   implicit none
@@ -572,9 +574,10 @@
   ! safety stops
   !! TL: allow PML if using subsampling
   !if (SIMULATION_TYPE /= 1 .and. .not. UNDO_ATTENUATION_AND_OR_PML) &
-  if ((SIMULATION_TYPE /= 1) .and. (.not. UNDO_ATTENUATION_AND_OR_PML)&
-      .and. (.not. SUBSAMPLE_FORWARD_WAVEFIELD)) &
-          stop 'Error: PMLs for adjoint runs require the flag UNDO_ATTENUATION_AND_OR_PML to be set'
+  if(UNDO_ATTENUATION_AND_OR_PML) stop 'UNDO_ATTENUATION_AND_OR_PML is not supported'
+  ! if ((SIMULATION_TYPE /= 1) .and. (.not. UNDO_ATTENUATION_AND_OR_PML)&
+  !     .and. (.not. SUBSAMPLE_FORWARD_WAVEFIELD)) &
+  !         stop 'Error: PMLs for adjoint runs require the flag UNDO_ATTENUATION_AND_OR_PML to be set'
 
   if (GPU_MODE .and. (.not. USE_ADE_PML)) stop 'Error: PMLs only supported in CPU mode for now'
 

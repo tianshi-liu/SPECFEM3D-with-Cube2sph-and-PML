@@ -490,6 +490,7 @@
   ! local parameters
   integer :: ier
   integer(kind=8) :: filesize
+  integer,parameter :: NDIM_CPML_INTF = 9
 
   ! checks PML flag
   if (.not. PML_CONDITIONS) return
@@ -589,12 +590,12 @@
     
     ! opens absorbing wavefield saved/to-be-saved by forward simulations
     if(ELASTIC_SIMULATION) then 
-      if((SIMULATION_TYPE == 3 .or. &
+      if(nglob_interface_PML_elastic > 0 .and. (SIMULATION_TYPE == 3 .or. &
           (SIMULATION_TYPE == 1 .and. SAVE_FORWARD))) then
         ! size of single record
-        b_reclen_PML_field = CUSTOM_REAL * 9 * nglob_interface_PML_elastic
+        b_reclen_PML_field = CUSTOM_REAL * NDIM_CPML_INTF * nglob_interface_PML_elastic
 
-        allocate(b_PML_field(9,nglob_interface_PML_elastic),stat=ier)
+        allocate(b_PML_field(NDIM_CPML_INTF,nglob_interface_PML_elastic),stat=ier)
         if (ier /= 0) call exit_MPI_without_rank('error allocating array 2318')
         if (ier /= 0) stop 'error allocating array b_PML_field'
 
@@ -670,6 +671,47 @@
   endif
   end subroutine adepml_allocate_arrays
 
+subroutine get_unique_pml_interface(n,a)
+  implicit none
+  integer,intent(inout) :: n 
+  integer,intent(inout) :: a(n)
+
+  ! new arrays
+  integer :: u(n),b(n),count,k
+  b(1:n) = a(1:n)
+  call sort_int(b,n)
+
+  u(1) = b(1)
+  count = 1
+  do k=2,n 
+    if(b(k) /= b(k-1)) then 
+      count = count + 1 
+      u(count) = b(k)
+    endif
+  enddo
+
+  ! reallocate a
+  a(1:count) = u(1:count)
+  n = count
+
+contains
+    subroutine sort_int(arr,na)
+        integer,intent(in) :: na 
+        integer, intent(inout) :: arr(na)
+        integer :: i, j, tmp
+        do i = 1, na-1
+            do j = i+1, na
+                if (arr(j) < arr(i)) then
+                    tmp = arr(i)
+                    arr(i) = arr(j)
+                    arr(j) = tmp
+                end if
+            end do
+        end do
+    end subroutine
+
+end subroutine get_unique_pml_interface
+
 
 !nqdu added
   subroutine get_pml_inner_boundary()
@@ -680,19 +722,21 @@
     use specfem_par,only: ibool,NGLOB_AB,NSPEC_AB
     use specfem_par_elastic,only: ELASTIC_SIMULATION,ispec_is_elastic
     use specfem_par_acoustic,only: ACOUSTIC_SIMULATION,ispec_is_acoustic
+    !use specfem_par,only: myrank
     use constants
     implicit none
   
     !local 
     logical :: mask_ibool_interior_domain(NGLOB_AB)
     integer :: ispec, i,j,k 
+    integer,allocatable :: pnts(:)
   
     ! init
     mask_ibool_interior_domain(:) = .false.
   
     ! mask 
     do ispec = 1,NSPEC_AB
-      if((.not. is_CPML(ispec)) .or.  (.not. ispec_is_elastic(ispec))) exit 
+      if(is_CPML(ispec)) cycle
       do k=1,NGLLZ; do j=1,NGLLY; do i=1,NGLLX
         mask_ibool_interior_domain(ibool(i,j,k,ispec)) = .true.
       enddo; enddo; enddo;
@@ -720,35 +764,52 @@
     enddo
   
     if (nglob_interface_PML_elastic > 0 .and. ELASTIC_SIMULATION) then
-      allocate(points_interface_PML_elastic(nglob_interface_PML_elastic))
-      points_interface_PML_elastic = 0
+      allocate(pnts(nglob_interface_PML_elastic))
+      !allocate(points_interface_PML_elastic(nglob_interface_PML_elastic))
+      pnts(:) = 0
       nglob_interface_PML_elastic = 0
       do ispec = 1,NSPEC_AB
         if (ispec_is_elastic(ispec) .and. is_CPML(ispec)) then
           do k = 1,NGLLZ; do j = 1,NGLLY; do i = 1,NGLLX
             if (mask_ibool_interior_domain(ibool(i,j,k,ispec))) then
               nglob_interface_PML_elastic = nglob_interface_PML_elastic + 1
-              points_interface_PML_elastic(nglob_interface_PML_elastic) = ibool(i,j,k,ispec)
+              !points_interface_PML_elastic(nglob_interface_PML_elastic) = ibool(i,j,k,ispec)
+              pnts(nglob_interface_PML_elastic) = ibool(i,j,k,ispec)
             endif
           enddo; enddo; enddo
         endif
       enddo
+
+      !print*,'before sorting ',myrank,nglob_interface_PML_elastic
+      call get_unique_pml_interface(nglob_interface_PML_elastic,pnts)
+      !print*,'after sorting ',myrank,nglob_interface_PML_elastic
+      allocate(points_interface_PML_elastic(nglob_interface_PML_elastic))
+      points_interface_PML_elastic(:) = pnts(1:nglob_interface_PML_elastic)
+      deallocate(pnts)
     endif
   
     if (nglob_interface_PML_acoustic > 0 .and. ACOUSTIC_SIMULATION) then
-      allocate(points_interface_PML_acoustic(nglob_interface_PML_acoustic))
-      points_interface_PML_acoustic = 0
+      allocate(pnts(nglob_interface_PML_acoustic))
+      !allocate(points_interface_PML_acoustic(nglob_interface_PML_acoustic))
+      !points_interface_PML_acoustic = 0
+      pnts(:) = 0
       nglob_interface_PML_acoustic = 0
       do ispec = 1,NSPEC_AB
         if (ispec_is_acoustic(ispec) .and. is_CPML(ispec)) then
           do k = 1,NGLLZ; do j = 1,NGLLY; do i = 1,NGLLX
             if (mask_ibool_interior_domain(ibool(i,j,k,ispec))) then
               nglob_interface_PML_acoustic = nglob_interface_PML_acoustic + 1
-              points_interface_PML_acoustic(nglob_interface_PML_acoustic) = ibool(i,j,k,ispec)
+              !points_interface_PML_acoustic(nglob_interface_PML_acoustic) = ibool(i,j,k,ispec)
+              pnts(nglob_interface_PML_acoustic) = ibool(i,j,k,ispec)
             endif
           enddo; enddo; enddo
         endif
       enddo
+
+      call get_unique_pml_interface(nglob_interface_PML_elastic,pnts)
+      allocate(points_interface_PML_acoustic(nglob_interface_PML_acoustic))
+      points_interface_PML_acoustic(:) = pnts(1:nglob_interface_PML_acoustic)
+      deallocate(pnts)
     endif
   
     
