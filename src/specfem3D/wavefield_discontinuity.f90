@@ -35,6 +35,7 @@ end subroutine read_mesh_databases_wavefield_discontinuity
 subroutine open_wavefield_discontinuity_file()
   use specfem_par, only: prname
   use wavefield_discontinuity_solver, only: IFILE_WAVEFIELD_DISCONTINUITY
+  use specfem_par,only: SIMULATION_TYPE
   implicit none
   ! open(unit=IFILE_WAVEFIELD_DISCONTINUITY, &
   !      file=trim(prname)//'displ.bin', access='stream', &
@@ -42,18 +43,34 @@ subroutine open_wavefield_discontinuity_file()
   ! open(unit=IFILE_WAVEFIELD_DISCONTINUITY+1, &
   !      file=trim(prname)//'traction.bin', access='stream', &
   !      status='old',action='read',form='unformatted')
-  open(unit=IFILE_WAVEFIELD_DISCONTINUITY, &
-       file=trim(prname)//'wavefield_discontinuity.bin', &
-       status='old',action='read',form='unformatted')
+
+  if(SIMULATION_TYPE == 1) then 
+    open(unit=IFILE_WAVEFIELD_DISCONTINUITY, &
+        file=trim(prname)//'wavefield_discontinuity.bin', &
+        status='old',action='read',form='unformatted')
+  else 
+    open(unit=IFILE_WAVEFIELD_DISCONTINUITY, &
+        file=trim(prname)//'wavefield_discontinuity.bin', &
+        status='old',action='read',form='unformatted',&
+        access='stream')
+  endif
 
 end subroutine open_wavefield_discontinuity_file
 
 subroutine read_wavefield_discontinuity_file()
   use wavefield_discontinuity_solver, only: IFILE_WAVEFIELD_DISCONTINUITY, &
                  displ_wd, accel_wd, traction_wd
+  
+  !nqdu added
+  use wavefield_discontinuity_solver,only: nglob_wd,nfaces_wd
+  use specfem_par,only: NDIM,NGLLSQUARE,CUSTOM_REAL
+  use specfem_par,only: it,NSTEP,SIMULATION_TYPE
+
   ! use specfem_par, only: NDIM
   ! use wavefield_discontinuity_solver, only: nglob_wd, nfaces_wd
   implicit none
+  integer(kind=8) :: offset(3),block_bytes
+
   ! integer :: i
   ! do i =1, nglob_wd
   !   read(IFILE_WAVEFIELD_DISCONTINUITY) displ_wd(1:NDIM, i)
@@ -62,9 +79,21 @@ subroutine read_wavefield_discontinuity_file()
   ! do i = 1, nfaces_wd
   ! read(IFILE_WAVEFIELD_DISCONTINUITY+1) traction_wd(:,:,i)
   ! enddo
-  read(IFILE_WAVEFIELD_DISCONTINUITY) displ_wd
-  read(IFILE_WAVEFIELD_DISCONTINUITY) accel_wd
-  read(IFILE_WAVEFIELD_DISCONTINUITY) traction_wd
+  if(SIMULATION_TYPE == 1) then
+    read(IFILE_WAVEFIELD_DISCONTINUITY) displ_wd
+    read(IFILE_WAVEFIELD_DISCONTINUITY) accel_wd
+    read(IFILE_WAVEFIELD_DISCONTINUITY) traction_wd
+  else 
+    block_bytes = CUSTOM_REAL *(nglob_wd*NDIM*2 + nfaces_wd*NGLLSQUARE*NDIM) + 8 * 3
+    offset(1) = (NSTEP - it) * block_bytes + 5 
+    offset(2) = offset(1) + CUSTOM_REAL * nglob_wd*NDIM + 8
+    offset(3) = offset(2) + CUSTOM_REAL * nglob_wd*NDIM + 8
+
+    ! read
+    read(IFILE_WAVEFIELD_DISCONTINUITY,pos=offset(1)) displ_wd
+    read(IFILE_WAVEFIELD_DISCONTINUITY,pos=offset(2)) accel_wd
+    read(IFILE_WAVEFIELD_DISCONTINUITY,pos=offset(3)) traction_wd
+  endif
   ! if(size(displ_wd)> 0) then
   !   print*,maxval(displ_wd),maxval(traction_wd),maxval(accel_wd),trim(prname),maxloc(traction_wd)
   ! endif
@@ -113,27 +142,52 @@ subroutine add_traction_discontinuity()
                                     nfaces_wd, face_ijk_wd, face_ispec_wd, &
                                     face_jacobian2Dw_wd
   use specfem_par, only: CUSTOM_REAL, NGLLX, NGLLY, NGLLZ, NGLLSQUARE, ibool
-  use specfem_par_elastic, only: accel
+  use specfem_par_elastic, only: accel,b_accel
+
+  !nqdu added
+  use specfem_par,only: SIMULATION_TYPE
+
   implicit none
   integer :: iglob_wd, iglob, ispec, i, j, k, iface_wd, igll
   real(kind=CUSTOM_REAL) :: jacobianw
-  do iglob_wd = 1, nglob_wd
-    iglob = boundary_to_iglob_wd(iglob_wd)
-    accel(:,iglob) = accel(:,iglob) - &
-                     accel_wd(:,iglob_wd) * mass_in_wd(iglob_wd)
-  enddo
-  do iface_wd = 1, nfaces_wd
-    do igll = 1, NGLLSQUARE
-      i = face_ijk_wd(1, igll, iface_wd)
-      j = face_ijk_wd(2, igll, iface_wd)
-      k = face_ijk_wd(3, igll, iface_wd)
-      ispec = face_ispec_wd(iface_wd)
-      iglob = ibool(i,j,k,ispec)
-      jacobianw = face_jacobian2Dw_wd(igll, iface_wd)
-      accel(:,iglob) = accel(:,iglob) + &
-                     traction_wd(:,igll,iface_wd) * jacobianw
+
+  if(SIMULATION_TYPE == 1) then
+    do iglob_wd = 1, nglob_wd
+      iglob = boundary_to_iglob_wd(iglob_wd)
+      accel(:,iglob) = accel(:,iglob) - &
+                      accel_wd(:,iglob_wd) * mass_in_wd(iglob_wd)
     enddo
-  enddo
+    do iface_wd = 1, nfaces_wd
+      do igll = 1, NGLLSQUARE
+        i = face_ijk_wd(1, igll, iface_wd)
+        j = face_ijk_wd(2, igll, iface_wd)
+        k = face_ijk_wd(3, igll, iface_wd)
+        ispec = face_ispec_wd(iface_wd)
+        iglob = ibool(i,j,k,ispec)
+        jacobianw = face_jacobian2Dw_wd(igll, iface_wd)
+        accel(:,iglob) = accel(:,iglob) + &
+                      traction_wd(:,igll,iface_wd) * jacobianw
+      enddo
+    enddo
+  else 
+    do iglob_wd = 1, nglob_wd
+      iglob = boundary_to_iglob_wd(iglob_wd)
+      b_accel(:,iglob) = b_accel(:,iglob) - &
+                      accel_wd(:,iglob_wd) * mass_in_wd(iglob_wd)
+    enddo
+    do iface_wd = 1, nfaces_wd
+      do igll = 1, NGLLSQUARE
+        i = face_ijk_wd(1, igll, iface_wd)
+        j = face_ijk_wd(2, igll, iface_wd)
+        k = face_ijk_wd(3, igll, iface_wd)
+        ispec = face_ispec_wd(iface_wd)
+        iglob = ibool(i,j,k,ispec)
+        jacobianw = face_jacobian2Dw_wd(igll, iface_wd)
+        b_accel(:,iglob) = b_accel(:,iglob) + &
+                      traction_wd(:,igll,iface_wd) * jacobianw
+      enddo
+    enddo
+  endif
 end subroutine add_traction_discontinuity
 
 subroutine transfer_wavefield_discontinuity_to_GPU()
