@@ -21,7 +21,7 @@ If you want to build CUDA accelarated version, please use:
 ```bash 
 cmake .. -DCC=gcc -DMPIFC=mpif90  -DENABLE_CUDA=ON
 ```
-By default, the CUDA architecture will be chosen as `native`. If you want to use some user defined number, please open `CMakeLists.txt` and find `set_target_properties(cuda PROPERTIES CUDA_ARCHITECTURES native)`. Then set `native` to the number you want.
+By default, the CUDA architecture will be chosen as `native`. If you want to set it to corresponding [compute compatibility](https://developer.nvidia.com/cuda-gpus), please open `CMakeLists.txt` and find `set_target_properties(cuda PROPERTIES CUDA_ARCHITECTURES native)`. Then set `native` to the target number.
 
 The CUDA-Aware MPI technique would facilitate communications. If you want to enable cuda aware mpi, please use:
 ```bash 

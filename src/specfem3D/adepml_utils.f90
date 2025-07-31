@@ -713,8 +713,8 @@ end subroutine compute_add_pml_physical_element
 subroutine update_Qt_conv()
   !use specfem_par, only: deltat, deltatover2
   use pml_par, only: Qt_t,Qt,nglob_CPML,rvolume,&
-                     coeff_glob_exp1,coeff_glob_exp2, &
-                     nglob_pml_in, pml_in_iglob
+                     coeff_glob_exp1,coeff_glob_exp2
+                     !nglob_pml_in, pml_in_iglob
   implicit none
   integer :: i
   do i = 1,nglob_CPML

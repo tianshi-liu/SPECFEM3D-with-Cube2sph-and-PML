@@ -40,7 +40,7 @@
 
   implicit none
 
-  integer :: igll
+  !integer :: igll
 
   integer :: ihours,iminutes,iseconds,int_tCPU, &
              ihours_remain,iminutes_remain,iseconds_remain,int_t_remain, &
