@@ -24,7 +24,9 @@ subroutine compute_forces_viscoelastic_ADE_GPU_calling()
   !! Tianshi Liu: for solving wavefield discontinuity problem with
   !! non-split-node scheme
   !nqdu if (IS_WAVEFIELD_DISCONTINUITY) then
-  if (IS_WAVEFIELD_DISCONTINUITY .and. COUPLE_WITH_INJECTION_TECHNIQUE) then
+  if (IS_WAVEFIELD_DISCONTINUITY .and. &
+      COUPLE_WITH_INJECTION_TECHNIQUE .and. &
+      SIMULATION_TYPE == 1) then
     call read_wavefield_discontinuity_file()
     call transfer_wavefield_discontinuity_to_GPU()
   endif
@@ -41,7 +43,9 @@ subroutine compute_forces_viscoelastic_ADE_GPU_calling()
     ! computes additional contributions
     if(iphase == 1)then
 
-      if (IS_WAVEFIELD_DISCONTINUITY .and. COUPLE_WITH_INJECTION_TECHNIQUE) then
+      if (IS_WAVEFIELD_DISCONTINUITY .and. &
+          COUPLE_WITH_INJECTION_TECHNIQUE .and. &
+          SIMULATION_TYPE == 1) then
         call add_traction_discontinuity_GPU()
       endif
     
