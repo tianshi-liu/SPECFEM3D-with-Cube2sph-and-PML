@@ -71,7 +71,13 @@
   if (ACOUSTIC_SIMULATION) call update_displacement_acoustic()
 
   ! elastic domain
-  if (ELASTIC_SIMULATION) call update_displacement_elastic()
+  if (ELASTIC_SIMULATION) then 
+    if(.not. USE_ADE_PML)  then 
+      call update_displacement_elastic()
+    else 
+      call update_displacement_elastic_ADE()
+    endif
+  endif
 
   ! poroelastic domain
   if (POROELASTIC_SIMULATION) call update_displacement_poroelastic()
@@ -205,7 +211,7 @@
     ! wavefields on CPU
 
     ! updates elastic displacement and velocity
-    if (PML_CONDITIONS .and. NSPEC_CPML > 0 .and. (.not. USE_ADE_PML)) then
+    if (PML_CONDITIONS .and. NSPEC_CPML > 0) then
         do ispec_cpml=1,NSPEC_CPML
            ispec = CPML_to_spec(ispec_cpml)
            do k = 1, NGLLZ
@@ -232,7 +238,7 @@
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     if (SIMULATION_TYPE /= 1) accel_adj_coupling(:,:) = accel(:,:)
     accel(:,:) = 0._CUSTOM_REAL
-    if (PML_CONDITIONS .and. NSPEC_CPML > 0 .and. (.not. USE_ADE_PML)) then
+    if (PML_CONDITIONS .and. NSPEC_CPML > 0) then
         do ispec_cpml=1,NSPEC_CPML
            ispec = CPML_to_spec(ispec_cpml)
            do k = 1, NGLLZ
@@ -282,15 +288,79 @@
 
     ! updates elastic displacement and velocity
     ! Includes SIM_TYPE 1 & 3 (for noise tomography)
-    if(.not. USE_ADE_PML) then 
-      call update_displacement_cuda(Mesh_pointer,deltat,deltatsqover2,deltatover2,b_deltat,b_deltatsqover2,b_deltatover2)
-    else 
-      call update_displacement_cuda_ade(Mesh_pointer,deltat,deltatsqover2,deltatover2,&
-                                        b_deltat,b_deltatsqover2,b_deltatover2)
-    endif
+    call update_displacement_cuda(Mesh_pointer,deltat,deltatsqover2,deltatover2,b_deltat,b_deltatsqover2,b_deltatover2)
   endif ! GPU_MODE
 
   end subroutine update_displacement_elastic
+
+
+
+subroutine update_displacement_elastic_ADE()
+
+  ! updates elastic wavefields, for ADE case
+
+  use specfem_par
+  use specfem_par_elastic
+  use pml_par
+  !use constants, only: USE_ADE_PML
+
+  implicit none
+
+  ! TL: timing
+  double precision :: t_clock
+  double precision, external :: wtime
+  t_clock = wtime()
+
+  ! read from disk for reconstruction
+  if (SIMULATION_TYPE == 3 .and. (.not. SUBSAMPLE_FORWARD_WAVEFIELD)) then
+    if (PML_CONDITIONS .and. USE_ADE_PML) then
+      if (nglob_interface_PML_elastic > 0) then
+        call read_field_on_pml_interface(b_accel,b_veloc,b_displ,nglob_interface_PML_elastic, &
+                                          b_PML_field,b_reclen_PML_field)
+      endif
+    endif
+  endif
+
+  ! Newmark time marching
+
+  if (.not. GPU_MODE) then
+    ! wavefields on CPU
+
+    ! u^{n+1}=u^n+\delta t*v^{n+1/2}
+    !        =u^n+\delta t*v^n+1/2*\delta t^2*a^n
+    ! v^{n+1/2}=v^n+\delta t*1/2*a^n 
+    displ(:,:) = displ(:,:) + deltat * veloc(:,:) + deltatsqover2 * accel(:,:)
+    veloc(:,:) = veloc(:,:) + deltatover2 * accel(:,:)
+    !! TL: update auxiliary variables, predictor !!
+    !if (PML_CONDITIONS .and. USE_ADE_PML.and. NSPEC_CPML > 0) &
+    !                           call update_pml_aux_predictor()
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    if (SIMULATION_TYPE /= 1) accel_adj_coupling(:,:) = accel(:,:)
+    accel(:,:) = 0._CUSTOM_REAL
+
+    ! TL: timing
+    t_update = t_update + (wtime() - t_clock)
+
+    ! adjoint simulations
+    !! TL: kernel computation with subsampled forward wavefield
+    !if (SIMULATION_TYPE == 3) then
+    if (SIMULATION_TYPE == 3 .and. &
+         (.not. SUBSAMPLE_FORWARD_WAVEFIELD)) then
+      b_displ(:,:) = b_displ(:,:) + b_deltat * b_veloc(:,:) + b_deltatsqover2 * b_accel(:,:)
+      b_veloc(:,:) = b_veloc(:,:) + b_deltatover2 * b_accel(:,:)
+      b_accel(:,:) = 0._CUSTOM_REAL
+    endif
+
+  else
+    ! wavefields on GPU
+    ! updates elastic displacement and velocity
+    ! Includes SIM_TYPE 1 & 3 (for noise tomography)
+    call update_displacement_cuda_ade(Mesh_pointer,deltat,deltatsqover2,deltatover2,&
+                                        b_deltat,b_deltatsqover2,b_deltatover2)
+  endif ! GPU_MODE
+
+  
+end subroutine update_displacement_elastic_ADE
 
 !
 !--------------------------------------------------------------------------------------------------------------
