@@ -33,26 +33,95 @@ subroutine read_mesh_databases_wavefield_discontinuity()
 end subroutine read_mesh_databases_wavefield_discontinuity
 
 subroutine open_wavefield_discontinuity_file()
-  use specfem_par, only: prname
-  use wavefield_discontinuity_solver, only: IFILE_WAVEFIELD_DISCONTINUITY
-  use specfem_par,only: SIMULATION_TYPE
-  implicit none
-  ! open(unit=IFILE_WAVEFIELD_DISCONTINUITY, &
-  !      file=trim(prname)//'displ.bin', access='stream', &
-  !      status='old',action='read',form='unformatted')
-  ! open(unit=IFILE_WAVEFIELD_DISCONTINUITY+1, &
-  !      file=trim(prname)//'traction.bin', access='stream', &
-  !      status='old',action='read',form='unformatted')
+  use specfem_par, only: prname,IMAIN,myrank,LOCAL_PATH
+  use specfem_par,only: SIMULATION_TYPE,NDIM,NSTEP,DT,NGLLSQUARE,CUSTOM_REAL
 
-  if(SIMULATION_TYPE == 1) then 
+  ! nqdu added 
+  use wavefield_discontinuity_solver
+  implicit none
+
+  ! local
+  logical :: iexist  
+  integer :: ier,it 
+  integer(kind=8) :: file_size, block_size 
+
+  ! check if dt/nstep file exists
+  inquire(file=trim(LOCAL_PATH)//'wavefield_discontinuity_info.txt', &
+          exist=iexist)
+  if(.not.iexist) then
+    DT_wd = real(DT,kind=CUSTOM_REAL) 
+    NSTEP_wd = NSTEP
+    SAVE_DOWNSAMPLED_WD = .false.
+
+    ! open it in the old way
+    if(SIMULATION_TYPE == 1) then 
+      open(unit=IFILE_WAVEFIELD_DISCONTINUITY, &
+          file=trim(prname)//'wavefield_discontinuity.bin', &
+          status='old',action='read',form='unformatted')
+    else 
+      open(unit=IFILE_WAVEFIELD_DISCONTINUITY, &
+          file=trim(prname)//'wavefield_discontinuity.bin', &
+          status='old',action='read',form='unformatted',&
+          access='stream')
+    endif
+
+    ! allocate dummpy arrays 
+    allocate(field_a_wd(1,1,1),field_d_wd(1,1,1),field_t_wd(1,1,1,1))
+
+  else 
+    open(unit=IFILE_WAVEFIELD_DISCONTINUITY+100, &
+        file=trim(LOCAL_PATH)//'wavefield_discontinuity_info.txt', &
+        status='old',action='read',form='formatted')
+    read(IFILE_WAVEFIELD_DISCONTINUITY+100,*) DT_wd
+    read(IFILE_WAVEFIELD_DISCONTINUITY+100,*) NSTEP_wd
+    close(IFILE_WAVEFIELD_DISCONTINUITY+100)
+    SAVE_DOWNSAMPLED_WD = .true.
+
+    ! open file to get size 
+    inquire(file=trim(prname)//'wavefield_discontinuity.bin', &
+            exist=iexist, size=file_size)
+    if(.not.iexist) then
+      if(myrank == 0) &
+        print*, 'wavefield_discontinuity.bin does not exist, please check!'
+      stop
+    endif
+
+    ! compute block size
+    block_size = (nglob_wd*NDIM*2 + nfaces_wd*NGLLSQUARE*NDIM)*CUSTOM_REAL + 2 * 3 * CUSTOM_REAL
+    block_size = block_size * NSTEP_wd 
+
+    ! warnings if memory usage is too large
+    if(block_size > file_size / 5) then 
+      if ( myrank == 0 ) then
+        write(IMAIN,*) '****************************************************************'
+        write(IMAIN,*) 'Warning: the size of downsampled wavefield_discontinuity.bin is much larger than expected!'
+        write(IMAIN,*) '         Please check if DT and NSTEP in wavefield_discontinuity_info.txt are correct!'
+        write(IMAIN,*) '         Current DT and DT_wd = ', DT,DT_wd
+        write(IMAIN,*) '         Current NSTEP = ', NSTEP,NSTEP_wd
+        write(IMAIN,*) '         total/downsample file size (bytes) = ', file_size, block_size
+        write(IMAIN,*) '****************************************************************'
+      end if
+    endif
+
+    ! allocate space 
+    allocate(field_d_wd(NDIM,nglob_wd,NSTEP_wd), &
+             field_a_wd(NDIM,nglob_wd,NSTEP_wd), &
+             field_t_wd(NDIM,NGLLSQUARE,nfaces_wd,NSTEP_wd),&
+             stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 89001')
+
+    ! read everything into memory
     open(unit=IFILE_WAVEFIELD_DISCONTINUITY, &
         file=trim(prname)//'wavefield_discontinuity.bin', &
         status='old',action='read',form='unformatted')
-  else 
-    open(unit=IFILE_WAVEFIELD_DISCONTINUITY, &
-        file=trim(prname)//'wavefield_discontinuity.bin', &
-        status='old',action='read',form='unformatted',&
-        access='stream')
+    do it = 1, NSTEP_wd
+      read(IFILE_WAVEFIELD_DISCONTINUITY) field_d_wd(:,:,it)
+      read(IFILE_WAVEFIELD_DISCONTINUITY) field_a_wd(:,:,it)
+      read(IFILE_WAVEFIELD_DISCONTINUITY) field_t_wd(:,:,:,it)
+    enddo
+
+    ! close in finalize
+    !close(IFILE_WAVEFIELD_DISCONTINUITY)
   endif
 
 end subroutine open_wavefield_discontinuity_file
@@ -62,37 +131,59 @@ subroutine read_wavefield_discontinuity_file()
                  displ_wd, accel_wd, traction_wd
   
   !nqdu added
-  use wavefield_discontinuity_solver,only: nglob_wd,nfaces_wd
+  use wavefield_discontinuity_solver,only: nglob_wd,nfaces_wd,DT_wd,NSTEP_wd
+  use wavefield_discontinuity_solver,only: field_a_wd,field_d_wd,field_t_wd,SAVE_DOWNSAMPLED_WD
   use specfem_par,only: NDIM,NGLLSQUARE,CUSTOM_REAL
-  use specfem_par,only: it,NSTEP,SIMULATION_TYPE
+  use specfem_par,only: it ,NSTEP,SIMULATION_TYPE,DT 
 
   ! use specfem_par, only: NDIM
   ! use wavefield_discontinuity_solver, only: nglob_wd, nfaces_wd
   implicit none
   integer(kind=8) :: offset(3),block_bytes
+  real(kind=CUSTOM_REAL) :: coef,t_now
+  integer :: it1,it2,it_sem 
 
-  ! integer :: i
-  ! do i =1, nglob_wd
-  !   read(IFILE_WAVEFIELD_DISCONTINUITY) displ_wd(1:NDIM, i)
-  !   read(IFILE_WAVEFIELD_DISCONTINUITY) accel_wd(1:NDIM, i)
-  ! enddo
-  ! do i = 1, nfaces_wd
-  ! read(IFILE_WAVEFIELD_DISCONTINUITY+1) traction_wd(:,:,i)
-  ! enddo
-  if(SIMULATION_TYPE == 1) then
-    read(IFILE_WAVEFIELD_DISCONTINUITY) displ_wd
-    read(IFILE_WAVEFIELD_DISCONTINUITY) accel_wd
-    read(IFILE_WAVEFIELD_DISCONTINUITY) traction_wd
+  if(SAVE_DOWNSAMPLED_WD) then
+
+    ! get current time 
+    if (SIMULATION_TYPE == 1) then
+      it_sem = it 
+    else 
+      it_sem = NSTEP - it + 1
+    endif
+    t_now = real((it_sem - 1) * DT,kind=CUSTOM_REAL)
+
+    ! Interpolate to get the correct index in downsampled arrays
+    it1 = int(t_now / DT_wd) + 1 
+    it2 = it1 + 1
+    coef = (t_now - real((it1 - 1) * DT_wd,kind=CUSTOM_REAL)) / DT_wd
+    if(it2 > NSTEP_wd) then
+      it2 = NSTEP_wd
+      it1 = NSTEP_wd
+      coef = 0.0_CUSTOM_REAL
+    endif
+
+    ! interpolate 
+    displ_wd(:,:) = field_d_wd(:,:,it1) * (field_d_wd(:,:,it2)-field_d_wd(:,:,it1)) * coef
+    accel_wd(:,:) = field_a_wd(:,:,it1) * (field_a_wd(:,:,it2)-field_a_wd(:,:,it1)) * coef
+    traction_wd(:,:,:) = field_t_wd(:,:,:,it1) * (field_t_wd(:,:,:,it2)-field_t_wd(:,:,:,it1)) * coef
+  
   else 
-    block_bytes = CUSTOM_REAL *(nglob_wd*NDIM*2 + nfaces_wd*NGLLSQUARE*NDIM) + 8 * 3
-    offset(1) = (NSTEP - it) * block_bytes + 5 
-    offset(2) = offset(1) + CUSTOM_REAL * nglob_wd*NDIM + 8
-    offset(3) = offset(2) + CUSTOM_REAL * nglob_wd*NDIM + 8
+    if(SIMULATION_TYPE == 1) then
+      read(IFILE_WAVEFIELD_DISCONTINUITY) displ_wd
+      read(IFILE_WAVEFIELD_DISCONTINUITY) accel_wd
+      read(IFILE_WAVEFIELD_DISCONTINUITY) traction_wd
+    else 
+      block_bytes = CUSTOM_REAL *(nglob_wd*NDIM*2 + nfaces_wd*NGLLSQUARE*NDIM) + 8 * 3
+      offset(1) = (NSTEP - it) * block_bytes + 5 
+      offset(2) = offset(1) + CUSTOM_REAL * nglob_wd*NDIM + 8
+      offset(3) = offset(2) + CUSTOM_REAL * nglob_wd*NDIM + 8
 
-    ! read
-    read(IFILE_WAVEFIELD_DISCONTINUITY,pos=offset(1)) displ_wd
-    read(IFILE_WAVEFIELD_DISCONTINUITY,pos=offset(2)) accel_wd
-    read(IFILE_WAVEFIELD_DISCONTINUITY,pos=offset(3)) traction_wd
+      ! read
+      read(IFILE_WAVEFIELD_DISCONTINUITY,pos=offset(1)) displ_wd
+      read(IFILE_WAVEFIELD_DISCONTINUITY,pos=offset(2)) accel_wd
+      read(IFILE_WAVEFIELD_DISCONTINUITY,pos=offset(3)) traction_wd
+    endif
   endif
   ! if(size(displ_wd)> 0) then
   !   print*,maxval(displ_wd),maxval(traction_wd),maxval(accel_wd),trim(prname),maxloc(traction_wd)
@@ -107,6 +198,9 @@ subroutine finalize_wavefield_discontinuity()
   deallocate(ispec_to_elem_wd, ibool_wd, boundary_to_iglob_wd, mass_in_wd, &
              face_ijk_wd, face_ispec_wd, face_normal_wd, face_jacobian2Dw_wd, &
              displ_wd, accel_wd, traction_wd)
+
+  ! free arrays
+  deallocate(field_d_wd,field_a_wd,field_t_wd)
 end subroutine finalize_wavefield_discontinuity
 
 subroutine add_displacement_discontinuity_element(ispec, dummyx_loc, &
