@@ -66,4 +66,47 @@ module wavefield_discontinuity_solver
   !! traction_wd(NDIM, NGLLSQUARE, nfaces_wd)
   !! traction discontinuity condition at current time step
   real(kind=CUSTOM_REAL), dimension(:,:,:), allocatable :: traction_wd
+
+
+  ! nqdu added  
+  !> time step for wavefield discontinuity solver
+  real(kind=CUSTOM_REAL) :: DT_wd 
+  integer :: NSTEP_wd  !> number of time steps for wavefield discontinuity solver
+  logical :: SAVE_DOWNSAMPLED_WD
+
+  !> discontinuity field for all time steps
+  real(kind=CUSTOM_REAL), allocatable :: &
+                              field_d_wd(:,:,:), field_a_wd(:,:,:),field_t_wd(:,:,:,:)
+
+  ! public:: lanczos_resample_to_grid
+! contains 
+
+!   !> sinc function 
+!   pure function sinc(a) result(b)
+!     real(kind=CUSTOM_REAL), intent(in) :: a
+!     real(kind=CUSTOM_REAL) :: b
+    
+!     if (abs(a) > 1.0e-12_CUSTOM_REAL) then
+!       b = 1.0_CUSTOM_REAL
+!     else
+!       b = sin(pi * a) / (pi * a)
+!     end if
+!   end function sinc
+
+!   !> lanczos resampler 
+!   pure real(CUSTOM_REAL) function lanczos_kernel(x, a) result(w)
+    
+!     use constants, only: dp => CUSTOM_REAL
+!     implicit none
+!     real(kind=dp), parameter :: pi = 3.14159265358979323846_dp
+!     real(dp), intent(in) :: x
+!     integer,  intent(in) :: a
+!     real(dp) :: ax
+!     ax = abs(x)
+!     if (ax >= real(a, dp)) then
+!       w = 0.0_dp
+!     else
+!       w = sinc(pi*x) * sinc(pi*x/real(a,dp))
+!     end if
+!   end function lanczos_kernel
 end module wavefield_discontinuity_solver
