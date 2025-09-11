@@ -65,7 +65,7 @@ subroutine open_wavefield_discontinuity_file()
           access='stream')
     endif
 
-    ! allocate dummpy arrays 
+    ! allocate dummy arrays 
     allocate(field_a_wd(1,1,1),field_d_wd(1,1,1),field_t_wd(1,1,1,1))
 
   else 
@@ -90,18 +90,18 @@ subroutine open_wavefield_discontinuity_file()
     block_size = (nglob_wd*NDIM*2 + nfaces_wd*NGLLSQUARE*NDIM)*CUSTOM_REAL + 2 * 3 * CUSTOM_REAL
     block_size = block_size * NSTEP_wd 
 
-    ! warnings if memory usage is too large
-    if(block_size > file_size / 5) then 
-      if ( myrank == 0 ) then
-        write(IMAIN,*) '****************************************************************'
+    if ( myrank == 0 ) then
+      write(IMAIN,*) '****************************************************************'
+      write(IMAIN,*) 'reading downsampled wavefield_discontinuity!'
+      write(IMAIN,*) '         Current DT and DT_wd = ', DT,DT_wd
+      write(IMAIN,*) '         Current NSTEP = ', NSTEP,NSTEP_wd
+
+      if(block_size/ 5 <  file_size) then 
         write(IMAIN,*) 'Warning: the size of downsampled wavefield_discontinuity.bin is much larger than expected!'
-        write(IMAIN,*) '         Please check if DT and NSTEP in wavefield_discontinuity_info.txt are correct!'
-        write(IMAIN,*) '         Current DT and DT_wd = ', DT,DT_wd
-        write(IMAIN,*) '         Current NSTEP = ', NSTEP,NSTEP_wd
-        write(IMAIN,*) '         total/downsample file size (bytes) = ', file_size, block_size
-        write(IMAIN,*) '****************************************************************'
-      end if
-    endif
+        write(IMAIN,*) '         total/downsample file size (bytes) = ',  block_size,file_size
+      endif
+      write(IMAIN,*) '****************************************************************'
+    end if
 
     ! allocate space 
     allocate(field_d_wd(NDIM,nglob_wd,NSTEP_wd), &
@@ -154,19 +154,19 @@ subroutine read_wavefield_discontinuity_file()
     t_now = real((it_sem - 1) * DT,kind=CUSTOM_REAL)
 
     ! Interpolate to get the correct index in downsampled arrays
-    it1 = int(t_now / DT_wd) + 1 
+    it1 = int((t_now - t0_wd) / DT_wd) + 1 
     it2 = it1 + 1
-    coef = (t_now - real((it1 - 1) * DT_wd,kind=CUSTOM_REAL)) / DT_wd
+    coef = (t_now - (it1 - 1) * DT_wd - t0_wd) / DT_wd
     if(it2 > NSTEP_wd) then
       it2 = NSTEP_wd
       it1 = NSTEP_wd
       coef = 0.0_CUSTOM_REAL
-    endif
+    endif 
 
     ! interpolate 
-    displ_wd(:,:) = field_d_wd(:,:,it1) * (field_d_wd(:,:,it2)-field_d_wd(:,:,it1)) * coef
-    accel_wd(:,:) = field_a_wd(:,:,it1) * (field_a_wd(:,:,it2)-field_a_wd(:,:,it1)) * coef
-    traction_wd(:,:,:) = field_t_wd(:,:,:,it1) * (field_t_wd(:,:,:,it2)-field_t_wd(:,:,:,it1)) * coef
+    displ_wd(:,:) = field_d_wd(:,:,it1) + (field_d_wd(:,:,it2)-field_d_wd(:,:,it1)) * coef
+    accel_wd(:,:) = field_a_wd(:,:,it1) + (field_a_wd(:,:,it2)-field_a_wd(:,:,it1)) * coef
+    traction_wd(:,:,:) = field_t_wd(:,:,:,it1) + (field_t_wd(:,:,:,it2)-field_t_wd(:,:,:,it1)) * coef
   
   else 
     if(SIMULATION_TYPE == 1) then
