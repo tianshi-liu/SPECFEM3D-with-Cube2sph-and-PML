@@ -140,7 +140,7 @@ subroutine read_wavefield_discontinuity_file()
   ! use wavefield_discontinuity_solver, only: nglob_wd, nfaces_wd
   implicit none
   integer(kind=8) :: offset(3),block_bytes
-  real(kind=CUSTOM_REAL) :: coef,t_now
+  real(kind=CUSTOM_REAL) :: coef,t_now,t0_wd 
   integer :: it1,it2,it_sem 
 
   if(SAVE_DOWNSAMPLED_WD) then
@@ -154,6 +154,7 @@ subroutine read_wavefield_discontinuity_file()
     t_now = real((it_sem - 1) * DT,kind=CUSTOM_REAL)
 
     ! Interpolate to get the correct index in downsampled arrays
+    t0_wd = -DT_wd
     it1 = int((t_now - t0_wd) / DT_wd) + 1 
     it2 = it1 + 1
     coef = (t_now - (it1 - 1) * DT_wd - t0_wd) / DT_wd
