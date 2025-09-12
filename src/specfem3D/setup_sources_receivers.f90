@@ -617,10 +617,18 @@
   if (ier /= 0) call exit_MPI_without_rank('error allocating array 2067')
   if (ier /= 0) stop 'error allocating arrays for receivers'
 
+  ! nqdu added bug fixing
   ! locate receivers in the mesh
-  call locate_receivers(filtered_rec_filename,nrec,islice_selected_rec,ispec_selected_rec, &
-                        xi_receiver,eta_receiver,gamma_receiver,station_name,network_name,nu, &
-                        utm_x_source(1),utm_y_source(1))
+  if(NSOURCES > 0) then
+    call locate_receivers(filtered_rec_filename,nrec,islice_selected_rec,ispec_selected_rec, &
+                          xi_receiver,eta_receiver,gamma_receiver,station_name,network_name,nu, &
+                          utm_x_source(1),utm_y_source(1))
+  else
+    ! no source, thus no utm_x_source and utm_y_source defined
+    call locate_receivers(filtered_rec_filename,nrec,islice_selected_rec,ispec_selected_rec, &
+                          xi_receiver,eta_receiver,gamma_receiver,station_name,network_name,nu, &
+                          0.d0,0.d0)
+  endif
 
   ! count number of receivers located in this slice
   nrec_local = 0
