@@ -186,7 +186,8 @@
     
     !! TL: add for ADE-PML
     if (USE_ADE_PML .and. is_CPML(ispec)) then
-      call compute_forces_viscoelastic_adepml_element(ispec,displ,accel)
+      if(.not. backward_simulation) &
+        call compute_forces_viscoelastic_adepml_element(ispec,displ,accel)
       cycle
     endif
 
