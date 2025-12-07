@@ -11,7 +11,8 @@
             ],
             
             "defines": ["-D","USE_CUDA","-D","WITH_MPI",
-                        "-D","aUSE_CUDA_AWARE_MPI"],
+                        "-D","aUSE_CUDA_AWARE_MPI",
+                    "-D","USE_PADDED_ADE_PML=1"],
             "compilerPath": "/usr/bin/gcc",
             "cStandard": "c99",
             "compilerArgs": ["-Wall"],

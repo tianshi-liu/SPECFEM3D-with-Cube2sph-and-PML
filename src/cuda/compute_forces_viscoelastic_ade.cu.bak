@@ -129,18 +129,10 @@ compute_sigma_adepml(int ispec,int i,int j,int k,int ANISO,
                     const realw* Qu)
 {
   const int idx = ispec * NGLL3 + k * NGLL2 + j * NGLLX + i;
-#ifndef USE_PADDED_ADE_PML 
-  // Rmat shape (nspec,NGLL3,NDIM,NDIM)
+
   #define Rmat(i,j)  rtrans[(idx*NDIM + j-1) * NDIM + i-1]
   #define Rmatinv(i,j) rtrans_inv[(idx*NDIM + j-1) * NDIM + i-1]
   #define Qmat(i,j) Qu[(idx * NDIM + j-1) * NDIM + i-1]
-#else 
-  // Rmat shape (nspec,NDIM,NDIM,NGLL3_PADDED)
-  const int idx1 = ispec * NGLL3_PADDED * NDIM * NDIM +  k * NGLL2 + j * NGLLX + i;
-  #define Rmat(i,j) rtrans[((j-1)*NDIM + (i-1)) * NGLL3_PADDED + idx1]
-  #define Rmatinv(i,j) rtrans_inv[((j-1)*NDIM + (i-1)) * NGLL3_PADDED + idx1]
-  #define Qmat(i,j) Qu[((j-1)*NDIM + (i-1)) * NGLL3_PADDED + idx1]
-#endif
   realw k1l,k2l,k3l,
       r1xl,r1yl,r1zl,r2xl,r2yl,r2zl,r3xl,r3yl,r3zl,
       ri1xl,ri1yl,ri1zl,ri2xl,ri2yl,ri2zl,ri3xl,ri3yl,ri3zl,
@@ -274,18 +266,9 @@ compute_Qu_t_point(int ispec,int i,int j,int k,
 {
   realw d1l,d2l,d3l;
   const int idx = ispec * NGLL3 + k * NGLL2 + j * NGLLX + i;
-#ifndef USE_PADDED_ADE_PML
-  // Rmatinv shape (nspec,NGLL3,NDIM,NDIM)
+  
   #define Rmatinv(i,j) rtrans_inv[(idx * NDIM + j-1) * NDIM + i-1]
   #define Qmat(i,j) Qu_t[(idx * NDIM + j-1) * NDIM + i-1]
-#else 
-  // Rmatinv shape (nspec,NDIM,NDIM,NGLL3_PADDED)
-  const int idx1 = ispec * NGLL3_PADDED * NDIM * NDIM +  k * NGLL2 + j * NGLLX + i;
-  #define Rmatinv(i,j) rtrans_inv[((j-1)*NDIM + (i-1)) * NGLL3_PADDED + idx1]
-  #define Qmat(i,j) Qu_t[((j-1)*NDIM + (i-1)) * NGLL3_PADDED + idx1]
-#endif
-
-
   const realw ri1xl = Rmatinv(1,1);
   const realw ri2xl = Rmatinv(2,1);
   const realw ri3xl = Rmatinv(3,1);
@@ -331,25 +314,16 @@ compute_Qt_t(int ispec,int i,int j,int k,int tid,
   const int idx = ispec * NGLL3 + k * NGLL2 + j * NGLLX + i;
   int iglob = ibool_CPML[idx] - 1;
 
-  // realw rt[9],rtinv[9];
-  // for(int i = 0; i < 9; i ++) {
-  //   rt[i] = r_trans[idx*NDIM*NDIM + i];
-  //   rtinv[i] = r_trans_inv[idx*NDIM*NDIM + i];
-  // }
-  // #define Rmat(i,j) rt[(j-1) * NDIM + i-1]
-  // #define Rmatinv(i,j) rtinv[(j-1) * NDIM + i-1]
+  realw rt[9],rtinv[9];
+  for(int i = 0; i < 9; i ++) {
+    rt[i] = r_trans[idx*NDIM*NDIM + i];
+    rtinv[i] = r_trans_inv[idx*NDIM*NDIM + i];
+  }
 
-#ifndef USE_PADDED_ADE_PML
-  // Rmat shape (nspec,NGLL3,NDIM,NDIM)
-  #define Rmat(i,j) r_trans[(idx*NDIM + j-1) * NDIM + i-1]
-  #define Rmatinv(i,j) r_trans_inv[(idx*NDIM + j-1) * NDIM + i-1]
-#else 
-  // Rmat shape (nspec,NDIM,NDIM,NGLL3_PADDED)
-  const int idx1 = ispec * NGLL3_PADDED * NDIM * NDIM +  k * NGLL2 + j * NGLLX + i;
-  #define Rmat(i,j) r_trans[((j-1)*NDIM + (i-1)) * NGLL3_PADDED + idx1]
-  #define Rmatinv(i,j) r_trans_inv[((j-1)*NDIM + (i-1)) * NGLL3_PADDED + idx1]
-#endif
-
+  // #define Rmat(i,j) r_trans[(idx*NDIM + j-1) * NDIM + i-1]
+  // #define Rmatinv(i,j) r_trans_inv[(idx*NDIM + j-1) * NDIM + i-1]
+  #define Rmat(i,j) rt[(j-1) * NDIM + i-1]
+  #define Rmatinv(i,j) rtinv[(j-1) * NDIM + i-1]
 
   r1xl = Rmat(1,1);
   r2xl = Rmat(2,1);
@@ -369,7 +343,7 @@ compute_Qt_t(int ispec,int i,int j,int k,int tid,
   ri3yl = Rmatinv(3,2);
   ri1zl = Rmatinv(1,3);
   ri2zl = Rmatinv(2,3);
-  ri3zl = Rmatinv(3,3); 
+  ri3zl = Rmatinv(3,3);
 
   d1l = pml_d[1-1 + idx*NDIM];
   d2l = pml_d[2-1 + idx*NDIM];
@@ -1000,18 +974,10 @@ compute_accel_adepml(int ispec,int i,int j,int k,realw_const_p temp,
                     realw_const_p pml_d, realw_p ax,realw_p ay, realw_p az)
 {
   realw  pmlxxl,pmlxyl,pmlxzl,pmlyxl,pmlyyl,pmlyzl,pmlzxl,pmlzyl,pmlzzl;
+
   const int idx = ispec * NGLL3 + k * NGLL2 + j * NGLLX + i;
-#ifndef USE_PADDED_ADE_PML
-  // Rmat shape (nspec,NGLL3,NDIM,NDIM)
   #define Rmat(i,j) r_trans[(idx * NDIM + j-1) * NDIM + i-1]
   #define Rmatinv(i,j) r_trans_inv[(idx * NDIM + j-1) * NDIM + i-1]
-#else
-  // Rmat shape (nspec,NDIM,NDIM,NGLL3_PADDED)
-  const int idx1 = ispec * NGLL3_PADDED * NDIM * NDIM +  k * NGLL2 + j * NGLLX + i;
-  #define Rmat(i,j) r_trans[((j-1)*NDIM + (i-1)) * NGLL3_PADDED + idx1]
-  #define Rmatinv(i,j) r_trans_inv[((j-1)*NDIM + (i-1)) * NGLL3_PADDED + idx1]
-#endif
-
   #define TMAT(a,b,c)  temp[((c-1) * NDIM + (b-1)) * 6 + a-1]
 
   #define r1xl Rmat(1,1)
@@ -1138,16 +1104,8 @@ add_pml_physical_contribution(int ispec_pml,const int *phy_spec,
     realw ny = phy_norm[idx1+1];
     realw nz = phy_norm[idx1+2];
 
-#ifndef USE_PADDED_ADE_PML
-    // Rmat shape (nspec,NGLL3,NDIM,NDIM)
     #define Rmat(i,j) rtrans[(idx * NDIM + j-1) * NDIM + i-1]
     #define Rmatinv(i,j) rtrans_inv[(idx * NDIM + j-1) * NDIM + i-1]
-#else
-    // Rmat shape (nspec,NDIM,NDIM,NGLL3_PADDED)
-    const int idx5 = ispec_pml * NGLL3_PADDED * NDIM * NDIM +  k * NGLL2 + j * NGLLX + i;
-    #define Rmat(i,j) rtrans[((j-1)*NDIM + (i-1)) * NGLL3_PADDED + idx5]
-    #define Rmatinv(i,j) rtrans_inv[((j-1)*NDIM + (i-1)) * NGLL3_PADDED + idx5]
-#endif
     #define Qmat(a,b) Qt_t[(iglob * NDIM + b - 1) * NDIM + a-1 ]
 
     r1xl = Rmat(1,1);
