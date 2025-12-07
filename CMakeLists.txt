@@ -59,6 +59,7 @@ set(CMAKE_VERBOSE_MAKEFILE off)
 
 # defination
 add_definitions(-DWITH_MPI)
+# add_definitions(-DUSE_PADDED_ADE_PML)
 add_definitions(-DFORCE_VECTORIZATION)
 
 
