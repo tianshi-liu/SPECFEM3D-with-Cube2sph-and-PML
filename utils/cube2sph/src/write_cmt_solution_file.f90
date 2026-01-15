@@ -190,9 +190,9 @@ program write_cmt_file
   write(IOUT, "(a11,a12)") "event name:","     000000A"
   write(IOUT, "(a11,f12.4)") "time shift:", tshift_src(isource)
   write(IOUT, "(a14,f9.4)") "half duration:", hdur(isource)
-  write(IOUT, "(a9,f14.4)") "latorUTM:", y_target_source*R_EARTH
-  write(IOUT, "(a10,f13.4)") "longorUTM:", x_target_source*R_EARTH
-  write(IOUT, "(a6,f17.4)") "depth:", z_target_source*R_EARTH
+  write(IOUT, "(a9,g0)") "latorUTM:", y_target_source*R_EARTH
+  write(IOUT, "(a10,g0)") "longorUTM:", x_target_source*R_EARTH
+  write(IOUT, "(a6,g0)") "depth:", z_target_source*R_EARTH
   write(IOUT, "(a4, es19.6E3)") "Mrr:", Mzz(isource)
   write(IOUT, "(a4, es19.6E3)") "Mtt:", Myy(isource)
   write(IOUT, "(a4, es19.6E3)") "Mpp:", Mxx(isource)
