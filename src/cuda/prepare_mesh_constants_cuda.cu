@@ -784,6 +784,8 @@ void FC_FUNC_(prepare_fields_elastic_device,
 
   copy_todevice_int((void**)&mp->d_phase_ispec_inner_elastic,phase_ispec_inner_elastic,2*mp->num_phase_ispec_elastic);
 
+
+
   // debug
   //synchronize_mpi();
 
@@ -1607,6 +1609,7 @@ TRACE("prepare_cleanup_device");
 
     cudaFree(mp->d_phase_ispec_inner_elastic);
     cudaFree(mp->d_ispec_is_elastic);
+    cudaFree(mp->d_phase_ispec_user_el);
 
     if (*ABSORBING_CONDITIONS && mp->d_num_abs_boundary_faces > 0){
       cudaFree(mp->d_rho_vp);
@@ -1915,6 +1918,65 @@ void prepare_ade_pml_device_(
   DCOPY1(d_pml_physical_ijk,NDIM*NGLL2*(*num_pml_phy));
   DCOPY1(d_rvolume,(*d_nglob_CPML));
   DCOPY1(d_CPML_to_glob,mp->nglob_CPML);
+
+  // get cnt_* 
+  int *phase_ispec_inner_el = (int*)malloc(mp->num_phase_ispec_elastic*2*sizeof(int));
+  int *h_phase_ispec_user = (int*)malloc(mp->num_phase_ispec_elastic*4*sizeof(int));
+  cudaMemcpy(phase_ispec_inner_el,mp->d_phase_ispec_inner_elastic,
+                 mp->num_phase_ispec_elastic*2*sizeof(int),cudaMemcpyDeviceToHost);
+  
+  int *h_is_pml = (int*)malloc(mp->NSPEC_AB*sizeof(int));
+  cudaMemcpy(h_is_pml,mp->d_is_pml,mp->NSPEC_AB*sizeof(int),cudaMemcpyDeviceToHost);
+  int max_nspec = mp->num_phase_ispec_elastic;
+  mp->cnt_pml_inner_el = 0; 
+  mp->cnt_pml_mpi_el = 0;
+  mp->cnt_reg_inner_el = 0;
+  mp->cnt_reg_mpi_el = 0;
+  for(int iphase = 0; iphase < 2; iphase ++) {
+    for(int iel = 0; iel < max_nspec; iel ++) {
+      int ispec = phase_ispec_inner_el[iphase * max_nspec + iel];
+      if(ispec > 0) 
+      {
+        if(iphase == 0) { // mpi elements
+          if(h_is_pml[ispec -1]) { // is pml
+            
+            h_phase_ispec_user[1 * max_nspec + mp->cnt_pml_mpi_el] = ispec;
+            mp->cnt_pml_mpi_el ++;
+          } 
+          else {
+            
+            h_phase_ispec_user[0 * max_nspec + mp->cnt_reg_mpi_el] = ispec;
+            mp->cnt_reg_mpi_el ++;
+          }
+        }
+        else { // inner elements
+          if(h_is_pml[ispec -1]) { // is pml
+            
+            h_phase_ispec_user[3 * max_nspec + mp->cnt_pml_inner_el] = ispec;
+            mp->cnt_pml_inner_el ++;
+          } 
+          else {
+            h_phase_ispec_user[2 * max_nspec + mp->cnt_reg_inner_el] = ispec;
+            mp->cnt_reg_inner_el ++;
+          }
+        }
+      }
+    }
+  }
+
+  // printf("PML ADE: cnt_pml_inner_el=%d, cnt_pml_mpi_el=%d, cnt_reg_inner_el=%d, cnt_reg_mpi_el=%d\n",
+  //         mp->cnt_pml_inner_el,mp->cnt_pml_mpi_el,mp->cnt_reg_inner_el,mp->cnt_reg_mpi_el);
+
+  // copy back to device
+  cudaMalloc((void**)&mp->d_phase_ispec_user_el,
+                 mp->num_phase_ispec_elastic*4*sizeof(int));
+  cudaMemcpy(mp->d_phase_ispec_user_el,
+                 h_phase_ispec_user,
+                 mp->num_phase_ispec_elastic*4*sizeof(int),cudaMemcpyHostToDevice);
+
+  free(phase_ispec_inner_el);
+  free(h_phase_ispec_user);
+  free(h_is_pml);
 
 #ifndef USE_PADDED_ADE_PML
 

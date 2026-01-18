@@ -10,6 +10,7 @@ set(CMAKE_Fortran_COMPILER     ${MPIFC})
 # build function test
 set(BUILD_TEST                  ${BUILD_TEST})
 set(ENABLE_GPU              ${ENABLE_GPU})
+set(CUDA_ARCHITECTURES              ${CUDA_ARCH})
 
 ################## dependencies ##################
 # preferred installation prefix of dependencies
@@ -20,6 +21,7 @@ if(NOT DEFINED ${var})
   set(${var} ${val})
 endif()
 endmacro()
+setDefault(CUDA_ARCHITECTURES "native")
 
 option(ENABLE_CUDA "Enable CUDA" OFF)
 option(ENABLE_CUDA_AWARE  "Enable CUDA AWARE MPI" OFF)
@@ -59,7 +61,7 @@ set(CMAKE_VERBOSE_MAKEFILE off)
 
 # defination
 add_definitions(-DWITH_MPI)
-# add_definitions(-DUSE_PADDED_ADE_PML)
+add_definitions(-DUSE_PADDED_ADE_PML)
 add_definitions(-DFORCE_VECTORIZATION)
 
 
@@ -104,5 +106,5 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/src/tomography)
 
 if(ENABLE_CUDA) 
   # set your architecture here
-  set_target_properties(cuda PROPERTIES CUDA_ARCHITECTURES native)
+  set_target_properties(cuda PROPERTIES CUDA_ARCHITECTURES ${CUDA_ARCHITECTURES})
 endif()

@@ -134,30 +134,23 @@ end subroutine setup_boundary_wavefield_discontinuity
           boundary_to_iglob_wd, face_ijk_wd, face_normal_wd, face_ispec_wd, &
           face_jacobian2Dw_wd, mass_in_wd, &
           IFILE_WAVEFIELD_DISCONTINUITY
-  use generate_databases_par,only : xstore,ystore,zstore,NSPEC_AB
+  use generate_databases_par,only : xstore,ystore,zstore,NSPEC_AB,NGLOB_AB
   implicit none
   integer :: i,j,k,ispec,iglob,igll,iglob_wd,iface_wd
   real(CUSTOM_REAL) :: tx, ty, tz
 
   ! local arrays
-  double precision :: xstore_db(nglob_wd), ystore_db(nglob_wd), zstore_db(nglob_wd)
+  double precision :: xstore_db(NGLOB_AB), ystore_db(NGLOB_AB), zstore_db(NGLOB_AB)
 
-
-  ! store coordinates of discontinuity points in local arrays
-  do iglob_wd = 1, nglob_wd
-    iglob = boundary_to_iglob_wd(iglob_wd)
-
-    ! using global arrays
-    do ispec = 1, NSPEC_AB
-      do k = 1, NGLLZ
-        do j = 1, NGLLY
-          do i = 1, NGLLX
-            if (ibool(i,j,k,ispec) == iglob) then
-              xstore_db(iglob_wd) = xstore(i,j,k,ispec)
-              ystore_db(iglob_wd) = ystore(i,j,k,ispec)
-              zstore_db(iglob_wd) = zstore(i,j,k,ispec)
-            endif
-          enddo
+  ! set  x/y/zstore_db 
+  do ispec = 1, NSPEC_AB
+    do k = 1, NGLLZ
+      do j = 1, NGLLY
+        do i = 1, NGLLX
+          iglob = ibool(i,j,k,ispec)
+          xstore_db(iglob) = xstore(i,j,k,ispec)
+          ystore_db(iglob) = ystore(i,j,k,ispec)
+          zstore_db(iglob) = zstore(i,j,k,ispec)
         enddo
       enddo
     enddo
@@ -171,8 +164,8 @@ end subroutine setup_boundary_wavefield_discontinuity
     iglob = boundary_to_iglob_wd(iglob_wd)
     ! write(IFILE_WAVEFIELD_DISCONTINUITY, '(4(g0,1x))') xstore_dummy(iglob), &
     !    ystore_dummy(iglob), zstore_dummy(iglob), mass_in_wd(iglob_wd)
-    write(IFILE_WAVEFIELD_DISCONTINUITY, '(4(g0,1x))') xstore_db(iglob_wd), &
-       ystore_db(iglob_wd), zstore_db(iglob_wd), mass_in_wd(iglob_wd)
+    write(IFILE_WAVEFIELD_DISCONTINUITY, '(4(g0,1x))') xstore_db(iglob), &
+       ystore_db(iglob), zstore_db(iglob), mass_in_wd(iglob_wd)
   enddo
   close(IFILE_WAVEFIELD_DISCONTINUITY)
   open(unit=IFILE_WAVEFIELD_DISCONTINUITY, &
@@ -191,8 +184,8 @@ end subroutine setup_boundary_wavefield_discontinuity
       ! write(IFILE_WAVEFIELD_DISCONTINUITY, '(7(g0,1x))') xstore_dummy(iglob), &
       !  ystore_dummy(iglob), zstore_dummy(iglob), tx, ty, tz, &
       !  face_jacobian2Dw_wd(igll, iface_wd)
-      write(IFILE_WAVEFIELD_DISCONTINUITY, '(7(g0,1x))') xstore_db(iglob_wd), &
-       ystore_db(iglob_wd), zstore_db(iglob_wd), tx, ty, tz, &
+      write(IFILE_WAVEFIELD_DISCONTINUITY, '(7(g0,1x))') xstore(i,j,k,ispec), &
+       ystore(i,j,k,ispec), zstore(i,j,k,ispec), tx, ty, tz, &
        face_jacobian2Dw_wd(igll, iface_wd)
     enddo
   enddo

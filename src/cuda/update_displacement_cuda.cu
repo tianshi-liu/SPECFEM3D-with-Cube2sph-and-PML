@@ -37,9 +37,9 @@
 /* ----------------------------------------------------------------------------------------------- */
 
 
-__global__ void UpdateDispVeloc_kernel(realw* displ,
-                                       realw* veloc,
-                                       realw* accel,
+__global__ void UpdateDispVeloc_kernel(realw_p displ,
+                                       realw_p veloc,
+                                       realw_p accel,
                                        int size,
                                        realw deltat,
                                        realw deltatsqover2,
