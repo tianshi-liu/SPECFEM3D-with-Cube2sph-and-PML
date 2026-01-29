@@ -224,7 +224,7 @@ program write_stations_file
     x_target(irec) = x_target_rec * R_EARTH
     y_target(irec) = y_target_rec * R_EARTH
     z_target(irec) = z_target_rec * R_EARTH
-    write(IOUT, "(a7,a7,g0,1x,g0,1x,f5.1,g0)") station_name(irec), &
+    write(IOUT, "(a7,a7,g0,1x,g0,1x,g0,1x,g0)") station_name(irec), &
             network_name(irec), y_target(irec), x_target(irec), &
             0.0, z_target(irec) 
   enddo
