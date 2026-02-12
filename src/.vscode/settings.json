@@ -93,5 +93,10 @@
         "__tree": "c",
         "queue": "c",
         "stack": "c"
-    }
+    },
+
+    "C_Cpp.default.compilerArgs": [
+        "-DWITH_MPI",
+        "-DUSE_PADDED_ADE_PML=1",
+    ],
 }

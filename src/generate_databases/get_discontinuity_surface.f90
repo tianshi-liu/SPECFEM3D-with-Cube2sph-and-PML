@@ -128,23 +128,44 @@ end subroutine setup_boundary_wavefield_discontinuity
   subroutine write_discontinuity_surface_file()
   use constants, only: NGLLX,NGLLY,NGLLZ,NDIM,NGLLSQUARE,CUSTOM_REAL
   use generate_databases_par, only: ibool, prname, myrank, LOCAL_PATH
-  use create_regions_mesh_ext_par, only: xstore_dummy, ystore_dummy, &
-                                         zstore_dummy
+  ! use create_regions_mesh_ext_par, only: xstore_dummy, ystore_dummy, &
+  !                                        zstore_dummy
   use wavefield_discontinuity_generate_databases, only: nglob_wd, nfaces_wd, &
           boundary_to_iglob_wd, face_ijk_wd, face_normal_wd, face_ispec_wd, &
           face_jacobian2Dw_wd, mass_in_wd, &
           IFILE_WAVEFIELD_DISCONTINUITY
+  use generate_databases_par,only : xstore,ystore,zstore,NSPEC_AB,NGLOB_AB
   implicit none
   integer :: i,j,k,ispec,iglob,igll,iglob_wd,iface_wd
   real(CUSTOM_REAL) :: tx, ty, tz
+
+  ! local arrays
+  double precision :: xstore_db(NGLOB_AB), ystore_db(NGLOB_AB), zstore_db(NGLOB_AB)
+
+  ! set  x/y/zstore_db 
+  do ispec = 1, NSPEC_AB
+    do k = 1, NGLLZ
+      do j = 1, NGLLY
+        do i = 1, NGLLX
+          iglob = ibool(i,j,k,ispec)
+          xstore_db(iglob) = xstore(i,j,k,ispec)
+          ystore_db(iglob) = ystore(i,j,k,ispec)
+          zstore_db(iglob) = zstore(i,j,k,ispec)
+        enddo
+      enddo
+    enddo
+  enddo
+
   call create_name_database(prname,myrank,LOCAL_PATH)
   open(unit=IFILE_WAVEFIELD_DISCONTINUITY, &
        file=prname(1:len_trim(prname))//'wavefield_discontinuity_points',&
        action='write', form='formatted')
   do iglob_wd = 1, nglob_wd
     iglob = boundary_to_iglob_wd(iglob_wd)
-    write(IFILE_WAVEFIELD_DISCONTINUITY, '(4e20.5)') xstore_dummy(iglob), &
-       ystore_dummy(iglob), zstore_dummy(iglob), mass_in_wd(iglob_wd)
+    ! write(IFILE_WAVEFIELD_DISCONTINUITY, '(4(g0,1x))') xstore_dummy(iglob), &
+    !    ystore_dummy(iglob), zstore_dummy(iglob), mass_in_wd(iglob_wd)
+    write(IFILE_WAVEFIELD_DISCONTINUITY, '(4(g0,1x))') xstore_db(iglob), &
+       ystore_db(iglob), zstore_db(iglob), mass_in_wd(iglob_wd)
   enddo
   close(IFILE_WAVEFIELD_DISCONTINUITY)
   open(unit=IFILE_WAVEFIELD_DISCONTINUITY, &
@@ -160,8 +181,11 @@ end subroutine setup_boundary_wavefield_discontinuity
       tx = face_normal_wd(1,igll,iface_wd)
       ty = face_normal_wd(2,igll,iface_wd)
       tz = face_normal_wd(3,igll,iface_wd)
-      write(IFILE_WAVEFIELD_DISCONTINUITY, '(7e20.5)') xstore_dummy(iglob), &
-       ystore_dummy(iglob), zstore_dummy(iglob), tx, ty, tz, &
+      ! write(IFILE_WAVEFIELD_DISCONTINUITY, '(7(g0,1x))') xstore_dummy(iglob), &
+      !  ystore_dummy(iglob), zstore_dummy(iglob), tx, ty, tz, &
+      !  face_jacobian2Dw_wd(igll, iface_wd)
+      write(IFILE_WAVEFIELD_DISCONTINUITY, '(7(g0,1x))') xstore(i,j,k,ispec), &
+       ystore(i,j,k,ispec), zstore(i,j,k,ispec), tx, ty, tz, &
        face_jacobian2Dw_wd(igll, iface_wd)
     enddo
   enddo

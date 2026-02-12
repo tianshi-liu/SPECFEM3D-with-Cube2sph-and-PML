@@ -272,7 +272,7 @@ void sync_wavefield_(int *size_f, realw *h_field,long *Mesh_pointer,int *flag_f,
   d_field = NULL;
 
 }
-
+ 
 
 
 /* ----------------------------------------------------------------------------------------------- */

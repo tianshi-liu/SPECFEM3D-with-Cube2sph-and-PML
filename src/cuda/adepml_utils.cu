@@ -45,10 +45,17 @@ kernel_update_Qu_conv(const realw *coeff_exp1, const realw* coeff_exp2,
     int igll3 = threadIdx.x;
     if(idx < nspec_CPML * NDIM && igll3 < NGLL3){
         int ispec_CPML = idx / NDIM, idim = idx % NDIM;
-        // Qu(3,3,NGLL3,nspec_CPML) coeff(3,NGLL3,nspec_CPML)
+        
         for(int i = 0; i < NDIM; i ++) {
+#ifndef USE_PADDED_ADE_PML
+            // Qu(3,3,NGLL3,nspec_CPML) coeff(3,NGLL3,nspec_CPML)
             int idx_q = ((ispec_CPML * NGLL3 + igll3) * NDIM + i) * NDIM + idim;
             int idx_c = (ispec_CPML * NGLL3 + igll3) * NDIM + idim;
+#else
+            // Qu(NGLL3_PADDED,3,3,nspec_CPML) coeff(NGLL3_PADDED,3,nspec_CPML)
+            int idx_q = ispec_CPML * NGLL3_PADDED * NDIM * NDIM + (i*NDIM+idim) * NGLL3_PADDED + igll3;
+            int idx_c = ispec_CPML * NGLL3_PADDED * NDIM + idim * NGLL3_PADDED + igll3;
+#endif
             Qu[idx_q] = Qu[idx_q] * coeff_exp1[idx_c] + 
                         Qu_t[idx_q] * coeff_exp2[idx_c];
         }
@@ -71,8 +78,13 @@ void update_qu_conv_device_(long *Mesh_pointer)
         mp->d_Qu_t,mp->d_Qu
     );
 
+    size_t size = NDIM*NDIM*NGLL3*nspec_CPML* sizeof(realw); 
+#ifdef USE_PADDED_ADE_PML
+    size = NDIM*NDIM*NGLL3_PADDED*nspec_CPML* sizeof(realw) ; 
+#endif
+
     cudaMemsetAsync(mp->d_Qu_t,0,
-                    sizeof(realw)*nspec_CPML*NDIM*NDIM*NGLL3,
+                    size,
                 mp->compute_stream);
 
 }

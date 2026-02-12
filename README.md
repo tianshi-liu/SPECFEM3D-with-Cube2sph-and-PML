@@ -63,3 +63,6 @@ with `nummaterial_velocity_file_tomo`.
 *6.* Launching the SPECFEM3D solver.
 
 *7.* Performing rotation for the seismograms.
+
+## FWI
+For mesh generation, data preparation and FWI workflow, please refer to the user manual of [FWAT-Cube2sph](https://github.com/nqdu/FWAT-cube2sph/tree/main) package.

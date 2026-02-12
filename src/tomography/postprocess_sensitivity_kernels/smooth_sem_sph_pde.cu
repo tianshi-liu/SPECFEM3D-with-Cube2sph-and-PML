@@ -8,6 +8,7 @@ const int  NGLL =  5;
 const int  NGLLX = 5;
 const int  NGLL2 = 25;
 const int  NGLL3 = 125;
+const int NGLL2PAD = 32;
 const int NGLL3PAD = 128;
 
 typedef float realw;
@@ -121,12 +122,12 @@ kernel_smooth_sph_pde(int num_elmts,int iphase,int num_phase_ispec,
     I = (tx-K*NGLL2-J*NGLLX);
 
     // shared memory
-    __shared__ realw sh_u[NGLL3];
-    __shared__ realw sh_hprimeT[NGLL2], sh_hprimewgll[NGLL2];
+    __shared__ realw sh_ux[NGLL3PAD], sh_uy[NGLL3PAD], sh_uz[NGLL3PAD];
+    __shared__ realw sh_hprimeT[NGLL2PAD], sh_hprimewgll[NGLL2PAD];
 
     // copy shared memory
     if(threadIdx.x < NGLL3) {
-        sh_u[tx] = dat_glob[iglob];
+        sh_ux[tx] = dat_glob[iglob];
         if(threadIdx.x < NGLL2) {
             sh_hprimeT[tx] = hprimeT[tx];
             sh_hprimewgll[tx] = hprime_wgll[tx];
@@ -154,43 +155,34 @@ kernel_smooth_sph_pde(int num_elmts,int iphase,int num_phase_ispec,
     gamyl = gamy[offset];
     gamzl = gamz[offset];
     jacobianl = jaco[offset];
-    mxm_optx(sh_u,sh_hprimeT,I,J,K,&temp1);
-    mxm_opty(sh_u,sh_hprimeT,I,J,K,&temp2);
-    mxm_optz(sh_u,sh_hprimeT,I,J,K,&temp3);
+    mxm_optx(sh_ux,sh_hprimeT,I,J,K,&temp1);
+    mxm_opty(sh_ux,sh_hprimeT,I,J,K,&temp2);
+    mxm_optz(sh_ux,sh_hprimeT,I,J,K,&temp3);
     dudx = temp1 * xixl + temp2 * etaxl + temp3 * gamxl;
     dudy = temp1 * xiyl + temp2 * etayl + temp3 * gamyl;
     dudz = temp1 * xizl + temp2 * etazl + temp3 * gamzl;
 
     // compute new terms
-    __syncthreads();
     if(threadIdx.x < NGLL3) {
-        sh_u[tx] = ((cv-ch) * (rxl*xixl+ryl*xiyl+rzl*xizl) * 
+        sh_ux[tx] = ((cv-ch) * (rxl*xixl+ryl*xiyl+rzl*xizl) * 
                     (rxl*dudx+ryl*dudy+rzl*dudz) +
                     ch * (xixl*dudx+xiyl*dudy + 
                     xizl*dudz)) * jacobianl;
-    }
-    __syncthreads();
-    mxm_optx(sh_u,sh_hprimewgll,I,J,K,&temp1);
-
-    __syncthreads();
-    if(threadIdx.x < NGLL3) {
-        sh_u[tx] = ((cv-ch) * (rxl*etaxl+ryl*etayl+rzl*etazl) * 
+        sh_uy[tx] = ((cv-ch) * (rxl*etaxl+ryl*etayl+rzl*etazl) * 
                     (rxl*dudx+ryl*dudy+rzl*dudz) +
                     ch * (etaxl*dudx+etayl*dudy +
                     etazl*dudz)) * jacobianl;
-    }
-    __syncthreads();
-    mxm_opty(sh_u,sh_hprimewgll,I,J,K,&temp2);
-
-    __syncthreads();
-    if(threadIdx.x < NGLL3) {
-        sh_u[tx] = ((cv-ch) * (rxl*gamxl+ryl*gamyl+rzl*gamzl) * 
+        sh_uz[tx] = ((cv-ch) * (rxl*gamxl+ryl*gamyl+rzl*gamzl) * 
                     (rxl*dudx+ryl*dudy+rzl*dudz) +
                     ch * (gamxl*dudx+gamyl*dudy + 
                     gamzl*dudz)) * jacobianl;
     }
     __syncthreads();
-    mxm_optz(sh_u,sh_hprimewgll,I,J,K,&temp3);
+    mxm_optx(sh_ux,sh_hprimewgll,I,J,K,&temp1);
+    mxm_opty(sh_uy,sh_hprimewgll,I,J,K,&temp2);
+    mxm_optz(sh_uz,sh_hprimewgll,I,J,K,&temp3);
+
+    __syncthreads();
 
     // update ddat_glob
     realw fac1 = wgllwgll_yz[K*NGLL + J];

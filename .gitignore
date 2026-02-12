@@ -1,0 +1,47 @@
+# Object files
+*.o
+*.mod
+*.smod
+
+# Compiled executables
+*.exe
+*.out
+*.app
+
+
+# Library files
+*.a
+*.so
+*.dylib
+
+# Build directories
+build/
+bin/
+obj/
+OUTPUT_FILES/
+
+# Data files
+DATA/*.bin
+DATA/*.vtk
+*.mod
+
+# Editor and IDE files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+*.sublime-*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+
+# Additional binaries
+bin/

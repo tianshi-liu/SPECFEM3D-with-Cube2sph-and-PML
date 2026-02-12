@@ -1147,6 +1147,8 @@ module decompose_mesh
     ! local number of each element for each partition
     call build_glob2loc_elmnts(nspec, part, glob2loc_elmnts,nparts)
 
+    ! call sort_glob2loc_elemnts(nspec,part,glob2loc_elmnts,nparts)
+
     ! local number of each node for each partition
     call build_glob2loc_nodes(nspec, nnodes,nsize, nnodes_elmnts, nodes_elmnts, part, &
          glob2loc_nodes_nparts, glob2loc_nodes_parts, glob2loc_nodes, nparts)

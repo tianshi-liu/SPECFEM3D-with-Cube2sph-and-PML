@@ -224,7 +224,7 @@ program write_stations_file
     x_target(irec) = x_target_rec * R_EARTH
     y_target(irec) = y_target_rec * R_EARTH
     z_target(irec) = z_target_rec * R_EARTH
-    write(IOUT, "(a7,a7,f23.4,f23.4,f5.1,f23.4)") station_name(irec), &
+    write(IOUT, "(a7,a7,g0,1x,g0,1x,g0,1x,g0)") station_name(irec), &
             network_name(irec), y_target(irec), x_target(irec), &
             0.0, z_target(irec) 
   enddo
@@ -235,9 +235,9 @@ program write_stations_file
           status='unknown', form='formatted', action='write', iostat=ier)
   do irec = 1,nrec
     write(IOUT, "(a7,a7)") network_name(irec), station_name(irec)
-    write(IOUT, "(f23.9,f23.9,f23.9)") nu(1,1,irec),nu(1,2,irec),nu(1,3,irec)
-    write(IOUT, "(f23.9,f23.9,f23.9)") nu(2,1,irec),nu(2,2,irec),nu(2,3,irec)
-    write(IOUT, "(f23.9,f23.9,f23.9)") nu(3,1,irec),nu(3,2,irec),nu(3,3,irec)
+    write(IOUT, "(g0,1x,g0,1x,g0)") nu(1,1,irec),nu(1,2,irec),nu(1,3,irec)
+    write(IOUT, "(g0,1x,g0,1x,g0)") nu(2,1,irec),nu(2,2,irec),nu(2,3,irec)
+    write(IOUT, "(g0,1x,g0,1x,g0)") nu(3,1,irec),nu(3,2,irec),nu(3,3,irec)
   enddo
   close(IOUT)
   

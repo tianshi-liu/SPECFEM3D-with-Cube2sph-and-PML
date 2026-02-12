@@ -37,95 +37,34 @@
 /* ----------------------------------------------------------------------------------------------- */
 
 
-// __global__ void UpdateDispVeloc_kernel(realw_p displ,
-//                                        realw_p veloc,
-//                                        realw_p accel,
-//                                        int size,
-//                                        realw deltat,
-//                                        realw deltatsqover2,
-//                                        realw deltatover2) {
+__global__ void UpdateDispVeloc_kernel(realw_p displ,
+                                       realw_p veloc,
+                                       realw_p accel,
+                                       int size,
+                                       realw deltat,
+                                       realw deltatsqover2,
+                                       realw deltatover2) {
 
-//   // two dimensional array of blocks on grid where each block has one dimensional array of threads
-//   int id = threadIdx.x + blockIdx.x*blockDim.x + blockIdx.y*gridDim.x*blockDim.x;
+  // two dimensional array of blocks on grid where each block has one dimensional array of threads
+  int id = threadIdx.x + blockIdx.x*blockDim.x + blockIdx.y*gridDim.x*blockDim.x;
   
-//   // because of block and grid sizing problems, there is a small
-//   // amount of buffer at the end of the calculation
-//   if (id < size) {
-//     realw acc = accel[id];
-//     displ[id] = displ[id] + deltat*veloc[id] + deltatsqover2*acc;
-//     veloc[id] = veloc[id] + deltatover2*acc;
-//     accel[id] = 0.0f; // can do this using memset...not sure if faster,probably not
-//   }
+  // because of block and grid sizing problems, there is a small
+  // amount of buffer at the end of the calculation
+  if (id < size) {
+    realw acc = accel[id];
+    displ[id] = displ[id] + deltat*veloc[id] + deltatsqover2*acc;
+    veloc[id] = veloc[id] + deltatover2*acc;
+    accel[id] = 0.0f; // can do this using memset...not sure if faster,probably not
+  }
 
-// // -----------------
-// // total of: 6 FLOP per thread (without int id calculation at beginning)
-// //
-// //           8 * 4 BYTE = 32 DRAM accesses per thread
-// //
-// // arithmetic intensity: 6 FLOP / 32 BYTES ~ 0.19 FLOP/BYTE
-// // -----------------
-// // nvprof: 24599250 flops for 4099875 threads -> 6 FLOP per thread
-// }
-
-__global__ void UpdateDispVeloc_kernel(
-  realw_p displ,
-  realw_p veloc,
-  realw_p accel,
-  int size,
-  realw deltat,
-  realw deltatsqover2,
-  realw deltatover2
-) {
-
-    // 1. Calculate ID for the VECTOR (chunk of 4), not the individual float
-    int tid = threadIdx.x + blockIdx.x * blockDim.x;
-    
-    // 2. Main Vectorized Loop (Processes 4 items at a time)
-    // We treat 'size' as the number of floats, so we check if the *entire vector* fits.
-    int idx = tid * 4;
-    
-    if (idx + 4 <= size) {
-        // Load data as 128-bit vectors
-        float4 d_vec = reinterpret_cast<float4*>(displ)[tid];
-        float4 v_vec = reinterpret_cast<float4*>(veloc)[tid];
-        float4 a_vec = reinterpret_cast<float4*>(accel)[tid];
-
-        // Perform computation on all 4 components (.x, .y, .z, .w)
-        
-        // Update Displacement
-        d_vec.x += deltat * v_vec.x + deltatsqover2 * a_vec.x;
-        d_vec.y += deltat * v_vec.y + deltatsqover2 * a_vec.y;
-        d_vec.z += deltat * v_vec.z + deltatsqover2 * a_vec.z;
-        d_vec.w += deltat * v_vec.w + deltatsqover2 * a_vec.w;
-
-        // Update Velocity
-        v_vec.x += deltatover2 * a_vec.x;
-        v_vec.y += deltatover2 * a_vec.y;
-        v_vec.z += deltatover2 * a_vec.z;
-        v_vec.w += deltatover2 * a_vec.w;
-
-        // Write back results
-        reinterpret_cast<float4*>(displ)[tid] = d_vec;
-        reinterpret_cast<float4*>(veloc)[tid] = v_vec;
-        
-        // Zero out acceleration (Write 0.0f to all 4 components)
-        // This generates a single ST.128 instruction of zeros.
-        float4 zero_vec = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-        reinterpret_cast<float4*>(accel)[tid] = zero_vec;
-    }
-    // 3. Tail Handling (Edge case for non-multiples of 4)
-    // Only the very last active thread will ever enter this block.
-    else if (idx < size) {
-        for (int k = 0; k < 4; ++k) {
-            int current_idx = idx + k;
-            if (current_idx < size) {
-                realw acc = accel[current_idx];
-                displ[current_idx] += deltat * veloc[current_idx] + deltatsqover2 * acc;
-                veloc[current_idx] += deltatover2 * acc;
-                accel[current_idx] = 0.0f;
-            }
-        }
-    }
+// -----------------
+// total of: 6 FLOP per thread (without int id calculation at beginning)
+//
+//           8 * 4 BYTE = 32 DRAM accesses per thread
+//
+// arithmetic intensity: 6 FLOP / 32 BYTES ~ 0.19 FLOP/BYTE
+// -----------------
+// nvprof: 24599250 flops for 4099875 threads -> 6 FLOP per thread
 }
 
 /* ----------------------------------------------------------------------------------------------- */
@@ -148,10 +87,16 @@ void FC_FUNC_(update_displacement_cuda,
   realw deltatsqover2 = *deltatsqover2_F;
   realw deltatover2 = *deltatover2_F;
 
-  int size = (NDIM * mp->NGLOB_AB + 3) / 4; // number of float4 elements
-  int nblocks = (size + BLOCKSIZE_KERNEL1 - 1) / BLOCKSIZE_KERNEL1;
-  dim3 grid(nblocks,1,1);
-  dim3 threads(BLOCKSIZE_KERNEL1,1,1);
+  int size = NDIM * mp->NGLOB_AB;
+
+  int blocksize = BLOCKSIZE_KERNEL1;
+  int size_padded = ((int)ceil(((double)size)/((double)blocksize)))*blocksize;
+
+  int num_blocks_x, num_blocks_y;
+  get_blocks_xy(size_padded/blocksize,&num_blocks_x,&num_blocks_y);
+
+  dim3 grid(num_blocks_x,num_blocks_y);
+  dim3 threads(blocksize,1,1);
 
   // Cuda timing
   cudaEvent_t start,stop;
@@ -168,7 +113,7 @@ void FC_FUNC_(update_displacement_cuda,
 
   //launch kernel
   UpdateDispVeloc_kernel<<<grid,threads,0,mp->compute_stream>>>(mp->d_displ,mp->d_veloc,mp->d_accel,
-                                                                NDIM*mp->NGLOB_AB,deltat,deltatsqover2,deltatover2);
+                                                                size,deltat,deltatsqover2,deltatover2);
 
   // kernel for backward fields
   if (mp->simulation_type == 3) {
@@ -177,7 +122,7 @@ void FC_FUNC_(update_displacement_cuda,
     realw b_deltatover2 = *b_deltatover2_F;
 
     UpdateDispVeloc_kernel<<<grid,threads,0,mp->compute_stream>>>(mp->d_b_displ,mp->d_b_veloc,mp->d_b_accel,
-                                                                  NDIM*mp->NGLOB_AB,b_deltat,b_deltatsqover2,b_deltatover2);
+                                                                  size,b_deltat,b_deltatsqover2,b_deltatover2);
   }
 
   // Cuda timing
@@ -194,12 +139,12 @@ void FC_FUNC_(update_displacement_cuda,
 
 #ifdef ENABLE_VERY_SLOW_ERROR_CHECKING
   exit_on_cuda_error("update_displacement_cuda");
-#endif 
-} 
+#endif
+}
+
 
 extern "C" void 
-FC_FUNC_(update_displacement_cuda_ade,
-        UPDATE_DISPLACEMENT_CUDA_ADE) (
+FC_FUNC_(update_displacement_cuda_ade,UPDATE_DISPLACEMENT_CUDA_ADE) (
                                           long* Mesh_pointer,
                                           realw* deltat_F,
                                           realw* deltatsqover2_F,
@@ -217,18 +162,24 @@ FC_FUNC_(update_displacement_cuda_ade,
   realw deltatsqover2 = *deltatsqover2_F;
   realw deltatover2 = *deltatover2_F;
 
-  int size = (NDIM * mp->NGLOB_AB + 3) / 4; // number of float4 elements
-  int nblocks = (size + BLOCKSIZE_KERNEL1 - 1) / BLOCKSIZE_KERNEL1;
-  dim3 grid(nblocks,1,1);
-  dim3 threads(BLOCKSIZE_KERNEL1,1,1);
+  int size = NDIM * mp->NGLOB_AB;
+
+  int blocksize = BLOCKSIZE_KERNEL1;
+  int size_padded = ((int)ceil(((double)size)/((double)blocksize)))*blocksize;
+
+  int num_blocks_x, num_blocks_y;
+  get_blocks_xy(size_padded/blocksize,&num_blocks_x,&num_blocks_y);
+
+  dim3 grid(num_blocks_x,num_blocks_y);
+  dim3 threads(blocksize,1,1);
 
   UpdateDispVeloc_kernel<<<grid,threads,0,mp->compute_stream>>>(mp->d_displ,mp->d_veloc,mp->d_accel,
-                                                                NDIM*mp->NGLOB_AB,deltat,deltatsqover2,deltatover2);
+                                                                size,deltat,deltatsqover2,deltatover2);
 
   if(mp->simulation_type == 3 && (!mp->SUBSAMPLE_FWD_WAVEFIELD)) {
     UpdateDispVeloc_kernel<<<grid,threads,0,mp->compute_stream>>>(
       mp->d_b_displ,mp->d_b_veloc,mp->d_b_accel,
-      NDIM*mp->NGLOB_AB,*b_deltat_F,*b_deltatsqover2_F,*b_deltatover2_F);
+      size,*b_deltat_F,*b_deltatsqover2_F,*b_deltatover2_F);
   }
 }
 
@@ -576,100 +527,23 @@ void FC_FUNC_(kernel_3_c_cuda,
 #endif
 }
 
-// __global__ void kernel_apply_mass(realw_p accel, realw_const_p rmassx,
-//                                   realw_const_p rmassy,realw_const_p rmassz,
-//                                   int nglob)
-// {
-//   int idx = threadIdx.x + blockIdx.x * blockDim.x;
-//   if (idx < nglob) {
-//     // Using registers instead of repeated memory access
-//     realw rx = rmassx[idx];
-//     realw ry = rmassy[idx];
-//     realw rz = rmassz[idx];
-
-//     int base_idx = idx * NDIM;
-    
-//     accel[base_idx]     *= rx;
-//     accel[base_idx + 1] *= ry;
-//     accel[base_idx + 2] *= rz;
-//   }
-// }
-
-__global__ void kernel_apply_mass(
-  realw_p accel, realw_const_p rmassx,
-  realw_const_p rmassy,realw_const_p rmassz,
-  int nglob
-) 
+__global__ void kernel_apply_mass(realw_p accel, realw_const_p rmassx,
+                                  realw_const_p rmassy,realw_const_p rmassz,
+                                  int nglob)
 {
-    // Process 4 particles per thread
-    int idx = (threadIdx.x + blockIdx.x * blockDim.x);
-    int p_idx = idx * 4; // Particle index start
+  int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  if (idx < nglob) {
+    // Using registers instead of repeated memory access
+    realw rx = rmassx[idx];
+    realw ry = rmassy[idx];
+    realw rz = rmassz[idx];
 
-    // --- SAFETY CHECK ---
-    // Ensure we don't read past the end. 
-    // Optimization applies only if we have a full chunk of 4 particles.
-    if (p_idx + 4 <= nglob) {
-        
-        // 1. Load Masses (Structure of Arrays - Easy)
-        // We load 4 masses at once using float4
-        float4 mx = reinterpret_cast<const float4*>(rmassx)[idx];
-        float4 my = reinterpret_cast<const float4*>(rmassy)[idx];
-        float4 mz = reinterpret_cast<const float4*>(rmassz)[idx];
-
-        // 2. Load Accel (Array of Structures - Tricky)
-        // 4 particles * 3 components = 12 floats.
-        // We load them as 3 contiguous float4 vectors.
-        // The accel pointer is treated as float4*.
-        // Base index in float4 space is 3 * idx.
-        float4* accel_vec_ptr = reinterpret_cast<float4*>(accel);
-        
-        float4 v1 = accel_vec_ptr[3 * idx + 0]; // x0, y0, z0, x1
-        float4 v2 = accel_vec_ptr[3 * idx + 1]; // y1, z1, x2, y2
-        float4 v3 = accel_vec_ptr[3 * idx + 2]; // z2, x3, y3, z3
-
-        // 3. Math (Apply Mass) - "Shuffle" the data in registers
-        // Particle 0
-        v1.x *= mx.x; // x0
-        v1.y *= my.x; // y0
-        v1.z *= mz.x; // z0
-        
-        // Particle 1
-        v1.w *= mx.y; // x1
-        v2.x *= my.y; // y1
-        v2.y *= mz.y; // z1
-        
-        // Particle 2
-        v2.z *= mx.z; // x2
-        v2.w *= my.z; // y2
-        v3.x *= mz.z; // z2
-        
-        // Particle 3
-        v3.y *= mx.w; // x3
-        v3.z *= my.w; // y3
-        v3.w *= mz.w; // z3
-
-        // 4. Store Back
-        accel_vec_ptr[3 * idx + 0] = v1;
-        accel_vec_ptr[3 * idx + 1] = v2;
-        accel_vec_ptr[3 * idx + 2] = v3;
-    }
-    else {
-        // --- TAIL HANDLING ---
-        // Fallback for the last 1-3 particles if nglob is not div by 4
-        for (int k = 0; k < 4; ++k) {
-            int curr = p_idx + k;
-            if (curr < nglob) {
-                realw rx = rmassx[curr];
-                realw ry = rmassy[curr];
-                realw rz = rmassz[curr];
-
-                int base = curr * 3; // NDIM = 3
-                accel[base]     *= rx;
-                accel[base + 1] *= ry;
-                accel[base + 2] *= rz;
-            }
-        }
-    }
+    int base_idx = idx * NDIM;
+    
+    accel[base_idx]     *= rx;
+    accel[base_idx + 1] *= ry;
+    accel[base_idx + 2] *= rz;
+  }
 }
 
 extern "C"
@@ -679,10 +553,9 @@ void apply_massmat_device_(long* Mesh_pointer,const int *backward)
 
   Mesh* mp = (Mesh*)(*Mesh_pointer); // get Mesh from fortran integer wrapper
 
-  int size = (mp->NGLOB_AB + 3) / 4; // number of float4 elements
-  //size = mp->NGLOB_AB;
+  int size = mp->NGLOB_AB;
 
-  int blocksize = 128;
+  int blocksize = BLOCKSIZE_KERNEL3;
   int nb = (size + blocksize - 1) / blocksize;
 
 
@@ -702,43 +575,10 @@ void apply_massmat_device_(long* Mesh_pointer,const int *backward)
 __global__ void kernel_UpdateVeloc(realw_p veloc, const realw *accel,
                                    realw dtover2,int npts)
 {
-  // int idx = threadIdx.x + blockIdx.x * blockDim.x;
-  // if(idx < npts) {
-  //   veloc[idx] += accel[idx] * dtover2;
-  // }
-
-// 1. Calculate thread index
-    int tid = threadIdx.x + blockIdx.x * blockDim.x;
-    
-    // 2. Calculate the data index for the vector (chunk of 4)
-    int idx = tid * 4;
-
-    // 3. Main Vectorized Path
-    // Checks if a full chunk of 4 floats fits within bounds
-    if (idx + 4 <= npts) {
-        // Load data as 128-bit vectors
-        // Note: We cast using 'tid' because we are accessing the array of float4s
-        float4 v_vec = reinterpret_cast<float4*>(veloc)[tid];
-        float4 a_vec = reinterpret_cast<const float4*>(accel)[tid];
-
-        // Perform Math on all 4 components
-        v_vec.x += a_vec.x * dtover2;
-        v_vec.y += a_vec.y * dtover2;
-        v_vec.z += a_vec.z * dtover2;
-        v_vec.w += a_vec.w * dtover2;
-
-        // Store back result
-        reinterpret_cast<float4*>(veloc)[tid] = v_vec;
-    }
-    // 4. Tail Handling (Process remaining 1-3 floats)
-    else if (idx < npts) {
-        for (int k = 0; k < 4; ++k) {
-            int current_idx = idx + k;
-            if (current_idx < npts) {
-                veloc[current_idx] += accel[current_idx] * dtover2;
-            }
-        }
-    }
+  int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  if(idx < npts) {
+    veloc[idx] += accel[idx] * dtover2;
+  }
 }
 
 extern "C"
@@ -748,7 +588,7 @@ void update_velocity_device_(long* Mesh_pointer,realw *delta2ov2_f,const int *ba
 
   Mesh* mp = (Mesh*)(*Mesh_pointer); // get Mesh from fortran integer wrapper
 
-  int size = (mp->NGLOB_AB*NDIM + 3) / 4; // number of float4 elements
+  int size = mp->NGLOB_AB*NDIM;
 
   int blocksize = BLOCKSIZE_KERNEL3;
   int nb = (size + blocksize - 1) / blocksize;
@@ -756,15 +596,16 @@ void update_velocity_device_(long* Mesh_pointer,realw *delta2ov2_f,const int *ba
 
   if(!*backward) {
     kernel_UpdateVeloc<<<nb,blocksize,0,mp->compute_stream >>> (
-      mp->d_veloc,mp->d_accel,dtover2,NDIM*mp->NGLOB_AB
+      mp->d_veloc,mp->d_accel,dtover2,size
     );
   }
   else {
     kernel_UpdateVeloc<<<nb,blocksize,0,mp->compute_stream >>> (
-      mp->d_b_veloc,mp->d_b_accel,dtover2,NDIM*mp->NGLOB_AB
+      mp->d_b_veloc,mp->d_b_accel,dtover2,size
     );
   }
 }
+
 
 /* ----------------------------------------------------------------------------------------------- */
 
@@ -886,4 +727,4 @@ TRACE("kernel_3_acoustic_cuda");
   //printf("checking updatedispl_kernel launch...with %dx%d blocks\n",num_blocks_x,num_blocks_y);
   exit_on_cuda_error("after kernel 3 ");
 #endif
-} 
+}
