@@ -477,6 +477,11 @@ typedef struct mesh_ {
   int* d_phase_ispec_inner_elastic;
   int num_phase_ispec_elastic;
 
+  // two stage 
+  int *d_phase_ispec_user_el; // shape(4,num_phase_ispec_user_el)
+  int cnt_reg_mpi_el, cnt_pml_mpi_el;
+  int cnt_reg_inner_el, cnt_pml_inner_el;
+
   // mesh coloring
   int* h_num_elem_colors_elastic;
   int num_colors_outer_elastic,num_colors_inner_elastic;

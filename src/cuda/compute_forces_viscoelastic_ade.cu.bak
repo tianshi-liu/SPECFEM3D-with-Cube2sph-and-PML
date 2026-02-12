@@ -19,9 +19,9 @@ add_displ_discontinuity(int ispec,int tx,realw_const_p displ_wd,const int* ibool
   }
 }
 
-template <bool ANISOTROPY>
+
 __device__ __forceinline__ void
-compute_stress(const realw* d_c11store,const realw* d_c12store,const realw* d_c13store,
+compute_stress(int ANISOTROPY,const realw* d_c11store,const realw* d_c12store,const realw* d_c13store,
               const realw* d_c14store,const realw* d_c15store,const realw* d_c16store,
               const realw* d_c22store,const realw* d_c23store,const realw* d_c24store,
               const realw* d_c25store,const realw* d_c26store,const realw* d_c33store,
@@ -47,7 +47,7 @@ compute_stress(const realw* d_c11store,const realw* d_c12store,const realw* d_c1
   
 
   // full anisotropic case, stress calculations
-  if constexpr (ANISOTROPY){
+  if (ANISOTROPY){
     realw c11,c12,c13,c14,c15,c16,c22,c23,c24,c25,c26,c33,c34,c35,c36,c44,c45,c46,c55,c56,c66;
     c11 = d_c11store[offset];
     c12 = d_c12store[offset];
@@ -109,9 +109,8 @@ compute_stress(const realw* d_c11store,const realw* d_c12store,const realw* d_c1
 /**
  * sig[1-6]: xx,xy,xz,yy,yz,zz
  */
-template <bool ANISO>
 __device__ __forceinline__ static void 
-compute_sigma_adepml(int ispec,int i,int j,int k,
+compute_sigma_adepml(int ispec,int i,int j,int k,int ANISO,
                     const realw* d_c11store,const realw* d_c12store,const realw* d_c13store,
                     const realw* d_c14store,const realw* d_c15store,const realw* d_c16store,
                     const realw* d_c22store,const realw* d_c23store,const realw* d_c24store,
@@ -128,20 +127,12 @@ compute_sigma_adepml(int ispec,int i,int j,int k,
                     realw_p sig1,realw_p sig2,realw_p sig3,
                     realw_p sig4,realw_p sig5,realw_p sig6,
                     const realw* Qu)
-{ 
+{
   const int idx = ispec * NGLL3 + k * NGLL2 + j * NGLLX + i;
-#ifndef USE_PADDED_ADE_PML 
-  // Rmat shape (nspec,NGLL3,NDIM,NDIM)
+
   #define Rmat(i,j)  rtrans[(idx*NDIM + j-1) * NDIM + i-1]
   #define Rmatinv(i,j) rtrans_inv[(idx*NDIM + j-1) * NDIM + i-1]
   #define Qmat(i,j) Qu[(idx * NDIM + j-1) * NDIM + i-1]
-#else 
-  // Rmat shape (nspec,NDIM,NDIM,NGLL3_PADDED)
-  const int idx1 = ispec * NGLL3_PADDED * NDIM * NDIM +  k * NGLL2 + j * NGLLX + i;
-  #define Rmat(i,j) rtrans[((j-1)*NDIM + (i-1)) * NGLL3_PADDED + idx1]
-  #define Rmatinv(i,j) rtrans_inv[((j-1)*NDIM + (i-1)) * NGLL3_PADDED + idx1]
-  #define Qmat(i,j) Qu[((j-1)*NDIM + (i-1)) * NGLL3_PADDED + idx1]
-#endif
   realw k1l,k2l,k3l,
       r1xl,r1yl,r1zl,r2xl,r2yl,r2zl,r3xl,r3yl,r3zl,
       ri1xl,ri1yl,ri1zl,ri2xl,ri2yl,ri2zl,ri3xl,ri3yl,ri3zl,
@@ -211,7 +202,7 @@ compute_sigma_adepml(int ispec,int i,int j,int k,
         pmlzxl*duydxl+pmlzyl*duydyl+pmlzzl*duydzl+ 
                r1zl*Qu1yl+r2zl*Qu2yl+r3zl*Qu3yl;
   
-  if constexpr (! ANISO) {
+  if(! ANISO) {
     realw kappal = d_kappav[offset], mul = d_muv[offset];
     realw lambdalplus2mul = kappal + 1.33333333333333333333f * mul;  // 4./3. = 1.3333333
     realw lambdal = lambdalplus2mul - 2.0f * mul;
@@ -275,18 +266,9 @@ compute_Qu_t_point(int ispec,int i,int j,int k,
 {
   realw d1l,d2l,d3l;
   const int idx = ispec * NGLL3 + k * NGLL2 + j * NGLLX + i;
-#ifndef USE_PADDED_ADE_PML
-  // Rmatinv shape (nspec,NGLL3,NDIM,NDIM)
+  
   #define Rmatinv(i,j) rtrans_inv[(idx * NDIM + j-1) * NDIM + i-1]
   #define Qmat(i,j) Qu_t[(idx * NDIM + j-1) * NDIM + i-1]
-#else 
-  // Rmatinv shape (nspec,NDIM,NDIM,NGLL3_PADDED)
-  const int idx1 = ispec * NGLL3_PADDED * NDIM * NDIM +  k * NGLL2 + j * NGLLX + i;
-  #define Rmatinv(i,j) rtrans_inv[((j-1)*NDIM + (i-1)) * NGLL3_PADDED + idx1]
-  #define Qmat(i,j) Qu_t[((j-1)*NDIM + (i-1)) * NGLL3_PADDED + idx1]
-#endif
-
-
   const realw ri1xl = Rmatinv(1,1);
   const realw ri2xl = Rmatinv(2,1);
   const realw ri3xl = Rmatinv(3,1);
@@ -332,25 +314,16 @@ compute_Qt_t(int ispec,int i,int j,int k,int tid,
   const int idx = ispec * NGLL3 + k * NGLL2 + j * NGLLX + i;
   int iglob = ibool_CPML[idx] - 1;
 
-  // realw rt[9],rtinv[9];
-  // for(int i = 0; i < 9; i ++) {
-  //   rt[i] = r_trans[idx*NDIM*NDIM + i];
-  //   rtinv[i] = r_trans_inv[idx*NDIM*NDIM + i];
-  // }
-  // #define Rmat(i,j) rt[(j-1) * NDIM + i-1]
-  // #define Rmatinv(i,j) rtinv[(j-1) * NDIM + i-1]
+  realw rt[9],rtinv[9];
+  for(int i = 0; i < 9; i ++) {
+    rt[i] = r_trans[idx*NDIM*NDIM + i];
+    rtinv[i] = r_trans_inv[idx*NDIM*NDIM + i];
+  }
 
-#ifndef USE_PADDED_ADE_PML
-  // Rmat shape (nspec,NGLL3,NDIM,NDIM)
-  #define Rmat(i,j) r_trans[(idx*NDIM + j-1) * NDIM + i-1]
-  #define Rmatinv(i,j) r_trans_inv[(idx*NDIM + j-1) * NDIM + i-1]
-#else 
-  // Rmat shape (nspec,NDIM,NDIM,NGLL3_PADDED)
-  const int idx1 = ispec * NGLL3_PADDED * NDIM * NDIM +  k * NGLL2 + j * NGLLX + i;
-  #define Rmat(i,j) r_trans[((j-1)*NDIM + (i-1)) * NGLL3_PADDED + idx1]
-  #define Rmatinv(i,j) r_trans_inv[((j-1)*NDIM + (i-1)) * NGLL3_PADDED + idx1]
-#endif
-
+  // #define Rmat(i,j) r_trans[(idx*NDIM + j-1) * NDIM + i-1]
+  // #define Rmatinv(i,j) r_trans_inv[(idx*NDIM + j-1) * NDIM + i-1]
+  #define Rmat(i,j) rt[(j-1) * NDIM + i-1]
+  #define Rmatinv(i,j) rtinv[(j-1) * NDIM + i-1]
 
   r1xl = Rmat(1,1);
   r2xl = Rmat(2,1);
@@ -370,7 +343,7 @@ compute_Qt_t(int ispec,int i,int j,int k,int tid,
   ri3yl = Rmatinv(3,2);
   ri1zl = Rmatinv(1,3);
   ri2zl = Rmatinv(2,3);
-  ri3zl = Rmatinv(3,3); 
+  ri3zl = Rmatinv(3,3);
 
   d1l = pml_d[1-1 + idx*NDIM];
   d2l = pml_d[2-1 + idx*NDIM];
@@ -387,8 +360,8 @@ compute_Qt_t(int ispec,int i,int j,int k,int tid,
   pmlzzl = r1zl*ri1zl;
 
   #define Qmat(a,b) Qt_t[(iglob * NDIM + b - 1) * NDIM + a-1 ]
-  //#define TMAT(a,b,c) temp[(((c-1) * NDIM + (b-1)) * 6 + a-1) * NGLL3_PADDED + tid]
-  #define TMAT(a,b,c) temp[(((c-1) * NDIM + (b-1)) * 6 + a-1)]
+  #define TMAT(a,b,c)  temp[((c-1) * NDIM + (b-1)) * 6 + a-1]
+
   realw val1,val2,val3;
 
   val1 = 
@@ -538,8 +511,6 @@ mxm_3op(int i,int j,int k,realw_const_p hprimewgll,
         realw_p tempz)
 {
   realw sx{},sy{},sz{};
-
-  #pragma unroll
   for(int l = 0; l < NGLLX; l ++) {
     sx += hprimewgll[i*NGLLX+l] * ux[k*NGLL2+j*NGLLX+l];
     sy += hprimewgll[j*NGLLX+l] * uy[k*NGLL2+l*NGLLX+i];
@@ -551,220 +522,463 @@ mxm_3op(int i,int j,int k,realw_const_p hprimewgll,
 }
 
 __device__ __forceinline__ static void 
-compute_newcomp(realw (*__restrict__ sh_temp)[NGLL3_PADDED],
-               realw_p sh_hprimewgll_xx,
-               realw sigma_xx, realw sigma_xy, realw sigma_xz,
-               realw sigma_yy, realw sigma_yz, realw sigma_zz,
-               realw xixj, realw xiyj, realw xizj,
-               realw etaxj, realw etayj, realw etazj, 
-               realw gamxj, realw gamyj, realw gamzj,
-               int tx, int I, int J, int K, realw_p newtemp_adepml)
+compute_newcomp(realw_p sh_tempx,realw_p sh_tempy,realw_p sh_tempz,
+               realw_p sh_hprimewgll_xx,realw sigma_xx,realw sigma_xy,
+               realw sigma_xz,realw sigma_yy,realw sigma_yz,
+               realw sigma_zz,realw xixj,realw xiyj,realw xizj,
+               realw etaxj,realw etayj, realw etazj, 
+               realw gamxj,realw gamyj,realw gamzj,int tx,
+               int I,int J,int K, realw_p newtemp_adepml)
 {
-  realw ux, uy, uz;
-  
-  // Calculate strides for the new shape (3, 18, PADDED)
-  // Assumes layout: [Component][Term][Point]
-  #define TMAT(a,b) newtemp_adepml[(a * 18) + b]
+  const int N = 18;
+  realw ux,uy,uz;
 
-  // -----------------------------------------------------------------------
-  // BATCH 1: Terms 0, 1, 2 (Metric 1: xixj, etaxj, gamxj)
-  // Sigmas: XX, XY, XZ
-  // -----------------------------------------------------------------------
+
+  //   if(tx < NGLL3) {
+  //     sh_tempx[tx] = sigma_xx*xixj;
+  //     sh_tempy[tx] = sigma_xx*xiyj;
+  //     sh_tempz[tx] = sigma_xx*xizj;
+  // }
+  // __syncthreads();
+  // sum_hprimewgll_xi(I,J,K,&ux,&uy,&uz,sh_tempx,sh_tempy,sh_tempz,sh_hprimewgll_xx);
+  // __syncthreads();
+  // newtemp_adepml[0 + 0 * 6] = ux;
+  // newtemp_adepml[0 + 1 * 6] = uy;
+  // newtemp_adepml[0 + 2 * 6] = uz;
+
+  // if(tx < NGLL3) {
+  //     sh_tempx[tx] = sigma_xy*xixj;
+  //     sh_tempy[tx] = sigma_xy*xiyj;
+  //     sh_tempz[tx] = sigma_xy*xizj;
+  // }
+  // __syncthreads();
+  // sum_hprimewgll_xi(I,J,K,&ux,&uy,&uz,sh_tempx,sh_tempy,sh_tempz,sh_hprimewgll_xx);
+  // __syncthreads();
+  // newtemp_adepml[1 + 0 * 6] = ux;
+  // newtemp_adepml[1 + 1 * 6] = uy;
+  // newtemp_adepml[1 + 2 * 6] = uz;
+
+  // if(tx < NGLL3) {
+  //     sh_tempx[tx] = sigma_xz*xixj;
+  //     sh_tempy[tx] = sigma_xz*xiyj;
+  //     sh_tempz[tx] = sigma_xz*xizj;
+  // }
+  // __syncthreads();
+  // sum_hprimewgll_xi(I,J,K,&ux,&uy,&uz,sh_tempx,sh_tempy,sh_tempz,sh_hprimewgll_xx);
+  // __syncthreads();
+  // newtemp_adepml[2 + 0 * 6] = ux;
+  // newtemp_adepml[2 + 1 * 6] = uy;
+  // newtemp_adepml[2 + 2 * 6] = uz;
+
+  // if(tx < NGLL3) {
+  //     sh_tempx[tx] = sigma_yy*xixj;
+  //     sh_tempy[tx] = sigma_yy*xiyj;
+  //     sh_tempz[tx] = sigma_yy*xizj;
+  // }
+  // __syncthreads();
+  // sum_hprimewgll_xi(I,J,K,&ux,&uy,&uz,sh_tempx,sh_tempy,sh_tempz,sh_hprimewgll_xx);
+  // __syncthreads();
+  // newtemp_adepml[3 + 0 * 6] = ux;
+  // newtemp_adepml[3 + 1 * 6] = uy;
+  // newtemp_adepml[3 + 2 * 6] = uz;
+
+  // if(tx < NGLL3) {
+  //     sh_tempx[tx] = sigma_yz*xixj;
+  //     sh_tempy[tx] = sigma_yz*xiyj;
+  //     sh_tempz[tx] = sigma_yz*xizj;
+  // }
+  // __syncthreads();
+  // sum_hprimewgll_xi(I,J,K,&ux,&uy,&uz,sh_tempx,sh_tempy,sh_tempz,sh_hprimewgll_xx);
+  // __syncthreads();
+  // newtemp_adepml[4 + 0 * 6] = ux;
+  // newtemp_adepml[4 + 1 * 6] = uy;
+  // newtemp_adepml[4 + 2 * 6] = uz;
+
+  // if(tx < NGLL3) {
+  //     sh_tempx[tx] = sigma_zz*xixj;
+  //     sh_tempy[tx] = sigma_zz*xiyj;
+  //     sh_tempz[tx] = sigma_zz*xizj;
+  // }
+  // __syncthreads();
+  // sum_hprimewgll_xi(I,J,K,&ux,&uy,&uz,sh_tempx,sh_tempy,sh_tempz,sh_hprimewgll_xx);
+  // __syncthreads();
+  // newtemp_adepml[5 + 0 * 6] = ux;
+  // newtemp_adepml[5 + 1 * 6] = uy;
+  // newtemp_adepml[5 + 2 * 6] = uz;
+
+  // if(tx < NGLL3) {
+  //     sh_tempx[tx] = sigma_xx*etaxj;
+  //     sh_tempy[tx] = sigma_xx*etayj;
+  //     sh_tempz[tx] = sigma_xx*etazj;
+  // }
+  // __syncthreads();
+  // sum_hprimewgll_eta(I,J,K,&ux,&uy,&uz,sh_tempx,sh_tempy,sh_tempz,sh_hprimewgll_xx);
+  // __syncthreads();
+  // newtemp_adepml[18 + 0 * 6] = ux;
+  // newtemp_adepml[18 + 1 * 6] = uy;
+  // newtemp_adepml[18 + 2 * 6] = uz;
+
+  // if(tx < NGLL3) {
+  //     sh_tempx[tx] = sigma_xy*etaxj;
+  //     sh_tempy[tx] = sigma_xy*etayj;
+  //     sh_tempz[tx] = sigma_xy*etazj;
+  // }
+  // __syncthreads();
+  // sum_hprimewgll_eta(I,J,K,&ux,&uy,&uz,sh_tempx,sh_tempy,sh_tempz,sh_hprimewgll_xx);
+  // __syncthreads();
+  // newtemp_adepml[19 + 0 * 6] = ux;
+  // newtemp_adepml[19 + 1 * 6] = uy;
+  // newtemp_adepml[19 + 2 * 6] = uz;
+
+  // if(tx < NGLL3) {
+  //     sh_tempx[tx] = sigma_xz*etaxj;
+  //     sh_tempy[tx] = sigma_xz*etayj;
+  //     sh_tempz[tx] = sigma_xz*etazj;
+  // }
+  // __syncthreads();
+  // sum_hprimewgll_eta(I,J,K,&ux,&uy,&uz,sh_tempx,sh_tempy,sh_tempz,sh_hprimewgll_xx);
+  // __syncthreads();
+  // newtemp_adepml[20 + 0 * 6] = ux;
+  // newtemp_adepml[20 + 1 * 6] = uy;
+  // newtemp_adepml[20 + 2 * 6] = uz;
+
+  // if(tx < NGLL3) {
+  //     sh_tempx[tx] = sigma_yy*etaxj;
+  //     sh_tempy[tx] = sigma_yy*etayj;
+  //     sh_tempz[tx] = sigma_yy*etazj;
+  // }
+  // __syncthreads();
+  // sum_hprimewgll_eta(I,J,K,&ux,&uy,&uz,sh_tempx,sh_tempy,sh_tempz,sh_hprimewgll_xx);
+  // __syncthreads();
+  // newtemp_adepml[21 + 0 * 6] = ux;
+  // newtemp_adepml[21 + 1 * 6] = uy;
+  // newtemp_adepml[21 + 2 * 6] = uz;
+
+  // if(tx < NGLL3) {
+  //     sh_tempx[tx] = sigma_yz*etaxj;
+  //     sh_tempy[tx] = sigma_yz*etayj;
+  //     sh_tempz[tx] = sigma_yz*etazj;
+  // }
+  // __syncthreads();
+  // sum_hprimewgll_eta(I,J,K,&ux,&uy,&uz,sh_tempx,sh_tempy,sh_tempz,sh_hprimewgll_xx);
+  // __syncthreads();
+  // newtemp_adepml[22 + 0 * 6] = ux;
+  // newtemp_adepml[22 + 1 * 6] = uy;
+  // newtemp_adepml[22 + 2 * 6] = uz;
+
+  // if(tx < NGLL3) {
+  //     sh_tempx[tx] = sigma_zz*etaxj;
+  //     sh_tempy[tx] = sigma_zz*etayj;
+  //     sh_tempz[tx] = sigma_zz*etazj;
+  // }
+  // __syncthreads();
+  // sum_hprimewgll_eta(I,J,K,&ux,&uy,&uz,sh_tempx,sh_tempy,sh_tempz,sh_hprimewgll_xx);
+  // __syncthreads();
+  // newtemp_adepml[23 + 0 * 6] = ux;
+  // newtemp_adepml[23 + 1 * 6] = uy;
+  // newtemp_adepml[23 + 2 * 6] = uz;
+
+  // if(tx < NGLL3) {
+  //     sh_tempx[tx] = sigma_xx*gamxj;
+  //     sh_tempy[tx] = sigma_xx*gamyj;
+  //     sh_tempz[tx] = sigma_xx*gamzj;
+  // }
+  // __syncthreads();
+  // sum_hprimewgll_gamma(I,J,K,&ux,&uy,&uz,sh_tempx,sh_tempy,sh_tempz,sh_hprimewgll_xx);
+  // __syncthreads();
+  // newtemp_adepml[36 + 0 * 6] = ux;
+  // newtemp_adepml[36 + 1 * 6] = uy;
+  // newtemp_adepml[36 + 2 * 6] = uz;
+
+  // if(tx < NGLL3) {
+  //     sh_tempx[tx] = sigma_xy*gamxj;
+  //     sh_tempy[tx] = sigma_xy*gamyj;
+  //     sh_tempz[tx] = sigma_xy*gamzj;
+  // }
+  // __syncthreads();
+  // sum_hprimewgll_gamma(I,J,K,&ux,&uy,&uz,sh_tempx,sh_tempy,sh_tempz,sh_hprimewgll_xx);
+  // __syncthreads();
+  // newtemp_adepml[37 + 0 * 6] = ux;
+  // newtemp_adepml[37 + 1 * 6] = uy;
+  // newtemp_adepml[37 + 2 * 6] = uz;
+
+  // if(tx < NGLL3) {
+  //     sh_tempx[tx] = sigma_xz*gamxj;
+  //     sh_tempy[tx] = sigma_xz*gamyj;
+  //     sh_tempz[tx] = sigma_xz*gamzj;
+  // }
+  // __syncthreads();
+  // sum_hprimewgll_gamma(I,J,K,&ux,&uy,&uz,sh_tempx,sh_tempy,sh_tempz,sh_hprimewgll_xx);
+  // __syncthreads();
+  // newtemp_adepml[38 + 0 * 6] = ux;
+  // newtemp_adepml[38 + 1 * 6] = uy;
+  // newtemp_adepml[38 + 2 * 6] = uz;
+
+  // if(tx < NGLL3) {
+  //     sh_tempx[tx] = sigma_yy*gamxj;
+  //     sh_tempy[tx] = sigma_yy*gamyj;
+  //     sh_tempz[tx] = sigma_yy*gamzj;
+  // }
+  // __syncthreads();
+  // sum_hprimewgll_gamma(I,J,K,&ux,&uy,&uz,sh_tempx,sh_tempy,sh_tempz,sh_hprimewgll_xx);
+  // __syncthreads();
+  // newtemp_adepml[39 + 0 * 6] = ux;
+  // newtemp_adepml[39 + 1 * 6] = uy;
+  // newtemp_adepml[39 + 2 * 6] = uz;
+
+  // if(tx < NGLL3) {
+  //     sh_tempx[tx] = sigma_yz*gamxj;
+  //     sh_tempy[tx] = sigma_yz*gamyj;
+  //     sh_tempz[tx] = sigma_yz*gamzj;
+  // }
+  // __syncthreads();
+  // sum_hprimewgll_gamma(I,J,K,&ux,&uy,&uz,sh_tempx,sh_tempy,sh_tempz,sh_hprimewgll_xx);
+  // __syncthreads();
+  // newtemp_adepml[40 + 0 * 6] = ux;
+  // newtemp_adepml[40 + 1 * 6] = uy;
+  // newtemp_adepml[40 + 2 * 6] = uz;
+
+  // if(tx < NGLL3) {
+  //     sh_tempx[tx] = sigma_zz*gamxj;
+  //     sh_tempy[tx] = sigma_zz*gamyj;
+  //     sh_tempz[tx] = sigma_zz*gamzj;
+  // }
+  // __syncthreads();
+  // sum_hprimewgll_gamma(I,J,K,&ux,&uy,&uz,sh_tempx,sh_tempy,sh_tempz,sh_hprimewgll_xx);
+  // __syncthreads();
+  // newtemp_adepml[41 + 0 * 6] = ux;
+  // newtemp_adepml[41 + 1 * 6] = uy;
+  // newtemp_adepml[41 + 2 * 6] = uz;
+
   if(tx < NGLL3) {
-    // Term 0 (XX) -> sh_temp[0-2]
-    sh_temp[0][tx] = sigma_xx * xixj;  sh_temp[1][tx] = sigma_xx * etaxj;  sh_temp[2][tx] = sigma_xx * gamxj;
-    // Term 1 (XY) -> sh_temp[3-5]
-    sh_temp[3][tx] = sigma_xy * xixj;  sh_temp[4][tx] = sigma_xy * etaxj;  sh_temp[5][tx] = sigma_xy * gamxj;
-    // Term 2 (XZ) -> sh_temp[6-8]
-    sh_temp[6][tx] = sigma_xz * xixj;  sh_temp[7][tx] = sigma_xz * etaxj;  sh_temp[8][tx] = sigma_xz * gamxj;
+    sh_tempx[tx] = sigma_xx*xixj;
+    sh_tempy[tx] = sigma_xx*etaxj;
+    sh_tempz[tx] = sigma_xx*gamxj;
   }
   __syncthreads();
-
-  // Compute Term 0
-  mxm_3op(I,J,K, sh_hprimewgll_xx, sh_temp[0], sh_temp[1], sh_temp[2], &ux, &uy, &uz);
-  TMAT(0,0)= ux;
-  TMAT(1,0)= uy;
-  TMAT(2,0)= uz;
-
-  // Compute Term 1
-  mxm_3op(I,J,K, sh_hprimewgll_xx, sh_temp[3], sh_temp[4], sh_temp[5], &ux, &uy, &uz);
-  TMAT(0, 1) = ux;
-  TMAT(1, 1) = uy;
-  TMAT(2, 1) = uz;
-
-  // Compute Term 2
-  mxm_3op(I,J,K, sh_hprimewgll_xx, sh_temp[6], sh_temp[7], sh_temp[8], &ux, &uy, &uz);
-  TMAT(0, 2) = ux;
-  TMAT(1, 2) = uy;
-  TMAT(2, 2) = uz;
-
+    mxm_3op(I,J,K,sh_hprimewgll_xx,sh_tempx,sh_tempy,sh_tempz,&ux,&uy,&uz);
   __syncthreads();
+  newtemp_adepml[0*N+0] = ux;
+  newtemp_adepml[1*N+0] = uy;
+  newtemp_adepml[2*N+0] = uz;
 
-  // -----------------------------------------------------------------------
-  // BATCH 2: Terms 3, 4, 5 (Metric 1: xixj, etaxj, gamxj)
-  // Sigmas: YY, YZ, ZZ
-  // -----------------------------------------------------------------------
   if(tx < NGLL3) {
-    // Term 3 (YY)
-    sh_temp[0][tx] = sigma_yy * xixj;  sh_temp[1][tx] = sigma_yy * etaxj;  sh_temp[2][tx] = sigma_yy * gamxj;
-    // Term 4 (YZ)
-    sh_temp[3][tx] = sigma_yz * xixj;  sh_temp[4][tx] = sigma_yz * etaxj;  sh_temp[5][tx] = sigma_yz * gamxj;
-    // Term 5 (ZZ)
-    sh_temp[6][tx] = sigma_zz * xixj;  sh_temp[7][tx] = sigma_zz * etaxj;  sh_temp[8][tx] = sigma_zz * gamxj;
+      sh_tempx[tx] = sigma_xy*xixj;
+      sh_tempy[tx] = sigma_xy*etaxj;
+      sh_tempz[tx] = sigma_xy*gamxj;
   }
   __syncthreads();
-
-  mxm_3op(I,J,K, sh_hprimewgll_xx, sh_temp[0], sh_temp[1], sh_temp[2], &ux, &uy, &uz);
-  TMAT(0, 3) = ux;
-  TMAT(1, 3) = uy;
-  TMAT(2, 3) = uz;
-
-  mxm_3op(I,J,K, sh_hprimewgll_xx, sh_temp[3], sh_temp[4], sh_temp[5], &ux, &uy, &uz);
-  TMAT(0, 4) = ux;
-  TMAT(1, 4) = uy;
-  TMAT(2, 4) = uz;
-
-  mxm_3op(I,J,K, sh_hprimewgll_xx, sh_temp[6], sh_temp[7], sh_temp[8], &ux, &uy, &uz);
-  TMAT(0,5) = ux;
-  TMAT(1,5) = uy;
-  TMAT(2,5) = uz;
-
+    mxm_3op(I,J,K,sh_hprimewgll_xx,sh_tempx,sh_tempy,sh_tempz,&ux,&uy,&uz);
   __syncthreads();
+  newtemp_adepml[0*N+1] = ux;
+  newtemp_adepml[1*N+1] = uy;
+  newtemp_adepml[2*N+1] = uz;
 
-  // -----------------------------------------------------------------------
-  // BATCH 3: Terms 6, 7, 8 (Metric 2: xiyj, etayj, gamyj)
-  // Sigmas: XX, XY, XZ
-  // -----------------------------------------------------------------------
   if(tx < NGLL3) {
-    sh_temp[0][tx] = sigma_xx * xiyj;  sh_temp[1][tx] = sigma_xx * etayj;  sh_temp[2][tx] = sigma_xx * gamyj;
-    sh_temp[3][tx] = sigma_xy * xiyj;  sh_temp[4][tx] = sigma_xy * etayj;  sh_temp[5][tx] = sigma_xy * gamyj;
-    sh_temp[6][tx] = sigma_xz * xiyj;  sh_temp[7][tx] = sigma_xz * etayj;  sh_temp[8][tx] = sigma_xz * gamyj;
+      sh_tempx[tx] = sigma_xz*xixj;
+      sh_tempy[tx] = sigma_xz*etaxj;
+      sh_tempz[tx] = sigma_xz*gamxj;
   }
   __syncthreads();
-
-  mxm_3op(I,J,K, sh_hprimewgll_xx, sh_temp[0], sh_temp[1], sh_temp[2], &ux, &uy, &uz);
-  TMAT(0,6) = ux;
-  TMAT(1,6) = uy;
-  TMAT(2,6) = uz;
-
-  mxm_3op(I,J,K, sh_hprimewgll_xx, sh_temp[3], sh_temp[4], sh_temp[5], &ux, &uy, &uz);
-  TMAT(0,7) = ux;
-  TMAT(1,7) = uy;
-  TMAT(2,7) = uz;
-
-  mxm_3op(I,J,K, sh_hprimewgll_xx, sh_temp[6], sh_temp[7], sh_temp[8], &ux, &uy, &uz);
-  TMAT(0,8) = ux;
-  TMAT(1,8) = uy;
-  TMAT(2,8) = uz;
-
+    mxm_3op(I,J,K,sh_hprimewgll_xx,sh_tempx,sh_tempy,sh_tempz,&ux,&uy,&uz);
   __syncthreads();
+  newtemp_adepml[0*N+2] = ux;
+  newtemp_adepml[1*N+2] = uy;
+  newtemp_adepml[2*N+2] = uz;
 
-  // -----------------------------------------------------------------------
-  // BATCH 4: Terms 9, 10, 11 (Metric 2: xiyj, etayj, gamyj)
-  // Sigmas: YY, YZ, ZZ
-  // -----------------------------------------------------------------------
   if(tx < NGLL3) {
-    sh_temp[0][tx] = sigma_yy * xiyj;  sh_temp[1][tx] = sigma_yy * etayj;  sh_temp[2][tx] = sigma_yy * gamyj;
-    sh_temp[3][tx] = sigma_yz * xiyj;  sh_temp[4][tx] = sigma_yz * etayj;  sh_temp[5][tx] = sigma_yz * gamyj;
-    sh_temp[6][tx] = sigma_zz * xiyj;  sh_temp[7][tx] = sigma_zz * etayj;  sh_temp[8][tx] = sigma_zz * gamyj;
+      sh_tempx[tx] = sigma_yy*xixj;
+      sh_tempy[tx] = sigma_yy*etaxj;
+      sh_tempz[tx] = sigma_yy*gamxj;
   }
   __syncthreads();
-
-  mxm_3op(I,J,K, sh_hprimewgll_xx, sh_temp[0], sh_temp[1], sh_temp[2], &ux, &uy, &uz);
-  TMAT(0,9) = ux;
-  TMAT(1,9) = uy;
-  TMAT(2,9) = uz;
-
-  mxm_3op(I,J,K, sh_hprimewgll_xx, sh_temp[3], sh_temp[4], sh_temp[5], &ux, &uy, &uz);
-  TMAT(0,10) = ux;
-  TMAT(1,10) = uy;
-  TMAT(2,10) = uz;
-
-  mxm_3op(I,J,K, sh_hprimewgll_xx, sh_temp[6], sh_temp[7], sh_temp[8], &ux, &uy, &uz);
-  TMAT(0,11) = ux;
-  TMAT(1,11) = uy;
-  TMAT(2,11) = uz;
-
+    mxm_3op(I,J,K,sh_hprimewgll_xx,sh_tempx,sh_tempy,sh_tempz,&ux,&uy,&uz);
   __syncthreads();
+  newtemp_adepml[0*N+3] = ux;
+  newtemp_adepml[1*N+3] = uy;
+  newtemp_adepml[2*N+3] = uz;
 
-  // -----------------------------------------------------------------------
-  // BATCH 5: Terms 12, 13, 14 (Metric 3: xizj, etazj, gamzj)
-  // Sigmas: XX, XY, XZ
-  // -----------------------------------------------------------------------
   if(tx < NGLL3) {
-    sh_temp[0][tx] = sigma_xx * xizj;  sh_temp[1][tx] = sigma_xx * etazj;  sh_temp[2][tx] = sigma_xx * gamzj;
-    sh_temp[3][tx] = sigma_xy * xizj;  sh_temp[4][tx] = sigma_xy * etazj;  sh_temp[5][tx] = sigma_xy * gamzj;
-    sh_temp[6][tx] = sigma_xz * xizj;  sh_temp[7][tx] = sigma_xz * etazj;  sh_temp[8][tx] = sigma_xz * gamzj;
+      sh_tempx[tx] = sigma_yz*xixj;
+      sh_tempy[tx] = sigma_yz*etaxj;
+      sh_tempz[tx] = sigma_yz*gamxj;
   }
   __syncthreads();
-
-  mxm_3op(I,J,K, sh_hprimewgll_xx, sh_temp[0], sh_temp[1], sh_temp[2], &ux, &uy, &uz);
-  TMAT(0,12) = ux;
-  TMAT(1,12) = uy;
-  TMAT(2,12) = uz;
-
-  mxm_3op(I,J,K, sh_hprimewgll_xx, sh_temp[3], sh_temp[4], sh_temp[5], &ux, &uy, &uz);
-  TMAT(0,13) = ux;
-  TMAT(1,13) = uy;
-  TMAT(2,13) = uz;
-
-  mxm_3op(I,J,K, sh_hprimewgll_xx, sh_temp[6], sh_temp[7], sh_temp[8], &ux, &uy, &uz);
-  TMAT(0,14) = ux;
-  TMAT(1,14) = uy;
-  TMAT(2,14) = uz;
-
+    mxm_3op(I,J,K,sh_hprimewgll_xx,sh_tempx,sh_tempy,sh_tempz,&ux,&uy,&uz);
   __syncthreads();
+  newtemp_adepml[0*N+4] = ux;
+  newtemp_adepml[1*N+4] = uy;
+  newtemp_adepml[2*N+4] = uz;
 
-  // -----------------------------------------------------------------------
-  // BATCH 6: Terms 15, 16, 17 (Metric 3: xizj, etazj, gamzj)
-  // Sigmas: YY, YZ, ZZ
-  // -----------------------------------------------------------------------
   if(tx < NGLL3) {
-    sh_temp[0][tx] = sigma_yy * xizj;  sh_temp[1][tx] = sigma_yy * etazj;  sh_temp[2][tx] = sigma_yy * gamzj;
-    sh_temp[3][tx] = sigma_yz * xizj;  sh_temp[4][tx] = sigma_yz * etazj;  sh_temp[5][tx] = sigma_yz * gamzj;
-    sh_temp[6][tx] = sigma_zz * xizj;  sh_temp[7][tx] = sigma_zz * etazj;  sh_temp[8][tx] = sigma_zz * gamzj;
+      sh_tempx[tx] = sigma_zz*xixj;
+      sh_tempy[tx] = sigma_zz*etaxj;
+      sh_tempz[tx] = sigma_zz*gamxj;
   }
   __syncthreads();
+    mxm_3op(I,J,K,sh_hprimewgll_xx,sh_tempx,sh_tempy,sh_tempz,&ux,&uy,&uz);
+  __syncthreads();
+  newtemp_adepml[0*N+5] = ux;
+  newtemp_adepml[1*N+5] = uy;
+  newtemp_adepml[2*N+5] = uz;
 
-  mxm_3op(I,J,K, sh_hprimewgll_xx, sh_temp[0], sh_temp[1], sh_temp[2], &ux, &uy, &uz);
-  TMAT(0,15) = ux;
-  TMAT(1,15) = uy;
-  TMAT(2,15) = uz;
+  if(tx < NGLL3) {
+      sh_tempx[tx] = sigma_xx*xiyj;
+      sh_tempy[tx] = sigma_xx*etayj;
+      sh_tempz[tx] = sigma_xx*gamyj;
+  }
+  __syncthreads();
+    mxm_3op(I,J,K,sh_hprimewgll_xx,sh_tempx,sh_tempy,sh_tempz,&ux,&uy,&uz);
+  __syncthreads();
+  newtemp_adepml[0*N+6] = ux;
+  newtemp_adepml[1*N+6] = uy;
+  newtemp_adepml[2*N+6] = uz;
 
-  mxm_3op(I,J,K, sh_hprimewgll_xx, sh_temp[3], sh_temp[4], sh_temp[5], &ux, &uy, &uz);
-  TMAT(0,16) = ux;
-  TMAT(1,16) = uy;
-  TMAT(2,16) = uz;
+  if(tx < NGLL3) {
+      sh_tempx[tx] = sigma_xy*xiyj;
+      sh_tempy[tx] = sigma_xy*etayj;
+      sh_tempz[tx] = sigma_xy*gamyj;
+  }
+  __syncthreads();
+    mxm_3op(I,J,K,sh_hprimewgll_xx,sh_tempx,sh_tempy,sh_tempz,&ux,&uy,&uz);
+  __syncthreads();
+  newtemp_adepml[0*N+7] = ux;
+  newtemp_adepml[1*N+7] = uy;
+  newtemp_adepml[2*N+7] = uz;
 
-  mxm_3op(I,J,K, sh_hprimewgll_xx, sh_temp[6], sh_temp[7], sh_temp[8], &ux, &uy, &uz);
-  TMAT(0,17) = ux;
-  TMAT(1,17) = uy;
-  TMAT(2,17) = uz;
+  if(tx < NGLL3) {
+      sh_tempx[tx] = sigma_xz*xiyj;
+      sh_tempy[tx] = sigma_xz*etayj;
+      sh_tempz[tx] = sigma_xz*gamyj;
+  }
+  __syncthreads();
+    mxm_3op(I,J,K,sh_hprimewgll_xx,sh_tempx,sh_tempy,sh_tempz,&ux,&uy,&uz);
+  __syncthreads();
+  newtemp_adepml[0*N+8] = ux;
+  newtemp_adepml[1*N+8] = uy;
+  newtemp_adepml[2*N+8] = uz;
 
-  #undef TMAT
+  if(tx < NGLL3) {
+      sh_tempx[tx] = sigma_yy*xiyj;
+      sh_tempy[tx] = sigma_yy*etayj;
+      sh_tempz[tx] = sigma_yy*gamyj;
+  }
+  __syncthreads();
+    mxm_3op(I,J,K,sh_hprimewgll_xx,sh_tempx,sh_tempy,sh_tempz,&ux,&uy,&uz);
+  __syncthreads();
+  newtemp_adepml[0*N+9] = ux;
+  newtemp_adepml[1*N+9] = uy;
+  newtemp_adepml[2*N+9] = uz;
+
+  if(tx < NGLL3) {
+      sh_tempx[tx] = sigma_yz*xiyj;
+      sh_tempy[tx] = sigma_yz*etayj;
+      sh_tempz[tx] = sigma_yz*gamyj;
+  }
+  __syncthreads();
+    mxm_3op(I,J,K,sh_hprimewgll_xx,sh_tempx,sh_tempy,sh_tempz,&ux,&uy,&uz);
+  __syncthreads();
+  newtemp_adepml[0*N+10] = ux;
+  newtemp_adepml[1*N+10] = uy;
+  newtemp_adepml[2*N+10] = uz;
+
+  if(tx < NGLL3) {
+      sh_tempx[tx] = sigma_zz*xiyj;
+      sh_tempy[tx] = sigma_zz*etayj;
+      sh_tempz[tx] = sigma_zz*gamyj;
+  }
+  __syncthreads();
+    mxm_3op(I,J,K,sh_hprimewgll_xx,sh_tempx,sh_tempy,sh_tempz,&ux,&uy,&uz);
+  __syncthreads();
+  newtemp_adepml[0*N+11] = ux;
+  newtemp_adepml[1*N+11] = uy;
+  newtemp_adepml[2*N+11] = uz;
+
+  if(tx < NGLL3) {
+      sh_tempx[tx] = sigma_xx*xizj;
+      sh_tempy[tx] = sigma_xx*etazj;
+      sh_tempz[tx] = sigma_xx*gamzj;
+  }
+  __syncthreads();
+    mxm_3op(I,J,K,sh_hprimewgll_xx,sh_tempx,sh_tempy,sh_tempz,&ux,&uy,&uz);
+  __syncthreads();
+  newtemp_adepml[0*N+12] = ux;
+  newtemp_adepml[1*N+12] = uy;
+  newtemp_adepml[2*N+12] = uz;
+
+  if(tx < NGLL3) {
+      sh_tempx[tx] = sigma_xy*xizj;
+      sh_tempy[tx] = sigma_xy*etazj;
+      sh_tempz[tx] = sigma_xy*gamzj;
+  }
+  __syncthreads();
+    mxm_3op(I,J,K,sh_hprimewgll_xx,sh_tempx,sh_tempy,sh_tempz,&ux,&uy,&uz);
+  __syncthreads();
+  newtemp_adepml[0*N+13] = ux;
+  newtemp_adepml[1*N+13] = uy;
+  newtemp_adepml[2*N+13] = uz;
+
+  if(tx < NGLL3) {
+      sh_tempx[tx] = sigma_xz*xizj;
+      sh_tempy[tx] = sigma_xz*etazj;
+      sh_tempz[tx] = sigma_xz*gamzj;
+  }
+  __syncthreads();
+    mxm_3op(I,J,K,sh_hprimewgll_xx,sh_tempx,sh_tempy,sh_tempz,&ux,&uy,&uz);
+  __syncthreads();
+  newtemp_adepml[0*N+14] = ux;
+  newtemp_adepml[1*N+14] = uy;
+  newtemp_adepml[2*N+14] = uz;
+
+  if(tx < NGLL3) {
+      sh_tempx[tx] = sigma_yy*xizj;
+      sh_tempy[tx] = sigma_yy*etazj;
+      sh_tempz[tx] = sigma_yy*gamzj;
+  }
+  __syncthreads();
+    mxm_3op(I,J,K,sh_hprimewgll_xx,sh_tempx,sh_tempy,sh_tempz,&ux,&uy,&uz);
+  __syncthreads();
+  newtemp_adepml[0*N+15] = ux;
+  newtemp_adepml[1*N+15] = uy;
+  newtemp_adepml[2*N+15] = uz;
+
+  if(tx < NGLL3) {
+      sh_tempx[tx] = sigma_yz*xizj;
+      sh_tempy[tx] = sigma_yz*etazj;
+      sh_tempz[tx] = sigma_yz*gamzj;
+  }
+  __syncthreads();
+    mxm_3op(I,J,K,sh_hprimewgll_xx,sh_tempx,sh_tempy,sh_tempz,&ux,&uy,&uz);
+  __syncthreads();
+  newtemp_adepml[0*N+16] = ux;
+  newtemp_adepml[1*N+16] = uy;
+  newtemp_adepml[2*N+16] = uz;
+
+  if(tx < NGLL3) {
+      sh_tempx[tx] = sigma_zz*xizj;
+      sh_tempy[tx] = sigma_zz*etazj;
+      sh_tempz[tx] = sigma_zz*gamzj;
+  }
+  __syncthreads();
+    mxm_3op(I,J,K,sh_hprimewgll_xx,sh_tempx,sh_tempy,sh_tempz,&ux,&uy,&uz);
+  __syncthreads();
+  newtemp_adepml[0*N+17] = ux;
+  newtemp_adepml[1*N+17] = uy;
+  newtemp_adepml[2*N+17] = uz;
 }
 
 __device__ __forceinline__ static void 
-compute_accel_adepml(int ispec,int i,int j,int k,int tid,realw_const_p temp,
+compute_accel_adepml(int ispec,int i,int j,int k,realw_const_p temp,
                     realw fac1,realw fac2,realw fac3,realw_const_p r_trans, 
                     realw_const_p r_trans_inv, realw_const_p pml_kappa,
                     realw_const_p pml_d, realw_p ax,realw_p ay, realw_p az)
 {
   realw  pmlxxl,pmlxyl,pmlxzl,pmlyxl,pmlyyl,pmlyzl,pmlzxl,pmlzyl,pmlzzl;
+
   const int idx = ispec * NGLL3 + k * NGLL2 + j * NGLLX + i;
-#ifndef USE_PADDED_ADE_PML
-  // Rmat shape (nspec,NGLL3,NDIM,NDIM)
   #define Rmat(i,j) r_trans[(idx * NDIM + j-1) * NDIM + i-1]
   #define Rmatinv(i,j) r_trans_inv[(idx * NDIM + j-1) * NDIM + i-1]
-#else
-  // Rmat shape (nspec,NDIM,NDIM,NGLL3_PADDED)
-  const int idx1 = ispec * NGLL3_PADDED * NDIM * NDIM +  k * NGLL2 + j * NGLLX + i;
-  #define Rmat(i,j) r_trans[((j-1)*NDIM + (i-1)) * NGLL3_PADDED + idx1]
-  #define Rmatinv(i,j) r_trans_inv[((j-1)*NDIM + (i-1)) * NGLL3_PADDED + idx1]
-#endif
-
   #define TMAT(a,b,c)  temp[((c-1) * NDIM + (b-1)) * 6 + a-1]
-  //#define TMAT(a,b,c) temp[(((c-1) * NDIM + (b-1)) * 6 + a-1) * NGLL3_PADDED + tid]
 
   #define r1xl Rmat(1,1)
   #define r1yl Rmat(1,2)
@@ -890,16 +1104,8 @@ add_pml_physical_contribution(int ispec_pml,const int *phy_spec,
     realw ny = phy_norm[idx1+1];
     realw nz = phy_norm[idx1+2];
 
-#ifndef USE_PADDED_ADE_PML
-    // Rmat shape (nspec,NGLL3,NDIM,NDIM)
     #define Rmat(i,j) rtrans[(idx * NDIM + j-1) * NDIM + i-1]
     #define Rmatinv(i,j) rtrans_inv[(idx * NDIM + j-1) * NDIM + i-1]
-#else
-    // Rmat shape (nspec,NDIM,NDIM,NGLL3_PADDED)
-    const int idx5 = ispec_pml * NGLL3_PADDED * NDIM * NDIM +  k * NGLL2 + j * NGLLX + i;
-    #define Rmat(i,j) rtrans[((j-1)*NDIM + (i-1)) * NGLL3_PADDED + idx5]
-    #define Rmatinv(i,j) rtrans_inv[((j-1)*NDIM + (i-1)) * NGLL3_PADDED + idx5]
-#endif
     #define Qmat(a,b) Qt_t[(iglob * NDIM + b - 1) * NDIM + a-1 ]
 
     r1xl = Rmat(1,1);
@@ -965,16 +1171,17 @@ add_pml_physical_contribution(int ispec_pml,const int *phy_spec,
 }
 
 // nqdu added ADE-PML kernels
-template<bool is_PML,bool is_aniso>
-__launch_bounds__(128, is_PML ? 4 : 0)
-__global__  void 
+__global__ static void 
 kernel_forces_adepml(
                       int nb_blocks_to_compute,
-                      const int * d_ispec_work_element,
-                      const int *d_irregular_element_number,
                       const int* d_ibool,
+                      const int* d_phase_ispec_inner_elastic,
+                      const int num_phase_ispec_elastic,
+                      const int d_iphase,
+                      const int* d_irregular_element_number,
                       const realw* d_displ,
                       realw_p d_accel,
+                      const int ANISOTROPY,
                       const realw* d_xix,realw_const_p d_xiy,realw_const_p d_xiz,
                       const realw* d_etax,realw_const_p d_etay,realw_const_p d_etaz,
                       const realw* d_gammax,realw_const_p d_gammay,realw_const_p d_gammaz,
@@ -982,7 +1189,7 @@ kernel_forces_adepml(
                       const int COMPUTE_AND_STORE_STRAIN,
                       realw_p epsilondev_xx,realw_p epsilondev_yy,realw_p epsilondev_xy,
                       realw_p epsilondev_xz,realw_p epsilondev_yz,
-                      realw_p epsilon_trace_over_3,
+                      realw_p epsilon_trace_over_3, const int backward_simulation,
                       realw_const_p d_hprime_xx,
                       realw_const_p d_hprimewgll_xx,
                       realw_const_p d_wgllwgll_xy,realw_const_p d_wgllwgll_xz,realw_const_p d_wgllwgll_yz,
@@ -996,6 +1203,7 @@ kernel_forces_adepml(
                       const realw* d_c55store, const realw* d_c56store,const realw* d_c66store,
                       int is_wavediscon,realw_const_p displ_wd, 
                       const int* ispec_to_elem_wd, const int *ibool_wd,
+                      const int *is_CPML,
                       const int *spec_to_CPML, const int *ibool_CPML,
                       realw_const_p rtrans,realw_const_p rtrans_inv,
                       realw_const_p pml_kappa,realw_const_p pml_d,
@@ -1039,21 +1247,19 @@ kernel_forces_adepml(
   realw sum_terms1,sum_terms2,sum_terms3;
 
   // shared memory
-  constexpr int NUM = (!is_PML) ? 3 : 9;
-  __shared__ realw sh_temp[NUM][NGLL3_PADDED];
-//   __shared__ realw sh_tempx[NGLL3];
-//   __shared__ realw sh_tempy[NGLL3];
-//   __shared__ realw sh_tempz[NGLL3];
+  __shared__ realw sh_tempx[NGLL3];
+  __shared__ realw sh_tempy[NGLL3];
+  __shared__ realw sh_tempz[NGLL3];
 
   // note: using shared memory for hprime's improves performance
   //       (but could tradeoff with occupancy)
-  __shared__ realw sh_hprime_xx[32];
-  __shared__ realw sh_hprimewgll_xx[32];
+  __shared__ realw sh_hprime_xx[NGLL2];
+  __shared__ realw sh_hprimewgll_xx[NGLL2];
 
   // spectral-element id
   // iphase-1 and working_element-1 for Fortran->C array conventions
   // iphase-1 and working_element-1 for Fortran->C array conventions
-  working_element = d_ispec_work_element[bx] - 1;
+  working_element = d_phase_ispec_inner_elastic[bx + num_phase_ispec_elastic*(d_iphase-1)] - 1;
   ispec_irreg = d_irregular_element_number[working_element] - 1;
 
   // local padded index
@@ -1062,6 +1268,9 @@ kernel_forces_adepml(
   // global index
   iglob = d_ibool[offset] - 1 ;
 
+  // skip all pml elements for backward simulation
+  if(backward_simulation && is_CPML[working_element]) return;
+
   // loads hprime's into shared memory
   if (threadIdx.x < NGLL3) {
     // copy hprime from global memory to shared memory
@@ -1069,15 +1278,15 @@ kernel_forces_adepml(
       sh_hprime_xx[tx] = d_hprime_xx[tx];
       sh_hprimewgll_xx[tx] = d_hprimewgll_xx[tx];
     }
-    sh_temp[0][tx] = d_displ[iglob*NDIM];
-    sh_temp[1][tx] = d_displ[iglob*NDIM+1];
-    sh_temp[2][tx] = d_displ[iglob*NDIM+2];
+    sh_tempx[tx] = d_displ[iglob*NDIM];
+    sh_tempy[tx] = d_displ[iglob*NDIM+1];
+    sh_tempz[tx] = d_displ[iglob*NDIM+2];
     
     if(is_wavediscon)
       add_displ_discontinuity(working_element,tx,displ_wd,
                               ibool_wd,ispec_to_elem_wd,
-                                &sh_temp[0][tx],&sh_temp[1][tx],
-                                &sh_temp[2][tx]);
+                                &sh_tempx[tx],&sh_tempy[tx],
+                                &sh_tempz[tx]);
   }
   __syncthreads();
 
@@ -1085,7 +1294,7 @@ kernel_forces_adepml(
   get_spatial_derivatives(&xixl,&xiyl,&xizl,&etaxl,&etayl,&etazl,
     &gammaxl,&gammayl,&gammazl,&jacobianl,I,J,K,tx,
     &tempx1l,&tempy1l,&tempz1l,&tempx2l,&tempy2l,&tempz2l,
-    &tempx3l,&tempy3l,&tempz3l,sh_temp[0],sh_temp[1],sh_temp[2],sh_hprime_xx,
+    &tempx3l,&tempy3l,&tempz3l,sh_tempx,sh_tempy,sh_tempz,sh_hprime_xx,
     &duxdxl,&duxdyl,&duxdzl,&duydxl,&duydyl,&duydzl,&duzdxl,&duzdyl,&duzdzl,
     d_xix,d_xiy,d_xiz,d_etax,d_etay,d_etaz,d_gammax,d_gammay,d_gammaz,ispec_irreg,xix_regular,0);
   
@@ -1106,9 +1315,9 @@ kernel_forces_adepml(
     } // threadIdx.x
   }
   
-  if constexpr (!is_PML) {
+  if(!is_CPML[working_element]) { // backward simulation, only tackle regular elements
     // compute stress
-    compute_stress<is_aniso>(d_c11store,d_c12store,d_c13store,d_c14store,d_c15store,
+    compute_stress(ANISOTROPY,d_c11store,d_c12store,d_c13store,d_c14store,d_c15store,
                   d_c16store,d_c22store,d_c23store, d_c24store, d_c25store,d_c26store,
                   d_c33store, d_c34store, d_c35store, d_c36store, d_c44store, 
                   d_c45store, d_c46store, d_c55store, d_c56store, d_c66store,
@@ -1119,20 +1328,20 @@ kernel_forces_adepml(
     // 1. cut-plane xi
     __syncthreads();
     get_dot_product(jacobianl,sigma_xx,sigma_xy,sigma_xy,sigma_xz,sigma_xz,sigma_yy,sigma_yz,sigma_yz,sigma_zz,
-                    xixl,xiyl,xizl,sh_temp[0],sh_temp[1],sh_temp[2],tx,ispec_irreg,xix_regular,jacobian_regular,1);
-    sum_hprimewgll_xi(I,J,K,&tempx1l,&tempy1l,&tempz1l,sh_temp[0],sh_temp[1],sh_temp[2],sh_hprimewgll_xx);
+                    xixl,xiyl,xizl,sh_tempx,sh_tempy,sh_tempz,tx,ispec_irreg,xix_regular,jacobian_regular,1);
+    sum_hprimewgll_xi(I,J,K,&tempx1l,&tempy1l,&tempz1l,sh_tempx,sh_tempy,sh_tempz,sh_hprimewgll_xx);
 
     // 2. cut-plane eta
     __syncthreads();
     get_dot_product(jacobianl,sigma_xx,sigma_xy,sigma_xy,sigma_xz,sigma_xz,sigma_yy,sigma_yz,sigma_yz,sigma_zz,
-                    etaxl,etayl,etazl,sh_temp[0],sh_temp[1],sh_temp[2],tx,ispec_irreg,xix_regular,jacobian_regular,2);
-    sum_hprimewgll_eta(I,J,K,&tempx2l,&tempy2l,&tempz2l,sh_temp[0],sh_temp[1],sh_temp[2],sh_hprimewgll_xx);
+                    etaxl,etayl,etazl,sh_tempx,sh_tempy,sh_tempz,tx,ispec_irreg,xix_regular,jacobian_regular,2);
+    sum_hprimewgll_eta(I,J,K,&tempx2l,&tempy2l,&tempz2l,sh_tempx,sh_tempy,sh_tempz,sh_hprimewgll_xx);
 
     // 3. cut-plane gamma
     __syncthreads();
     get_dot_product(jacobianl,sigma_xx,sigma_xy,sigma_xy,sigma_xz,sigma_xz,sigma_yy,sigma_yz,sigma_yz,sigma_zz,
-                    gammaxl,gammayl,gammazl,sh_temp[0],sh_temp[1],sh_temp[2],tx,ispec_irreg,xix_regular,jacobian_regular,3);
-    sum_hprimewgll_gamma(I,J,K,&tempx3l,&tempy3l,&tempz3l,sh_temp[0],sh_temp[1],sh_temp[2],sh_hprimewgll_xx);
+                    gammaxl,gammayl,gammazl,sh_tempx,sh_tempy,sh_tempz,tx,ispec_irreg,xix_regular,jacobian_regular,3);
+    sum_hprimewgll_gamma(I,J,K,&tempx3l,&tempy3l,&tempz3l,sh_tempx,sh_tempy,sh_tempz,sh_hprimewgll_xx);
 
     // gets double weights
     if(threadIdx.x < NGLL3) {
@@ -1156,12 +1365,10 @@ kernel_forces_adepml(
   }
   else {
 
+    realw newtemp_adepml[3][3][6];
     int ispec_pml = spec_to_CPML[working_element] - 1;
 
-    // Q_newcomp shape (nspec_pml,3,3,6,NGLL3_PADDED)
-    //realw * __restrict__ newtemp_adepml = &Q_newcomp[ispec_pml * NGLL3_PADDED * 9 * 6];
-    realw  newtemp_adepml[3*3*6];
-    compute_sigma_adepml<is_aniso>(ispec_pml,I,J,K,d_c11store,d_c12store,d_c13store,
+    compute_sigma_adepml(ispec_pml,I,J,K,ANISOTROPY,d_c11store,d_c12store,d_c13store,
                         d_c14store,d_c15store,d_c16store,d_c22store,d_c23store,
                         d_c24store, d_c25store,d_c26store,d_c33store, d_c34store, 
                         d_c35store, d_c36store, d_c44store, d_c45store, d_c46store,
@@ -1189,20 +1396,20 @@ kernel_forces_adepml(
     gammazl *= jacobianl;
 
     // compute new_temp
-    compute_newcomp(sh_temp,sh_hprimewgll_xx,
+    compute_newcomp(sh_tempx,sh_tempy,sh_tempz,sh_hprimewgll_xx,
                     sigma_xx,sigma_xy,sigma_xz,sigma_yy,sigma_yz,
                     sigma_zz,xixl,xiyl,xizl,etaxl,etayl,etazl,gammaxl,
-                  gammayl,gammazl,threadIdx.x,I,J,K,newtemp_adepml);
+                  gammayl,gammazl,threadIdx.x,I,J,K,&newtemp_adepml[0][0][0]);
 
     // update Qt_t
     fac1 = d_wgllwgll_yz[K*NGLLX+J];
     fac2 = d_wgllwgll_xz[K*NGLLX+I];
     fac3 = d_wgllwgll_xy[J*NGLLX+I];
-    compute_Qt_t(ispec_pml,I,J,K,threadIdx.x,newtemp_adepml,
+    compute_Qt_t(ispec_pml,I,J,K,threadIdx.x,&newtemp_adepml[0][0][0],
                   fac1,fac2,fac3,rtrans,rtrans_inv,
               pml_d,ibool_CPML,Qt_t);
     
-    compute_accel_adepml(ispec_pml,I,J,K,threadIdx.x,newtemp_adepml,
+    compute_accel_adepml(ispec_pml,I,J,K,&newtemp_adepml[0][0][0],
                           fac1,fac2,fac3,rtrans,rtrans_inv,
                          pml_kappa,pml_d,&sum_terms1,&sum_terms2,
                          &sum_terms3);
@@ -1223,49 +1430,6 @@ kernel_forces_adepml(
   }
 
 }
-
-// instantiation of the templated kernels
-#define INSTANTIATE_KERNELS_PML_ANISO(PML_FLAG,ANISO_FLAG) \
-template __global__  void \
-kernel_forces_adepml<PML_FLAG,ANISO_FLAG>( \
-                      int nb_blocks_to_compute, \
-                      const int * d_ispec_work_element, \
-                      const int *d_irregular_element_number, \
-                      const int* d_ibool, \
-                      const realw* d_displ, \
-                      realw_p d_accel, \
-                      const realw* d_xix,realw_const_p d_xiy,realw_const_p d_xiz, \
-                      const realw* d_etax,realw_const_p d_etay,realw_const_p d_etaz, \
-                      const realw* d_gammax,realw_const_p d_gammay,realw_const_p d_gammaz, \
-                      const realw xix_regular,const realw jacobian_regular, \
-                      const int COMPUTE_AND_STORE_STRAIN, \
-                      realw_p epsilondev_xx,realw_p epsilondev_yy,realw_p epsilondev_xy, \
-                      realw_p epsilondev_xz,realw_p epsilondev_yz, \
-                      realw_p epsilon_trace_over_3, \
-                      realw_const_p d_hprime_xx, \
-                      realw_const_p d_hprimewgll_xx, \
-                      realw_const_p d_wgllwgll_xy,realw_const_p d_wgllwgll_xz,realw_const_p d_wgllwgll_yz, \
-                      realw_const_p d_kappav,realw_const_p d_muv, \
-                      const realw* d_c11store, const realw* d_c12store,const realw* d_c13store, \
-                      const realw* d_c14store, const realw* d_c15store,const realw* d_c16store, \
-                      const realw* d_c22store, const realw* d_c23store,const realw* d_c24store, \
-                      const realw* d_c25store, const realw* d_c26store,const realw* d_c33store, \
-                      const realw* d_c34store, const realw* d_c35store,const realw* d_c36store, \
-                      const realw* d_c44store, const realw* d_c45store,const realw* d_c46store, \
-                      const realw* d_c55store, const realw* d_c56store,const realw* d_c66store, \
-                      int is_wavediscon,realw_const_p displ_wd, \
-                      const int* ispec_to_elem_wd, const int *ibool_wd, \
-                      const int *spec_to_CPML, const int *ibool_CPML, \
-                      realw_const_p rtrans,realw_const_p rtrans_inv, \
-                      realw_const_p pml_kappa,realw_const_p pml_d, \
-                      const int *phy_ijk, const int *phy_spec, \
-                      realw_const_p phy_norm, \
-                      realw_const_p phy_jaco2Dw, \
-                      const realw* Qu,realw_p Qu_t,realw_p Qt_t);  
-INSTANTIATE_KERNELS_PML_ANISO(false,false);
-INSTANTIATE_KERNELS_PML_ANISO(false,true);
-INSTANTIATE_KERNELS_PML_ANISO(true,false);
-INSTANTIATE_KERNELS_PML_ANISO(true,true);
 
 
 extern "C"
@@ -1290,40 +1454,26 @@ void compute_forces_viscoelastic_cuda_ade_(long* Mesh_pointer,
 
   Mesh* mp = (Mesh*)(*Mesh_pointer); // get Mesh from fortran integer wrapper
 
-  dim3 grid,grid_pml,threads(NGLL3_PADDED,1,1);
+  int num_elements;
+
+  if (*iphase == 1)
+    num_elements = *nspec_outer_elastic;
+  else
+    num_elements = *nspec_inner_elastic;
+
+  // checks if anything to do
+  if (num_elements == 0) return;
+
+  // gpu resources
+  int blocksize = NGLL3_PADDED;
   int num_blocks_x, num_blocks_y;
-  int num_reg, num_pml;
-  int *ispec_reg_ptr = nullptr;
-  int *ispec_pml_ptr = nullptr;
-  if(*iphase == 1) {
-    num_reg = mp->cnt_reg_mpi_el;
-    num_pml = mp->cnt_pml_mpi_el;
-    if(*backward_simulation) num_pml = 0; // no PML in backward sim
-    get_blocks_xy(num_reg,&num_blocks_x,&num_blocks_y);
-    grid = dim3(num_blocks_x,num_blocks_y);
-    get_blocks_xy(num_pml,&num_blocks_x,&num_blocks_y);
-    grid_pml = dim3(num_blocks_x,num_blocks_y);
+  get_blocks_xy(num_elements,&num_blocks_x,&num_blocks_y);
 
-    ispec_reg_ptr = mp->d_phase_ispec_user_el + 0 * mp->num_phase_ispec_elastic; 
-    ispec_pml_ptr = mp->d_phase_ispec_user_el + 1 * mp->num_phase_ispec_elastic;
-  }
-  else {
-    num_reg = mp->cnt_reg_inner_el;
-    num_pml = mp->cnt_pml_inner_el;
-    if(*backward_simulation) num_pml = 0; // no PML in backward sim
-    get_blocks_xy(num_reg,&num_blocks_x,&num_blocks_y);
-    grid = dim3(num_blocks_x,num_blocks_y);
-    get_blocks_xy(num_pml,&num_blocks_x,&num_blocks_y);
-    grid_pml = dim3(num_blocks_x,num_blocks_y);
-
-    ispec_reg_ptr = mp->d_phase_ispec_user_el + 2 * mp->num_phase_ispec_elastic; 
-    ispec_pml_ptr = mp->d_phase_ispec_user_el + 3 * mp->num_phase_ispec_elastic;
-  }
-
-  if(num_reg + num_pml == 0) return; // nothing to do
+  dim3 grid(num_blocks_x,num_blocks_y);
+  dim3 threads(blocksize,1,1);
 
   // pointers
-  realw *accel=nullptr,*displ;
+  realw *accel,*displ;
   realw *epsilondev_xx,*epsilondev_xy,*epsilondev_xz;
   realw *epsilondev_yz, *epsilondev_yy,*epsilondev_trace_over_3;
 
@@ -1348,37 +1498,26 @@ void compute_forces_viscoelastic_cuda_ade_(long* Mesh_pointer,
     epsilondev_trace_over_3 = mp->d_epsilon_trace_over_3;
   }
 
-  #define run_kernel(is_pml,aniso,ispec_ptr,stream) { \
-        int num_elements = is_pml ? num_pml : num_reg; \
-        if(num_elements > 0) \
-        kernel_forces_adepml<is_pml,aniso> <<< is_pml ? grid_pml : grid ,threads,0,stream>>> ( \
-        num_elements,ispec_ptr,mp->d_irregular_element_number,mp->d_ibool, \
-        displ,accel,mp->d_xix,mp->d_xiy,mp->d_xiz, \
-        mp->d_etax,mp->d_etay,mp->d_etaz,mp->d_gammax,mp->d_gammay,mp->d_gammaz, \
-        mp->xix_regular,mp->jacobian_regular, *COMPUTE_AND_STORE_STRAIN, \
-        epsilondev_xx,epsilondev_yy,epsilondev_xy, \
-        epsilondev_xz,epsilondev_yz,epsilondev_trace_over_3, \
-        mp->d_hprime_xx,mp->d_hprimewgll_xx, \
-        mp->d_wgllwgll_xy,mp->d_wgllwgll_xz,mp->d_wgllwgll_yz,mp->d_kappav, \
-        mp->d_muv,mp->d_c11store,mp->d_c12store,mp->d_c13store,mp->d_c14store, \
-        mp->d_c15store,mp->d_c16store,mp->d_c22store,mp->d_c23store,mp->d_c24store, \
-        mp->d_c25store,mp->d_c26store,mp->d_c33store,mp->d_c34store,mp->d_c35store, \
-        mp->d_c36store,mp->d_c44store,mp->d_c45store,mp->d_c46store,mp->d_c55store, \
-        mp->d_c56store,mp->d_c66store,mp->is_wavefield_discontinuity,mp->d_displ_wd, \
-        mp->d_ispec_to_elem_wd,mp->d_ibool_wd,mp->d_spec_to_CPML, \
-        mp->d_ibool_CPML,mp->d_r_trans,mp->d_r_trans_inv,mp->d_pml_kappa, \
-        mp->d_pml_d,mp->d_pml_physical_ijk,mp->d_pml_spec_physical, \
-        mp->d_pml_physical_normal,mp->d_pml_physical_jacobian2Dw,mp->d_Qu, \
-        mp->d_Qu_t,mp->d_Qt_t); \
-    }
+  kernel_forces_adepml <<< grid,threads,0,mp->compute_stream>>> (
+    num_elements,mp->d_ibool,mp->d_phase_ispec_inner_elastic,
+    mp->num_phase_ispec_elastic,*iphase,mp->d_irregular_element_number,
+    displ,accel,*ANISOTROPY,mp->d_xix,mp->d_xiy,mp->d_xiz,
+    mp->d_etax,mp->d_etay,mp->d_etaz,mp->d_gammax,mp->d_gammay,mp->d_gammaz,
+    mp->xix_regular,mp->jacobian_regular, *COMPUTE_AND_STORE_STRAIN,
+    epsilondev_xx,epsilondev_yy,epsilondev_xy,
+    epsilondev_xz,epsilondev_yz,epsilondev_trace_over_3,
+    *backward_simulation,mp->d_hprime_xx,mp->d_hprimewgll_xx,
+    mp->d_wgllwgll_xy,mp->d_wgllwgll_xz,mp->d_wgllwgll_yz,mp->d_kappav,
+    mp->d_muv,mp->d_c11store,mp->d_c12store,mp->d_c13store,mp->d_c14store,
+    mp->d_c15store,mp->d_c16store,mp->d_c22store,mp->d_c23store,mp->d_c24store,
+    mp->d_c25store,mp->d_c26store,mp->d_c33store,mp->d_c34store,mp->d_c35store,
+    mp->d_c36store,mp->d_c44store,mp->d_c45store,mp->d_c46store,mp->d_c55store,
+    mp->d_c56store,mp->d_c66store,mp->is_wavefield_discontinuity,mp->d_displ_wd,
+    mp->d_ispec_to_elem_wd,mp->d_ibool_wd,mp->d_is_pml,mp->d_spec_to_CPML,
+    mp->d_ibool_CPML,mp->d_r_trans,mp->d_r_trans_inv,mp->d_pml_kappa,
+    mp->d_pml_d,mp->d_pml_physical_ijk,mp->d_pml_spec_physical,
+    mp->d_pml_physical_normal,mp->d_pml_physical_jacobian2Dw,mp->d_Qu,
+    mp->d_Qu_t,mp->d_Qt_t
+  );
 
-    if(*ANISOTROPY) { 
-      run_kernel(false,true,ispec_reg_ptr,mp->compute_stream);
-      run_kernel(true,true,ispec_pml_ptr,mp->compute_stream);
-    } 
-    else {
-      run_kernel(false,false,ispec_reg_ptr,mp->compute_stream);
-      run_kernel(true,false,ispec_pml_ptr,mp->compute_stream);
-    }
-    #undef run_kernel
 }

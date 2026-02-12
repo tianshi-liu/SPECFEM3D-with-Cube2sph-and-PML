@@ -784,6 +784,8 @@ void FC_FUNC_(prepare_fields_elastic_device,
 
   copy_todevice_int((void**)&mp->d_phase_ispec_inner_elastic,phase_ispec_inner_elastic,2*mp->num_phase_ispec_elastic);
 
+
+
   // debug
   //synchronize_mpi();
 
@@ -1607,6 +1609,7 @@ TRACE("prepare_cleanup_device");
 
     cudaFree(mp->d_phase_ispec_inner_elastic);
     cudaFree(mp->d_ispec_is_elastic);
+    cudaFree(mp->d_phase_ispec_user_el);
 
     if (*ABSORBING_CONDITIONS && mp->d_num_abs_boundary_faces > 0){
       cudaFree(mp->d_rho_vp);
@@ -1913,21 +1916,119 @@ void prepare_ade_pml_device_(
   DCOPY1(d_pml_physical_jacobian2Dw,NGLL2*(*num_pml_phy));
   DCOPY1(d_pml_physical_normal,NDIM*NGLL2*(*num_pml_phy));
   DCOPY1(d_pml_physical_ijk,NDIM*NGLL2*(*num_pml_phy));
+  DCOPY1(d_rvolume,(*d_nglob_CPML));
+  DCOPY1(d_CPML_to_glob,mp->nglob_CPML);
+
+  // get cnt_* 
+  int *phase_ispec_inner_el = (int*)malloc(mp->num_phase_ispec_elastic*2*sizeof(int));
+  int *h_phase_ispec_user = (int*)malloc(mp->num_phase_ispec_elastic*4*sizeof(int));
+  cudaMemcpy(phase_ispec_inner_el,mp->d_phase_ispec_inner_elastic,
+                 mp->num_phase_ispec_elastic*2*sizeof(int),cudaMemcpyDeviceToHost);
+  
+  int *h_is_pml = (int*)malloc(mp->NSPEC_AB*sizeof(int));
+  cudaMemcpy(h_is_pml,mp->d_is_pml,mp->NSPEC_AB*sizeof(int),cudaMemcpyDeviceToHost);
+  int max_nspec = mp->num_phase_ispec_elastic;
+  mp->cnt_pml_inner_el = 0; 
+  mp->cnt_pml_mpi_el = 0;
+  mp->cnt_reg_inner_el = 0;
+  mp->cnt_reg_mpi_el = 0;
+  for(int iphase = 0; iphase < 2; iphase ++) {
+    for(int iel = 0; iel < max_nspec; iel ++) {
+      int ispec = phase_ispec_inner_el[iphase * max_nspec + iel];
+      if(ispec > 0) 
+      {
+        if(iphase == 0) { // mpi elements
+          if(h_is_pml[ispec -1]) { // is pml
+            
+            h_phase_ispec_user[1 * max_nspec + mp->cnt_pml_mpi_el] = ispec;
+            mp->cnt_pml_mpi_el ++;
+          } 
+          else {
+            
+            h_phase_ispec_user[0 * max_nspec + mp->cnt_reg_mpi_el] = ispec;
+            mp->cnt_reg_mpi_el ++;
+          }
+        }
+        else { // inner elements
+          if(h_is_pml[ispec -1]) { // is pml
+            
+            h_phase_ispec_user[3 * max_nspec + mp->cnt_pml_inner_el] = ispec;
+            mp->cnt_pml_inner_el ++;
+          } 
+          else {
+            h_phase_ispec_user[2 * max_nspec + mp->cnt_reg_inner_el] = ispec;
+            mp->cnt_reg_inner_el ++;
+          }
+        }
+      }
+    }
+  }
+
+  // printf("PML ADE: cnt_pml_inner_el=%d, cnt_pml_mpi_el=%d, cnt_reg_inner_el=%d, cnt_reg_mpi_el=%d\n",
+  //         mp->cnt_pml_inner_el,mp->cnt_pml_mpi_el,mp->cnt_reg_inner_el,mp->cnt_reg_mpi_el);
+
+  // copy back to device
+  cudaMalloc((void**)&mp->d_phase_ispec_user_el,
+                 mp->num_phase_ispec_elastic*4*sizeof(int));
+  cudaMemcpy(mp->d_phase_ispec_user_el,
+                 h_phase_ispec_user,
+                 mp->num_phase_ispec_elastic*4*sizeof(int),cudaMemcpyHostToDevice);
+
+  free(phase_ispec_inner_el);
+  free(h_phase_ispec_user);
+  free(h_is_pml);
+
+#ifndef USE_PADDED_ADE_PML
+
   DCOPY1(d_r_trans,NDIM*NDIM*NGLL3*(*nspec_pml));
   DCOPY1(d_r_trans_inv,NDIM*NDIM*NGLL3*(*nspec_pml));
-  DCOPY1(d_rvolume,(*d_nglob_CPML));
-  //DCOPY1(d_spec_to_CPML,2*NDIM*(*nspec_pml));
-  DCOPY1(d_CPML_to_glob,mp->nglob_CPML);
+  size = NDIM*NDIM*NGLL3*(*nspec_pml);
+  DCOPY1(d_Qu,size); DCOPY1(d_Qu_t,size); 
+  size = NDIM*NGLL3*(*nspec_pml);
+  DCOPY1(d_coeff_exp1,size); DCOPY1(d_coeff_exp2,size);
+#else
+  cudaMalloc((void**)&mp->d_Qu,NGLL3_PADDED*NDIM*NDIM*(*nspec_pml)*sizeof(realw));
+  cudaMalloc((void**)&mp->d_Qu_t,NGLL3_PADDED*NDIM*NDIM*(*nspec_pml)*sizeof(realw));
+  cudaMemset(mp->d_Qu,0,NGLL3_PADDED*NDIM*NDIM*(*nspec_pml)*sizeof(realw));
+  cudaMemset(mp->d_Qu_t,0,NGLL3_PADDED*NDIM*NDIM*(*nspec_pml)*sizeof(realw));
+
+  // d_coeff_exp1/2 are stored as (nspec_pml,NDIM,NGLL3)
+  realw *coef_buf = new realw[NDIM*NGLL3*(*nspec_pml)]{};
+  #define COPY4(dev) print_CUDA_error_if_any(cudaMalloc((void**)&mp->dev,NGLL3_PADDED*NDIM*(*nspec_pml)*sizeof(realw)),32425); \
+    for(int ispec = 0; ispec < *nspec_pml; ispec++) { \
+      for(int i = 0; i < NDIM; i++) { \
+        for(int igll = 0; igll < NGLL3; igll++) { \
+          coef_buf[ispec*NDIM*NGLL3 + i*NGLL3 + igll] = dev[ispec*NDIM*NGLL3 + igll*NDIM + i]; \
+        } \
+      } \
+    } \
+    cudaMemcpy2D(mp->dev, NGLL3_PADDED*sizeof(realw), coef_buf, NGLL3*sizeof(realw), NGLL3*sizeof(realw), (*nspec_pml)*NDIM, cudaMemcpyHostToDevice)
+  COPY4(d_coeff_exp1);
+  COPY4(d_coeff_exp2);
+  #undef COPY4
+  delete [] coef_buf;
+  // allocate rtrans_buffer(nspec_pml,NDIM,NDIM,NGLL3)
+  // rtrans/rtrans_inv are stored as (nspec_pml,NGLL3,NDIM,NDIM)
+  realw *rtrans_buffer = new realw[NDIM*NDIM*NGLL3*(*nspec_pml)]{};
+  #define COPY3(dev) print_CUDA_error_if_any(cudaMalloc((void**)&mp->dev,NGLL3_PADDED*NDIM*NDIM*(*nspec_pml)*sizeof(realw)),32425); \
+    for(int ispec = 0; ispec < *nspec_pml; ispec++) { \
+      for(int i = 0; i < NDIM*NDIM; i++) { \
+        for(int igll = 0; igll < NGLL3; igll++) { \
+          rtrans_buffer[ispec*NDIM*NDIM*NGLL3 + i*NGLL3 + igll] = dev[ispec*NDIM*NDIM*NGLL3 + igll*NDIM*NDIM + i]; \
+        } \
+      } \
+    } \
+    cudaMemcpy2D(mp->dev, NGLL3_PADDED*sizeof(realw), rtrans_buffer, NGLL3*sizeof(realw), NGLL3*sizeof(realw), (*nspec_pml)*NDIM*NDIM, cudaMemcpyHostToDevice)
+  COPY3(d_r_trans);
+  COPY3(d_r_trans_inv);
+  #undef COPY3
+  delete [] rtrans_buffer;
+#endif
 
   size = NDIM*NDIM*(*num_intf_pml)*(*max_nibool_interfaces_PML);
   DCOPY1(d_buffer_send_matrix_PML,size);
   mp->size_mpi_buffer_pml = size;
 
-  size = NDIM*NDIM*NGLL3*(*nspec_pml);
-  DCOPY1(d_Qu,size); DCOPY1(d_Qu_t,size); 
-
-  size = NDIM*NGLL3*(*nspec_pml);
-  DCOPY1(d_coeff_exp1,size); DCOPY1(d_coeff_exp2,size);
   size = NDIM*NDIM*(*d_nglob_CPML);
   DCOPY1(d_Qt,size); DCOPY1(d_Qt_t,size);
 

@@ -231,6 +231,33 @@ contains
   end subroutine build_glob2loc_elmnts
 
 
+  ! subroutine sort_glob2loc_elemnts(nspec, part, glob2loc_elmnts,nparts)
+  !   use 
+  !   implicit none
+  !   integer, intent(in)  :: nspec,nparts 
+  !   integer, dimension(0:nspec-1), intent(in)  :: part
+  !   integer, dimension(:), pointer  :: glob2loc_elmnts
+
+  !   integer :: rank,iel 
+  !   integer :: count_elemnts(0:nparts-1)
+  !   integer,allocatable :: loc2glob(:)
+
+  !   do rank =0,nparts-1
+  !     count_elemnts(rank)=0
+  !     do iel = 0,nspec-1 
+  !       if (part(iel) == rank) then
+  !         count_elemnts(rank)=count_elemnts(rank)+1
+  !       endif
+  !     enddo 
+
+  !     ! allocate temporary array
+  !     allocate(loc2glob(0:count_elemnts(rank)-1))
+  !   enddo
+    
+
+  ! end subroutine sort_glob2loc_elemnts   
+
+
 
   !--------------------------------------------------
   ! construct local numbering for the nodes in each partition
