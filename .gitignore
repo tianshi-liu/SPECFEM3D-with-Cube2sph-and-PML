@@ -20,6 +20,8 @@ bin/
 obj/
 OUTPUT_FILES/
 
+bin/
+
 # Data files
 DATA/*.bin
 DATA/*.vtk
