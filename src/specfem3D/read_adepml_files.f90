@@ -185,7 +185,7 @@ subroutine read_adepml_files()
     enddo
   endif
 
-  if (num_pml_physical > 0) then
+  if (num_pml_physical > 0 .and. SAVE_MESH_FILES) then
     vtk_name = prname(1:len_trim(prname)) // 'pml_physical.vtk'
     open(unit=iout_vtk,file=trim(vtk_name),action='write',&
          form='formatted',iostat=ier)
@@ -257,7 +257,7 @@ subroutine read_adepml_files()
     close(iout_vtk)
   endif
 
-  if (num_interfaces_PML > 0) then
+  if (num_interfaces_PML > 0 .and. SAVE_MESH_FILES) then
     vtk_name = prname(1:len_trim(prname)) // 'pml_interface.vtk'
     open(unit=iout_vtk,file=trim(vtk_name),action='write',&
          form='formatted',iostat=ier)
@@ -296,7 +296,7 @@ subroutine read_adepml_files()
     close(iout_vtk)
   endif
 
-  if (nglob_pml_in > 0) then
+  if (nglob_pml_in > 0 .and. SAVE_MESH_FILES) then
     vtk_name = prname(1:len_trim(prname)) // 'pml_internal.vtk'
     open(unit=iout_vtk,file=trim(vtk_name),action='write',&
          form='formatted',iostat=ier)
