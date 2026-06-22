@@ -1,4 +1,4 @@
-#ifndef SEM_ASYNC_IO
+#ifdef SEM_SYNC_IO
 
 #include "config.h"
 
