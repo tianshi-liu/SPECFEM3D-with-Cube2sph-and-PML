@@ -35,11 +35,24 @@ build_node_filename(MPI_Comm comm,const char *filename,
         return;
     }
 
-    int world_rank;
+    int world_rank,local_rank;
     MPI_Comm_rank(MPI_COMM_WORLD,&world_rank);
+    MPI_Comm_rank(comm,&local_rank);
 
-    // node leader (local rank 0) broadcasts its world rank as the node id
-    int nodeid = world_rank;
+    // node leaders (local rank 0) form their own communicator; their rank in
+    // it gives a contiguous node id (0,1,2,...) ordered by world rank
+    MPI_Comm leadercomm;
+    MPI_Comm_split(MPI_COMM_WORLD,
+                   (local_rank == 0) ? 0 : MPI_UNDEFINED,
+                   world_rank,&leadercomm);
+
+    int nodeid = 0;
+    if(local_rank == 0) {
+        MPI_Comm_rank(leadercomm,&nodeid);
+        MPI_Comm_free(&leadercomm);
+    }
+
+    // node leader broadcasts the contiguous node id to its node members
     MPI_Bcast(&nodeid,1,MPI_INT,0,comm);
 
     snprintf(out,out_size,"%s.node.%d",filename,nodeid);
