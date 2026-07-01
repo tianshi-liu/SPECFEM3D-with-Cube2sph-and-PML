@@ -1,4 +1,4 @@
-# SpeFEM3D-Cube2sph
+# SPECFEM3D-Cube2sph
 
 Accurate and flexible continental-scale seismic wave simulations based on SPECFEM3D
 
