@@ -1,4 +1,4 @@
-#ifdef SEM_ASYNC_IO
+#ifndef SEM_SYNC_IO
 
 #include "config.h"
 
@@ -11,10 +11,52 @@
 typedef struct {
     int size,myrank;
     long total_size,offset;
+    MPI_Comm comm;
     MPI_File fh;
     MPI_Request req;
     float *buf;
 } WFAsyncIO;
+
+// build a per-node filename "<filename>.<nodeid>", where nodeid is the
+// MPI_COMM_WORLD rank of the node-local leader. This makes the file unique
+// per node so it also works on a shared parallel filesystem.
+static void
+build_node_filename(MPI_Comm comm,const char *filename,
+                    char *out,size_t out_size)
+{
+    int world_size,comm_size;
+    MPI_Comm_size(MPI_COMM_WORLD,&world_size);
+    MPI_Comm_size(comm,&comm_size);
+
+    // single node: the node-local communicator spans all ranks, so there is
+    // no risk of collision -> keep the plain filename
+    if(comm_size == world_size) {
+        snprintf(out,out_size,"%s",filename);
+        return;
+    }
+
+    int world_rank,local_rank;
+    MPI_Comm_rank(MPI_COMM_WORLD,&world_rank);
+    MPI_Comm_rank(comm,&local_rank);
+
+    // node leaders (local rank 0) form their own communicator; their rank in
+    // it gives a contiguous node id (0,1,2,...) ordered by world rank
+    MPI_Comm leadercomm;
+    MPI_Comm_split(MPI_COMM_WORLD,
+                   (local_rank == 0) ? 0 : MPI_UNDEFINED,
+                   world_rank,&leadercomm);
+
+    int nodeid = 0;
+    if(local_rank == 0) {
+        MPI_Comm_rank(leadercomm,&nodeid);
+        MPI_Comm_free(&leadercomm);
+    }
+
+    // node leader broadcasts the contiguous node id to its node members
+    MPI_Bcast(&nodeid,1,MPI_INT,0,comm);
+
+    snprintf(out,out_size,"%s.node.%d",filename,nodeid);
+}
 
 void 
 FC_FUNC_(open_subsample_write,OPEN_SUBSAMPLE_WRITE) (
@@ -27,28 +69,39 @@ FC_FUNC_(open_subsample_write,OPEN_SUBSAMPLE_WRITE) (
     fwdio->size = *f_size;
     fwdio->buf = (float*) malloc(sizeof(float)*fwdio->size);
 
-    // mpisize
+    // node-local communicator: ranks sharing the same node write to the
+    // same node-local file, so offsets are computed within this group only
+    MPI_Comm_split_type(
+        MPI_COMM_WORLD,MPI_COMM_TYPE_SHARED,0,
+        MPI_INFO_NULL,&fwdio->comm
+    );
+
+    // rank within the node-local communicator
     int myrank;
-    MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+    MPI_Comm_rank(fwdio->comm,&myrank);
     fwdio->myrank = myrank;
     fwdio->req = MPI_REQUEST_NULL;
 
     // gather total size
     MPI_Exscan(
         &n,&fwdio->offset,1,
-        MPI_LONG,MPI_SUM,MPI_COMM_WORLD
+        MPI_LONG,MPI_SUM,fwdio->comm
     );
     if(myrank == 0) fwdio->offset = 0;
 
     // total size
     MPI_Allreduce(
         &n,&fwdio->total_size,1,
-        MPI_LONG,MPI_SUM,MPI_COMM_WORLD
+        MPI_LONG,MPI_SUM,fwdio->comm
     );
+
+    // per-node filename so it also works on a shared parallel filesystem
+    char filename_new[512];
+    build_node_filename(fwdio->comm,filename,filename_new,sizeof(filename_new));
 
     // open file
     MPI_File_open(
-        MPI_COMM_WORLD,filename,
+        fwdio->comm,filename_new,
         MPI_MODE_WRONLY + MPI_MODE_CREATE,
         MPI_INFO_NULL,&fwdio->fh
     );
@@ -66,28 +119,39 @@ FC_FUNC_(open_subsample_read,OPEN_SUBSAMPLE_READ)(
     fwdio->size = *f_size;
     fwdio->buf = (float*) malloc(sizeof(float)*fwdio->size);
 
-    // mpisize
+    // node-local communicator: ranks sharing the same node read from the
+    // same node-local file, so offsets are computed within this group only
+    MPI_Comm_split_type(
+        MPI_COMM_WORLD,MPI_COMM_TYPE_SHARED,0,
+        MPI_INFO_NULL,&fwdio->comm
+    );
+
+    // rank within the node-local communicator
     int myrank = 0;
-    MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+    MPI_Comm_rank(fwdio->comm,&myrank);
     fwdio->myrank = myrank;
     fwdio->req = MPI_REQUEST_NULL;
 
     // gather total size
     MPI_Exscan(
         &n,&fwdio->offset,1,
-        MPI_LONG,MPI_SUM,MPI_COMM_WORLD
+        MPI_LONG,MPI_SUM,fwdio->comm
     );
     if(myrank == 0) fwdio->offset = 0;
 
     // total size
     MPI_Allreduce(
         &n,&fwdio->total_size,1,
-        MPI_LONG,MPI_SUM,MPI_COMM_WORLD
+        MPI_LONG,MPI_SUM,fwdio->comm
     );
+
+    // per-node filename so it also works on a shared parallel filesystem
+    char filename_new[512];
+    build_node_filename(fwdio->comm,filename,filename_new,sizeof(filename_new));
 
     // open file
     MPI_File_open(
-        MPI_COMM_WORLD,filename,
+        fwdio->comm,filename_new,
         MPI_MODE_RDONLY,
         MPI_INFO_NULL,&fwdio->fh
     );
@@ -117,6 +181,9 @@ FC_FUNC_(close_subsample_file,CLOSE_SUBSAMPLE_FILE) (long *io_ptr)
 
     // closefile
     MPI_File_close(&fwdio->fh);
+
+    // free node-local communicator
+    MPI_Comm_free(&fwdio->comm);
 
     if(fwdio->buf != NULL) {
         free(fwdio->buf);
