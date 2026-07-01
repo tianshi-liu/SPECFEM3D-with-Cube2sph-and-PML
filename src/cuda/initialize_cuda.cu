@@ -234,11 +234,11 @@ void FC_FUNC_(initialize_cuda_device,
       }else{
         fprintf(fp,"  canMapHostMemory: FALSE\n");
       }
-      if (deviceProp.deviceOverlap){
-        fprintf(fp,"  deviceOverlap: TRUE\n");
-      }else{
-        fprintf(fp,"  deviceOverlap: FALSE\n");
-      }
+      // if (deviceProp.deviceOverlap){
+      //   fprintf(fp,"  deviceOverlap: TRUE\n");
+      // }else{
+      //   fprintf(fp,"  deviceOverlap: FALSE\n");
+      // }
       if (deviceProp.concurrentKernels){
         fprintf(fp,"  concurrentKernels: TRUE\n");
       }else{

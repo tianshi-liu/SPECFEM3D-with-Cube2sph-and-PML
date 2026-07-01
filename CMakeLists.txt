@@ -25,7 +25,7 @@ setDefault(CUDA_ARCHITECTURES "native")
 
 option(ENABLE_CUDA "Enable CUDA" OFF)
 option(ENABLE_CUDA_AWARE  "Enable CUDA AWARE MPI" OFF)
-option(ENABLE_ASYNC_IO  "ENABLE_ASYNC_IO" OFF )
+option(ENABLE_SYNC_IO  "ENABLE_SYNC_IO" OFF )
 
 # project
 if(ENABLE_CUDA)
@@ -83,11 +83,9 @@ if(ENABLE_CUDA)
   endif()
 endif()
 
-if(ENABLE_ASYNC_IO)
-  message(STATUS "Enable ASYNC IO")
-  add_definitions(-DSEM_ASYNC_IO=1)
-else()
-  message(STATUS "Disable ASYNC IO")
+if(ENABLE_SYNC_IO)
+  message(STATUS "Enable SYNC IO")
+  add_definitions(-DSEM_SYNC_IO=1)
 endif()
 
 ################# include paths #################

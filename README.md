@@ -5,32 +5,38 @@ Accurate and flexible continental-scale seismic wave simulations based on SPECFE
 - mesh truncated at customized depth
 - implementation of curvilinear PML based on auxiliary differential equations
 - CUDA accelaration, on both forward/adjoint simulation and sensitivity kernels
-- Teleseismic wavefield injection.
+- Teleseismic wavefield injection. 
 
 ## Installation
 This package and has two parts: a spectral-element solver and the cube2sph-toolkit.  
 
-To compile the first part, you can use:
+First, clone the repo to your installation path:
+```
+git clone https://github.com/nqdu/specfem3d-cube2sph.git
+cd specfem3d-cube2sph
+```
+
+Then compile it like:
 ```bash 
 mkdir -p build
 cd build
 cmake .. -DCC=gcc -DMPIFC=mpif90 
 make -j8
 ```
-If you want to build CUDA accelarated version, please use:
+If you want to build the CUDA-accelerated version, please use:
 ```bash 
 cmake .. -DCC=gcc -DMPIFC=mpif90  -DENABLE_CUDA=ON
 ```
-By default, the CUDA architecture will be chosen as `native`. If you want to set it to corresponding [compute compatibility](https://developer.nvidia.com/cuda-gpus), please open `CMakeLists.txt` and find `set_target_properties(cuda PROPERTIES CUDA_ARCHITECTURES native)`. Then set `native` to the target number.
+By default, the CUDA architecture is set to `native`. To target a specific [compute capability](https://developer.nvidia.com/cuda-gpus), add `-DCUDA_ARCHITECTURES=arch` option in cmake. For example, an A100 GPU with compute capability 80 should be compiled using `-DCUDA_ARCHITECTURES=80`
 
-The CUDA-Aware MPI technique would facilitate communications. If you want to enable cuda aware mpi, please use:
+The CUDA-Aware MPI technique would facilitate communications. If you want to enable CUDA-aware MPI, please use:
 ```bash 
-cmake .. -DCC=gcc -DMPIFC=mpif90 -DENABLE_CUDA=ON  \ 
+cmake .. -DCC=gcc -DMPIFC=mpif90 -DENABLE_CUDA=ON \
         -DENABLE_CUDA_AWARE=ON
 ```
 
 
-For the cube2sph toolkit, please make sure you've installed [netcdf-fortran](https://docs.unidata.ucar.edu/netcdf-fortran/current/) on you machine. Then you can go to `utils/cube2sph` and try the following:
+Ensure [netcdf-fortran](https://docs.unidata.ucar.edu/netcdf-fortran/current/) is installed on your machine. Then navigate to `utils/cube2sph` (inside the `specfem3d-cube2sph` repo cloned above) and run:
 
 ```bash 
 mkdir -p build
@@ -39,12 +45,7 @@ cmake .. -DCC=gcc -DMPIFC=mpif90
 make -j8
 ```
 
-## Anisotropic Model Support
-You should provide `c21` model with density in `tomography.xyz`.
-1. Anisotropic models in `proc*_external_mesh.bin` are in cartesian coordinates, i.e. $C_{xxxx}, C_{xyzx}$ 
-2. Anisotropic models in `proc*_c11-c66.bin`, `tomography.xyz` are in radial coordinates,i.e. $C_{rrrr}, C_{r\theta \phi r}$. The notation rule for $c_{ijkl}$ is : $C_{1232} = C_{\theta \phi r \phi}$. 
-
-## Steps (EXAMPLES/NED-Model)
+## Steps (utils/cube2sph/EXAMPLES/NED-Model)
 *1.* Preparing parameter files (`DATA/Par_file_initmesh`, `DATA/meshfem3D_files/Mesh_Par_file`) and model files (e.g., interface files, tomographic files). Notes
 - Make should your simulation region is bigger than the study region, which can be tuned in `step0_plot_region.sh`.
 - If teleseismic simulation is required, please make sure the PML boundaries match the `WAVEFIELD_DISCONTINUITY_BOX_*` in `DATA/Par_file_initmesh`. Enable `COUPLE_WITH_INJECTION = .true.` and `INJECTINO_TYPE = 4`.
@@ -64,5 +65,5 @@ with `nummaterial_velocity_file_tomo`.
 
 *7.* Performing rotation for the seismograms.
 
-## FWI
-For mesh generation, data preparation and FWI workflow, please refer to the user manual of [FWAT-Cube2sph](https://github.com/nqdu/FWAT-cube2sph/tree/main) package.
+## Full-waveform Inversion
+For detailed instructions including mesh generation, data preparation, examples, and the FWI workflow, refer to the [Cube2sph-FWI](https://github.com/nqdu/FWAT-cube2sph/tree/main) package documentation.
