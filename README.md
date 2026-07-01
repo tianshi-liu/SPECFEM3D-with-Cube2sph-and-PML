@@ -66,4 +66,4 @@ with `nummaterial_velocity_file_tomo`.
 *7.* Performing rotation for the seismograms.
 
 ## Full-waveform Inversion
-For detailed instructions including mesh generation, data preparation, examples, and the FWI workflow, refer to the [Cube2sph-FWI](https://github.com/nqdu/FWAT-cube2sph/tree/main) package documentation.
+For detailed instructions including mesh generation, data preparation, examples, and the FWI workflow, refer to the detailed [Documentation](https://github.com/nqdu/FWAT-cube2sph/tree/main).
