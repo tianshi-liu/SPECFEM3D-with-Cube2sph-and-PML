@@ -887,3 +887,37 @@ TRACE("kernel_3_acoustic_cuda");
   exit_on_cuda_error("after kernel 3 ");
 #endif
 } 
+
+static __global__ void 
+kernel_apply_dirichlet_mask_to_accel(realw* accel, const realw* dirichlet_mask, int nglob)
+{
+  int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  if (idx < nglob) {
+    // Using registers instead of repeated memory access
+    realw r = dirichlet_mask[idx];
+
+    int base_idx = idx * NDIM;
+    
+    accel[base_idx]     *= r;
+    accel[base_idx + 1] *= r;
+    accel[base_idx + 2] *= r;
+  }
+}
+
+extern "C"
+void FC_FUNC_(apply_dirichlet_mask_to_accel,
+  APPLY_DIRICHLET_MASK_TO_ACCEL)(long* Mesh_pointer)
+{
+  TRACE("\tapply_dirichlet_mask_to_accel");
+
+  Mesh* mp = (Mesh*)(*Mesh_pointer); // get Mesh from fortran integer wrapper
+
+  int size = mp->NGLOB_AB;
+
+  int blocksize = BLOCKSIZE_KERNEL3;
+  int nb = (size + blocksize - 1) / blocksize;
+
+  kernel_apply_dirichlet_mask_to_accel<<<nb,blocksize,0,mp->compute_stream>>>(
+    mp->d_accel,mp->d_mask_dirichlet,size
+  );
+}

@@ -348,6 +348,9 @@ module specfem_par_elastic
   real(kind=CUSTOM_REAL), dimension(:), allocatable :: rmassx,rmassy,rmassz
   real(kind=CUSTOM_REAL), dimension(:,:,:,:), allocatable :: rho_vp,rho_vs
 
+  ! nqdu added dirichlet mask
+  real(kind=CUSTOM_REAL), dimension(:), allocatable :: mask_dirichlet
+
   ! anisotropic
   !! TL: add kappav and muv
   real(kind=CUSTOM_REAL), dimension(:,:,:,:), allocatable :: &
