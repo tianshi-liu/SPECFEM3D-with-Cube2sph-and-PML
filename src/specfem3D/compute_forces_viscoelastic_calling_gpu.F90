@@ -103,8 +103,15 @@ subroutine compute_forces_viscoelastic_ADE_GPU_calling()
   endif 
 
   ! multiplies with inverse of mass matrix (note: rmass has been inverted already)
-  ! dirichlet boundary condition has been added to rmass
   call apply_massmat_device(Mesh_pointer,backward_simulation)
+
+  if(APPROXIMATE_OCEAN_LOAD) then 
+    call compute_coupling_ocean_cuda(Mesh_pointer,1)
+  endif
+
+  ! add dirichlet boundary condition to acceleration
+  !nqdu added
+  call apply_dirichlet_mask_to_accel(Mesh_pointer)
 
   ! update velocity
   call update_velocity_device(Mesh_pointer,deltatover2,backward_simulation)
@@ -210,9 +217,12 @@ subroutine compute_forces_viscoelastic_ADE_GPU_backward_calling()
   enddo      
 
   ! multiplies with inverse of mass matrix (note: rmass has been inverted already)
-  ! dirichlet boundary condition has been added to rmass
   call apply_massmat_device(Mesh_pointer,backward_simulation)
 
+  if(APPROXIMATE_OCEAN_LOAD) then 
+    call compute_coupling_ocean_cuda(Mesh_pointer,3)
+  endif
+  
   ! update velocity
   call update_velocity_device(Mesh_pointer,b_deltatover2,backward_simulation)
 

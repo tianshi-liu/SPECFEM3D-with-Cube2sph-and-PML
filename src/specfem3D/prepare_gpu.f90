@@ -124,6 +124,7 @@
   if (ELASTIC_SIMULATION) then
     call prepare_fields_elastic_device(Mesh_pointer, &
                                 rmassx,rmassy,rmassz, &
+                                mask_dirichlet, &
                                 rho_vp,rho_vs, &
                                 kappastore, mustore, &
                                 num_phase_ispec_elastic,phase_ispec_inner_elastic, &

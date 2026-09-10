@@ -226,9 +226,11 @@ void FC_FUNC_(compute_coupling_el_ac_cuda,
                                            int* num_coupling_ac_el_facesf) {}
 
 void FC_FUNC_(compute_coupling_ocean_cuda,
-              COMPUTE_COUPLING_OCEAN_CUDA)(long* Mesh_pointer) {}
+              COMPUTE_COUPLING_OCEAN_CUDA)(long* Mesh_pointer,
+                                           int* FORWARD_OR_ADJOINT) {}
 
 
+                                           
 //
 // src/cuda/compute_forces_acoustic_cuda.cu
 //
@@ -523,6 +525,7 @@ void FC_FUNC_(prepare_fields_acoustic_adj_dev,
 void FC_FUNC_(prepare_fields_elastic_device,
               PREPARE_FIELDS_ELASTIC_DEVICE)(long* Mesh_pointer,
                                              realw* rmassx, realw* rmassy, realw* rmassz,
+                                             realw* mask_dirichlet,
                                              realw* rho_vp, realw* rho_vs,
                                              int* num_phase_ispec_elastic,
                                              int* phase_ispec_inner_elastic,
@@ -971,3 +974,8 @@ smooth_sph_pde_cuda_(int *h_nspec, int *h_nglob,int *nprocs,
    const int *nibool_intf,const int* ibool_intf,
    const realw* dat_bak, realw* dat,const realw *rvol,
    realw* dat_glob,realw* ddat_glob) {}
+
+
+void FC_FUNC_(apply_dirichlet_mask_to_accel,
+  APPLY_DIRICHLET_MASK_TO_ACCEL)(long* Mesh_pointer)
+{}

@@ -162,6 +162,10 @@ kernel_smooth_sph_pde(int num_elmts,int iphase,int num_phase_ispec,
     dudy = temp1 * xiyl + temp2 * etayl + temp3 * gamyl;
     dudz = temp1 * xizl + temp2 * etazl + temp3 * gamzl;
 
+    // ensure all reads of sh_ux (gradient input) are done before it is
+    // reused below to store stemp1; gradients are already in registers
+    __syncthreads();
+
     // compute new terms
     if(threadIdx.x < NGLL3) {
         sh_ux[tx] = ((cv-ch) * (rxl*xixl+ryl*xiyl+rzl*xizl) * 
