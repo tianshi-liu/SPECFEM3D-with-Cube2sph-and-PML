@@ -518,7 +518,7 @@
 ! flag to turn off the conversion of geographic to geocentric coordinates for
 ! the seismic source and the stations; i.e. assume a perfect sphere, which
 ! can be useful for benchmarks of a spherical Earth with fictitious sources and stations
-  logical, parameter :: ASSUME_PERFECT_SPHERE = .true.
+  logical, parameter :: ASSUME_PERFECT_SPHERE = .false.
 
 ! flags to do benchmark runs to measure scaling of the code
 ! for a limited number of time steps only, setting the initial field to 1
