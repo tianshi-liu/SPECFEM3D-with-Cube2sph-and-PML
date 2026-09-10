@@ -45,7 +45,7 @@ program write_stations_file
   call MPI_Comm_rank(MPI_COMM_WORLD, myrank, ier)
   
   if (command_argument_count() /= 5) then
-    print*, 'Usage: ./this station_sph stations_cart rotation_nu use_topo use_ellipticity '
+    print*, 'Usage: ./this station_sph[in] stations_cart[out] rotation_nu[out] use_topo use_ellipticity '
     stop
   endif
 
@@ -201,6 +201,10 @@ program write_stations_file
        r0 = r0 + stele(irec) / R_EARTH
     endif
     
+    ! subtract station burial depth (in meters)
+    ! this is done in the perfect sphere, before the ellipticity stretching
+    r0 = r0 - stbur(irec)/R_EARTH
+
     ! ellipticity
     if (ELLIPTICITY) then
       cost=cos(theta)
@@ -212,9 +216,6 @@ program write_stations_file
       ! this is eq (14.4) in Dahlen and Tromp (1998)
       r0=r0*(1.0d0-(2.0d0/3.0d0)*ell*p20)
     endif
-
-    ! subtract station burial depth (in meters)
-    r0 = r0 - stbur(irec)/R_EARTH
 
     ! compute the Cartesian position of the receiver
     x_target_rec = r0*sin(theta)*cos(phi)

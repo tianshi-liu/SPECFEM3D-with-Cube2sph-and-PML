@@ -84,7 +84,10 @@ program cube2latlon
             nodes_coords_new(3,1), &
             lat,lon,dep)
       else 
-        lat = 90.0d0 - theta*180.0d0/dacos(-1.0d0)
+
+        ! nqdu added, convert to geodetic latitude, longitude, and depth for the node
+        call geocentric_2_geographic_dble(theta,lat)
+        lat = 90.0d0 - lat*180.0d0/dacos(-1.0d0)
         lon = phi*180.0d0/dacos(-1.0d0)
         dep = r_earth - r
       endif
