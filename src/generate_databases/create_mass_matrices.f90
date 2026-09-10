@@ -190,7 +190,7 @@
     APPROXIMATE_OCEAN_LOAD,TOPOGRAPHY, &
     NX_TOPO,NY_TOPO,itopo_bathy,myrank, &
     NGLLX,NGLLY,NGLLZ,CUSTOM_REAL,SIZE_REAL,NGLLSQUARE,IMAIN, &
-    MINIMUM_THICKNESS_3D_OCEANS,RHO_APPROXIMATE_OCEAN_LOAD
+    MINIMUM_THICKNESS_3D_OCEANS,RHO_APPROXIMATE_OCEAN_LOAD,CALC_ADEPML_DAMPING,IOUT,LOCAL_PATH
 
   use create_regions_mesh_ext_par
 
@@ -210,7 +210,8 @@
   integer :: ix_oceans,iy_oceans,iz_oceans,ispec_oceans,ispec2D,igll,iglobnum
   integer :: ier
 
-  real(kind=CUSTOM_REAL) :: xloc,yloc,loc_elevation
+  real(kind=CUSTOM_REAL) :: xloc,yloc,loc_elevation,zloc
+  !character(len=MAX_STRING_LEN) :: filename
 
   ! creates ocean load mass matrix
   if (APPROXIMATE_OCEAN_LOAD) then
@@ -218,6 +219,16 @@
     if (myrank == 0) then
       write(IMAIN,*) '  ...creating ocean load mass matrix '
     endif
+
+    ! nqdu mask files 
+    !write(prname,'(a,i6.6,a)') trim(LOCAL_PATH)// '/' //'proc',myrank,'_'
+    ! filename = prname(1:len_trim(prname))//'ocean_load.txt'
+    ! open(unit=IOUT, file=trim(filename), status='unknown', &
+    !  action='write', form='formatted', iostat=ier)
+
+    ! if (ier /= 0) then
+    !   print *, "Error opening file:", ier
+    ! end if
 
     ! adding ocean load mass matrix at ocean bottom
     NGLOB_OCEAN = nglob
@@ -248,35 +259,48 @@
           ! compute local height of oceans
           if (TOPOGRAPHY) then
 
-            ! takes elevation from topography file
-            xloc = xstore_dummy(iglobnum)
-            yloc = ystore_dummy(iglobnum)
+          ! takes elevation from topography file
+          xloc = xstore_dummy(iglobnum)
+          yloc = ystore_dummy(iglobnum)
 
-            call get_topo_bathy_elevation(xloc,yloc,loc_elevation, &
+          call get_topo_bathy_elevation(xloc,yloc,loc_elevation, &
                                         itopo_bathy,NX_TOPO,NY_TOPO)
 
-            elevation = dble(loc_elevation)
+          elevation = dble(loc_elevation)
 
           else
 
-            ! takes elevation from z-coordinate of mesh point
+          ! takes elevation from z-coordinate of mesh point
+          if ( CUBE2SPH_MESH .and. .not.  CALC_ADEPML_DAMPING ) then
+            xloc = xstore_dummy(iglobnum)
+            yloc = ystore_dummy(iglobnum)
+            zloc = zstore_dummy(iglobnum)
+            !elevation=sqrt(xloc**2+yloc**2+zloc**2)-6371000 !this is for sphere
+            call get_elevation(xloc,yloc,zloc,elevation) ! this is for ell
+          else
             elevation = zstore_dummy(iglobnum)
+          endif
 
           endif
 
           ! suppress positive elevation, which means no oceans
           if (elevation >= - MINIMUM_THICKNESS_3D_OCEANS) then
-            height_oceans = 0.d0
+          height_oceans = 0.d0
           else
-            height_oceans = dabs(elevation)
+          height_oceans = dabs(elevation)
           endif
-
+          !  if (height_oceans .gt. 5000)then
+          !    print*,'ocean high for ocean load:',height_oceans
+          !  endif
+          !write(IOUT,'(4F15.3)') xloc,yloc,zloc,height_oceans
           ! take into account inertia of water column
           weight = dble( free_surface_jacobian2Dw(igll,ispec2D)) &
-                   * dble(RHO_APPROXIMATE_OCEAN_LOAD) * height_oceans
+                  * dble(RHO_APPROXIMATE_OCEAN_LOAD) * height_oceans
 
           ! distinguish between single and double precision for reals
           rmass_ocean_load(iglobnum) = rmass_ocean_load(iglobnum) + real(weight,kind=CUSTOM_REAL)
+          !binhe check if elevation is correct!!!!
+          !print*,"binbin, topo",height_oceans,myrank,elevation
 
         enddo ! igll
       endif ! ispec_is_elastic
@@ -284,6 +308,7 @@
 
     ! adds regular mass matrix to ocean load contribution
     rmass_ocean_load(:) = rmass_ocean_load(:) + rmass(:)
+    !close(IOUT)
 
   else
 
@@ -855,3 +880,51 @@
   enddo ! do ispec_CPML=1,nspec_cpml
 
   end subroutine create_mass_matrices_pml_acoustic
+
+
+
+
+!=====================================================================
+ !  Compute ellipsoidal elevation from ECEF coordinates (meters)
+ !  Elevation = height above ellipsoid (positive = land, negative = ocean)
+ !=====================================================================
+ subroutine get_elevation(x, y, z, elevation)
+   use constants, only: CUSTOM_REAL
+   implicit none
+   real(CUSTOM_REAL), intent(in)  :: x, y, z         ! ECEF coordinates in METERS
+   double precision, intent(out) :: elevation       ! Ellipsoidal height (meters)
+ 
+   ! WGS84 Ellipsoid constants
+   double precision, parameter :: a = 6378137.0d0                     ! Equatorial radius
+   double precision, parameter :: f = 1.d0 / 298.257223563d0          ! Flattening
+   double precision, parameter :: b = a * (1.d0 - f)                  ! Polar radius
+   double precision, parameter :: e2  = 2.d0*f - f*f                  ! Eccentricity²
+   double precision, parameter :: ep2 = e2 / (1.d0 - e2)              ! 2nd eccentricity²
+ 
+   double precision :: p, theta, phi, sinphi, N, h
+ 
+   ! Compute horizontal distance
+   p = sqrt(x*x + y*y)
+ 
+   ! Edge case near poles
+   if (p < 1.d-10) then
+      h = abs(z) - b
+      elevation = h       ! height above ellipsoid
+      return
+   endif
+ 
+   ! Bowring formula
+   theta = atan2(z*a, p*b)
+ 
+   phi = atan2( z + ep2*b*(sin(theta)**3), &
+                p - e2*a*(cos(theta)**3) )
+ 
+   sinphi = sin(phi)
+   N = a / sqrt(1.d0 - e2*sinphi*sinphi)
+ 
+   ! Ellipsoidal height h
+   h = (p / cos(phi)) - N
+ 
+   elevation = h    ! positive = above ellipsoid, negative = below (ocean)
+ end subroutine get_elevation
+ 

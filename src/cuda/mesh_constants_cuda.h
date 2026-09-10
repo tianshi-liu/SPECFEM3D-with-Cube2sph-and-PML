@@ -491,6 +491,9 @@ typedef struct mesh_ {
   realw* d_rmassy;
   realw* d_rmassz;
 
+  // mask dirichlet boundary conditions
+  realw *d_mask_dirichlet;
+
   // mpi buffer
   realw* d_send_accel_buffer;
   realw* d_b_send_accel_buffer;

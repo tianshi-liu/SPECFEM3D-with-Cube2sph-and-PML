@@ -276,6 +276,13 @@ subroutine compute_forces_viscoelastic_calling()
   !   enddo
   !   t_update_pml = t_update_pml + (wtime() - t_clock)
   ! endif
+
+  ! nqdu added
+  ! apply mask taper to the mass matrix for dirichlet boundary condition
+  accel(1,:) = accel(1,:)*mask_dirichlet(:)
+  accel(2,:) = accel(2,:)*mask_dirichlet(:)
+  accel(3,:) = accel(3,:)*mask_dirichlet(:)
+
   if (PML_CONDITIONS .and. (.not. USE_ADE_PML)) then
     do iface = 1,num_abs_boundary_faces
       ispec = abs_boundary_ispec(iface)

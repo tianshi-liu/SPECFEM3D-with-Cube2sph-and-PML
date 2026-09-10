@@ -136,6 +136,11 @@
     deallocate(rmassx)
     deallocate(rmassy)
     deallocate(rmassz)
+
+    ! nqdu added, deallocate mask_dirichlet
+    if(allocated(mask_dirichlet)) then
+      deallocate(mask_dirichlet)
+    endif
   endif
   if (ACOUSTIC_SIMULATION) then
     deallocate(rmass_acoustic)

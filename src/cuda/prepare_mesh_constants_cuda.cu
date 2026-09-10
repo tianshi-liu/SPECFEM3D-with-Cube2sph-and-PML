@@ -661,6 +661,7 @@ extern "C"
 void FC_FUNC_(prepare_fields_elastic_device,
               PREPARE_FIELDS_ELASTIC_DEVICE)(long* Mesh_pointer,
                                              realw* rmassx, realw* rmassy, realw* rmassz,
+                                             realw* mask_dirichlet,
                                              realw* rho_vp, realw* rho_vs,
                                              realw* h_kappav, realw* h_muv,
                                              int* num_phase_ispec_elastic,
@@ -775,6 +776,9 @@ void FC_FUNC_(prepare_fields_elastic_device,
   copy_todevice_realw((void**)&mp->d_rmassx,rmassx,mp->NGLOB_AB);
   copy_todevice_realw((void**)&mp->d_rmassy,rmassy,mp->NGLOB_AB);
   copy_todevice_realw((void**)&mp->d_rmassz,rmassz,mp->NGLOB_AB);
+
+  // mask for Dirichlet boundary conditions
+  copy_todevice_realw((void**)&mp->d_mask_dirichlet,mask_dirichlet,mp->NGLOB_AB);
 
   // element indices
   copy_todevice_int((void**)&mp->d_ispec_is_elastic,ispec_is_elastic,mp->NSPEC_AB);
@@ -1606,6 +1610,9 @@ TRACE("prepare_cleanup_device");
     cudaFree(mp->d_rmassx);
     cudaFree(mp->d_rmassy);
     cudaFree(mp->d_rmassz);
+    
+    // mask_dirichlet
+    cudaFree(mp->d_mask_dirichlet);
 
     cudaFree(mp->d_phase_ispec_inner_elastic);
     cudaFree(mp->d_ispec_is_elastic);

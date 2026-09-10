@@ -365,12 +365,19 @@
 
   !nqdu add
   ! add dirichlet boundary condition
+  if(.not. allocated(mask_dirichlet)) then
+    allocate(mask_dirichlet(NGLOB_AB))
+  endif
+  mask_dirichlet(:) = 1.0_CUSTOM_REAL
+
+  ! nqdu added, use mask_taper to set the mass matrix to zero for dirichlet boundary condition
   if(PML_CONDITIONS .and. USE_ADE_PML) then 
     do  i=1,nglob_dirichlet
       iglob = iglob_dirichlet(i)
-      rmassx(iglob) = 0.0_CUSTOM_REAL
-      rmassy(iglob) = 0.0_CUSTOM_REAL
-      rmassz(iglob) = 0.0_CUSTOM_REAL
+      ! rmassx(iglob) = 0.0_CUSTOM_REAL
+      ! rmassy(iglob) = 0.0_CUSTOM_REAL
+      ! rmassz(iglob) = 0.0_CUSTOM_REAL
+      mask_dirichlet(iglob) = 0.0_CUSTOM_REAL
     enddo
   endif
 

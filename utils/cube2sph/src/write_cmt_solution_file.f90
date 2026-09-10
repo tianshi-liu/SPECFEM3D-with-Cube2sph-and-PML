@@ -34,7 +34,6 @@ program write_cmt_file
   character(len=MAX_STRING_LEN) :: cart_cmt_fn, sph_cmt_fn, arg_str
   double precision :: scaleM
   double precision :: min_tshift_src_original
-  double precision :: radius
   integer :: yr, jda, mo, da, ho, mi
   double precision :: sec
   double precision, dimension(6,NSOURCES) :: moment_tensor
@@ -48,6 +47,10 @@ program write_cmt_file
   DT = 0.0
   NUMBER_OF_SIMULTANEOUS_RUNS = 1
   isource = 1
+  if (command_argument_count() /= 4) then
+      print*, 'Usage: ./this sph_cmt_file[in] cart_cmt_file[out] use_topo use_ellipticity '
+      stop
+  endif
   call get_command_argument(1, sph_cmt_fn)
   call get_command_argument(2, cart_cmt_fn)
   call get_command_argument(3, arg_str)
@@ -68,9 +71,9 @@ program write_cmt_file
            Mxz(NSOURCES), &
            Myz(NSOURCES), stat=ier)
   allocate(ibathy_topo(NX_BATHY,NY_BATHY),stat=ier)
-  call make_ellipticity(nspl,rspl,espl,espl2,ONE_CRUST)
+  if(ELLIPTICITY) call make_ellipticity(nspl,rspl,espl,espl2,ONE_CRUST)
   ibathy_topo(:,:) = 0
-  call read_topo_bathy_file(ibathy_topo)
+  if(TOPOGRAPHY) call read_topo_bathy_file(ibathy_topo)
   call get_cmt(yr,jda,mo,da,ho,mi,sec,tshift_src,hdur,lat,long,depth,&
                moment_tensor,DT,NSOURCES,min_tshift_src_original,sph_cmt_fn)
   ! dimensionalize
@@ -149,19 +152,21 @@ program write_cmt_file
     call get_topo_bathy(lat(isource),long(isource),elevation,ibathy_topo)
     r0 = r0 + elevation/R_EARTH
   endif
+
+  ! subtracts source depth (given in km)
+  ! nqdu 2026.09.10, done in the perfect sphere, before the ellipticity block,
+  ! so that the radial stretching applies to the radius of the source itself
+  r_target_source = r0 - depth(isource)*1000.0d0/R_EARTH
+
   if (ELLIPTICITY) then
     dcost = dcos(theta)
 ! this is the Legendre polynomial of degree two, P2(cos(theta)), see the discussion above eq (14.4) in Dahlen and Tromp (1998)
     p20 = 0.5d0*(3.0d0*dcost*dcost-1.0d0)
-    radius = r0 - depth(isource)*1000.0d0/R_EARTH
 ! get ellipticity using spline evaluation
-    call spline_evaluation(rspl,espl,espl2,nspl,radius,ell)
+    call spline_evaluation(rspl,espl,espl2,nspl,r_target_source,ell)
 ! this is eq (14.4) in Dahlen and Tromp (1998)
-    r0 = r0*(1.0d0-(2.0d0/3.0d0)*ell*p20)
+    r_target_source = r_target_source*(1.0d0-(2.0d0/3.0d0)*ell*p20)
   endif
-
-  ! subtracts source depth (given in km)
-  r_target_source = r0 - depth(isource)*1000.0d0/R_EARTH
 
   ! compute the Cartesian position of the source
   x_target_source = r_target_source*dsin(theta)*dcos(phi)

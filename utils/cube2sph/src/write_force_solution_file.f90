@@ -34,7 +34,6 @@ program write_force_solution_file
   character(len=MAX_STRING_LEN) :: cart_force_fn, sph_force_fn, arg_str
   double precision :: scaleF, fx, fy, fz
   double precision :: min_tshift_src_original
-  double precision :: radius
   call MPI_Init(ier)
   call MPI_Comm_rank(MPI_COMM_WORLD, myrank, ier)
   USE_FORCE_POINT_SOURCE = .true.
@@ -44,7 +43,7 @@ program write_force_solution_file
   NUMBER_OF_SIMULTANEOUS_RUNS = 1
   isource = 1
   if (command_argument_count() /= 4) then
-      print*, 'Usage: ./this sph_force_file cart_force_file use_topo use_ellipticity '
+      print*, 'Usage: ./this sph_force_file[in] cart_force_file[out] use_topo use_ellipticity '
       stop
   endif
   call get_command_argument(1, sph_force_fn)
@@ -127,19 +126,21 @@ program write_force_solution_file
     call get_topo_bathy(lat(isource),long(isource),elevation,ibathy_topo)
     r0 = r0 + elevation/R_EARTH
   endif
+
+  ! subtracts source depth (given in km)
+  ! nqdu 2026.09.10, done in the perfect sphere, before the ellipticity block,
+  ! so that the radial stretching applies to the radius of the source itself
+  r_target_source = r0 - depth(isource)*1000.0d0/R_EARTH
+
   if (ELLIPTICITY) then
     dcost = dcos(theta)
 ! this is the Legendre polynomial of degree two, P2(cos(theta)), see the discussion above eq (14.4) in Dahlen and Tromp (1998)
     p20 = 0.5d0*(3.0d0*dcost*dcost-1.0d0)
-    radius = r0 - depth(isource)*1000.0d0/R_EARTH
 ! get ellipticity using spline evaluation
-    call spline_evaluation(rspl,espl,espl2,nspl,radius,ell)
+    call spline_evaluation(rspl,espl,espl2,nspl,r_target_source,ell)
 ! this is eq (14.4) in Dahlen and Tromp (1998)
-    r0 = r0*(1.0d0-(2.0d0/3.0d0)*ell*p20)
+    r_target_source = r_target_source*(1.0d0-(2.0d0/3.0d0)*ell*p20)
   endif
-
-  ! subtracts source depth (given in km)
-  r_target_source = r0 - depth(isource)*1000.0d0/R_EARTH
 
   ! compute the Cartesian position of the source
   x_target_source = r_target_source*dsin(theta)*dcos(phi)
